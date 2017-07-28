@@ -242,6 +242,7 @@ static void config_parse_configuration
         CFG_INT("colorful_output",  0,                              0),
         CFG_INT("listen_port",      1337,                           0),
         CFG_INT("max_size",         1024 * 1024 /* 1MiB */,         0),
+        CFG_INT("list_type",        0,                              0),
         CFG_STR("domain",           "localhost",                    0),
         CFG_STR("user",             "kurload",                      0),
         CFG_STR("group",            "kurload",                      0),
@@ -249,7 +250,6 @@ static void config_parse_configuration
         CFG_STR("program_log",      "/var/log/kurload.log",         0),
         CFG_STR("whitelist",        "/etc/kurload/whitelist",       0),
         CFG_STR("blacklist",        "/etc/kurload/blacklist",       0),
-        CFG_STR("list_type",        "none",                         0),
         CFG_STR("output_dir",       "/var/lib/kurload",             0),
         CFG_STR("bind_if",          "{none}",                       CFGF_LIST),
         CFG_END()
@@ -358,7 +358,7 @@ void config_print(void)
     CONFIG_PRINT_STR(program_log);
     CONFIG_PRINT_STR(whitelist);
     CONFIG_PRINT_STR(blacklist);
-    CONFIG_PRINT_STR(list_type);
+    CONFIG_PRINT_INT(list_type);
     CONFIG_PRINT_STR(output_dir);
     CONFIG_PRINT_STR(bind_if);
 }

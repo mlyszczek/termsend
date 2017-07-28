@@ -31,7 +31,7 @@
 #include <embedlog.h>
 
 #include "config.h"
-
+#include "bnwlist.h"
 
 /* ==========================================================================
                                         __     __ _
@@ -51,6 +51,11 @@
 
 int main(int argc, char *argv[])
 {
+    int          list_type;
+    const char  *list_file;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
     config_init(argc, argv);
     el_level_set(cfg_getint(g_config, "log_level"));
     el_output_enable(EL_OUT_STDERR);
@@ -60,6 +65,11 @@ int main(int argc, char *argv[])
     el_option(EL_OPT_COLORS, cfg_getint(g_config, "colorful_output"));
 
     config_print();
+
+    list_type = cfg_getint(g_config, "list_type");
+    list_file = cfg_getstr(g_config, list_type == 1 ? "whitelist" : "blacklist");
+
+    bnw_init(list_file, list_type);
 
 error:
     config_destroy();
