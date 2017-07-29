@@ -72,6 +72,7 @@ int main(int argc, char *argv[])
     bnw_init(list_file, list_type);
 
 error:
+    bnw_destroy();
     config_destroy();
 
     return 0;

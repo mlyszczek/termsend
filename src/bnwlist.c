@@ -63,18 +63,21 @@ int         mode;     /* operation mode, 0 - none, -1 blacklist, 1 whitelist */
 
 
 /* ==========================================================================
-
+    function parses file with  list  and  converts  IPs  there  from  string
+    representation ("127.0.0.1") to in_addr_t type (uint32_t).   Parsed  IPs
+    are stored in heap allocated memory 'ip_list'.  If sytax error is  found
+    in list file, nothing is allocated and -1 is returned.
    ========================================================================== */
 
 
 static int bnw_parse_list
 (
-    char  *f,
-    off_t  flen
+    char  *f,    /* memory mapped list file */
+    off_t  flen  /* length of f buffer */
 )
 {
-    size_t  n;
-    int     i;
+    size_t  n;   /* number of entries in file */
+    int     i;   /* helper iterator for loop */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -82,7 +85,7 @@ static int bnw_parse_list
      * first count number of entries so we can allocate enough memory
      */
 
-    for (i = 0; i != flen; ++i)
+    for (i = 0, n = 0; i != flen; ++i)
     {
         n += f[i] == '\n';
     }
@@ -147,6 +150,8 @@ static int bnw_parse_list
      */
 
     ip_list[n] = (in_addr_t)0;
+    el_print(ELI, "%d IPs added to the list, list size in mem %zu bytes",
+        n, (n + 1) * sizeof(in_addr_t));
 
     return 0;
 }
@@ -165,6 +170,13 @@ static int bnw_parse_list
             / __// /_/ // / / // /__ / /_ / // /_/ // / / /(__  )
            /_/   \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/
 
+   ========================================================================== */
+
+
+/* ==========================================================================
+    initializes all private data in this module. It allocates memory for
+    IP list from file, and loads list to private ip_list variable. If mode
+    is set to 0 (no filtering) no data is allocated.
    ========================================================================== */
 
 
@@ -225,4 +237,10 @@ int bnw_init
     munmap(f, st.st_size);
     close(fd);
     return 0;
+}
+
+
+void bnw_destroy(void)
+{
+    free(ip_list);
 }

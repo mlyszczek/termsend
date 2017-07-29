@@ -236,22 +236,22 @@ static void config_parse_configuration
 
     cfg_opt_t options[] =
     {
-    /*  type    field name          default value                   flags */
+    /*  type         field name          default value                 flags */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        CFG_INT("log_level",        EL_LEVEL_ERR,                   0),
-        CFG_INT("colorful_output",  0,                              0),
-        CFG_INT("listen_port",      1337,                           0),
-        CFG_INT("max_size",         1024 * 1024 /* 1MiB */,         0),
-        CFG_INT("list_type",        0,                              0),
-        CFG_STR("domain",           "localhost",                    0),
-        CFG_STR("user",             "kurload",                      0),
-        CFG_STR("group",            "kurload",                      0),
-        CFG_STR("query_log",        "/var/log/kurload-query.log",   0),
-        CFG_STR("program_log",      "/var/log/kurload.log",         0),
-        CFG_STR("whitelist",        "/etc/kurload/whitelist",       0),
-        CFG_STR("blacklist",        "/etc/kurload/blacklist",       0),
-        CFG_STR("output_dir",       "/var/lib/kurload",             0),
-        CFG_STR("bind_if",          "{none}",                       CFGF_LIST),
+        CFG_STR_LIST("bind_if",          "{none}",                       0),
+        CFG_INT(     "log_level",        EL_LEVEL_ERR,                   0),
+        CFG_INT(     "colorful_output",  0,                              0),
+        CFG_INT(     "listen_port",      1337,                           0),
+        CFG_INT(     "max_size",         1024 * 1024 /* 1MiB */,         0),
+        CFG_INT(     "list_type",        0,                              0),
+        CFG_STR(     "domain",           "localhost",                    0),
+        CFG_STR(     "user",             "kurload",                      0),
+        CFG_STR(     "group",            "kurload",                      0),
+        CFG_STR(     "query_log",        "/var/log/kurload-query.log",   0),
+        CFG_STR(     "program_log",      "/var/log/kurload.log",         0),
+        CFG_STR(     "whitelist",        "/etc/kurload/whitelist",       0),
+        CFG_STR(     "blacklist",        "/etc/kurload/blacklist",       0),
+        CFG_STR(     "output_dir",       "/var/lib/kurload",             0),
         CFG_END()
     };
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/

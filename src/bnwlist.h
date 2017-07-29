@@ -7,5 +7,6 @@
 #define BNWLIST_H 1
 
 int bnw_init(const char *, int);
+void bnw_destroy(void);
 
 #endif
