@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -42,7 +43,8 @@
    ========================================================================== */
 
 
-in_addr_t  *ip_list;  /* list containing IPs, black or white */
+in_addr_t  *ip_list;  /* list containing IPs black or white in host endianess */
+size_t      num_ip;   /* number of ips in ip_list */
 int         mode;     /* operation mode, 0 - none, -1 blacklist, 1 whitelist */
 
 
@@ -60,6 +62,39 @@ int         mode;     /* operation mode, 0 - none, -1 blacklist, 1 whitelist */
            /_/   \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/
 
    ========================================================================== */
+
+
+/* ==========================================================================
+    comparator for sorting ip list
+   ========================================================================== */
+
+
+static int bnw_ip_comp
+(
+    const void       *a,   /* ip a */
+    const void       *b    /* ip b */
+    )
+{
+    const in_addr_t  *ipa;  /* ip a */
+    const in_addr_t  *ipb;  /* ip b */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    ipa = a;
+    ipb = b;
+
+    if (*ipa == *ipb)
+    {
+        return 0;
+    }
+
+    if (*ipa < *ipb)
+    {
+        return -1;
+    }
+
+    return 1;
+}
 
 
 /* ==========================================================================
@@ -90,11 +125,6 @@ static int bnw_parse_list
         n += f[i] == '\n';
     }
 
-    /*
-     * we reserve space for n + 1 elements, for NULL at the end
-     */
-
-    ++n;
     if ((ip_list = malloc(n * sizeof(in_addr_t))) == NULL)
     {
         el_print(ELE, "malloc error %d bytes for list", n * sizeof(in_addr_t));
@@ -135,7 +165,7 @@ static int bnw_parse_list
 
         ip[j] = '\0';
 
-        if ((ip_list[n] = inet_addr(ip)) == INADDR_NONE)
+        if ((ip_list[n] = ntohl(inet_addr(ip))) == INADDR_NONE)
         {
             el_print(ELE, "malformed ip (%s) in list on line %d", ip, n + 1);
             free(ip_list);
@@ -146,12 +176,13 @@ static int bnw_parse_list
     }
 
     /*
-     * null terminate ip_list
+     * sort IPs for faster search
      */
 
-    ip_list[n] = (in_addr_t)0;
+    num_ip = n;
+    qsort(ip_list, n, sizeof(in_addr_t), bnw_ip_comp);
     el_print(ELI, "%d IPs added to the list, list size in mem %zu bytes",
-        n, (n + 1) * sizeof(in_addr_t));
+        n, n * sizeof(in_addr_t));
 
     return 0;
 }
@@ -238,6 +269,93 @@ int bnw_init
     close(fd);
     return 0;
 }
+
+
+/* ==========================================================================
+    determines wheter ip should be allowed to upload to server or not.
+   ========================================================================== */
+
+
+int bnw_is_allowed
+(
+    in_addr_t ip      /* ip address to check */
+)
+{
+    size_t    begin;  /* begin index for binary search */
+    size_t    end;    /* end index for binary search */
+    size_t    i;      /* middle index to check for binary search */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    if (mode == 0)
+    {
+        /*
+         * filtering is off, ip is always allowed
+         */
+
+        return 1;
+    }
+
+    ip = ntohl(ip);
+    begin = 0;
+    end = num_ip - 1;
+
+    while (begin <= end)
+    {
+        i = (begin + end) / 2;
+
+        if (ip_list[i] == ip)
+        {
+            if (mode == 1)
+            {
+                /*
+                 * ip was found in white list mode, ip is allowed
+                 */
+
+                return 1;
+            }
+            else
+            {
+                /*
+                 * ip was found in black list mode, ip is not allowed
+                 */
+
+                return 0;
+            }
+        }
+
+        if (ip_list[i] > ip)
+        {
+            end = i - 1;
+        }
+        else
+        {
+            begin = i + 1;
+        }
+    }
+
+    if (mode == 1)
+    {
+        /*
+         * ip was not found in white list, do not allow
+         */
+
+        return 0;
+    }
+    else
+    {
+        /*
+         * ip was not found in black list, allow ip
+         */
+
+        return 1;
+    }
+}
+
+
+/* ==========================================================================
+    frees all resources allocated by this module
+   ========================================================================== */
 
 
 void bnw_destroy(void)
