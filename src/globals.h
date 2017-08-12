@@ -11,6 +11,7 @@
 
 extern cfg_t             *g_config;
 extern int                g_shutdown;
+extern int                g_stfu;
 extern struct el_options  g_qlog;
 
 #endif

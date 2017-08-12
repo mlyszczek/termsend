@@ -1008,6 +1008,21 @@ void server_destroy(void)
             return;
         }
 
+        if (g_stfu)
+        {
+            /*
+             * someone is nervous, finishing without waiting for  connection
+             * to finish - this might cause file  in  output_dir  to  be  in
+             * invalid state
+             */
+
+            el_print(ELW, "exiting without waiting for connection to finish "
+                "this may lead to invalid files in %s",
+                cfg_getstr(g_config, "output_dir"));
+
+            return;
+        }
+
         usleep(100 * 1000);  /* 100[ms] */
     }
 }

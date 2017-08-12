@@ -56,6 +56,7 @@
 
 struct el_options  g_qlog;      /* options for embedlog to print query logs */
 int                g_shutdown;  /* flag indicating that program should die */
+int                g_stfu;      /* someone relly want to kill us FAST */
 
 
 /* ==========================================================================
@@ -85,8 +86,18 @@ static void sigint_handler(int signo)
 {
     (void)signo;
 
-    el_print(ELI, "received SIGINT, exiting");
+    if (g_shutdown)
+    {
+        /*
+         * someone hit ctrl-c second time, impatient fella
+         */
 
+        el_print(ELI, "second SIGINT, ok... got it, will deal with it!");
+        g_stfu = 1;
+        return;
+    }
+
+    el_print(ELI, "received SIGINT, exiting");
     g_shutdown = 1;
 }
 
