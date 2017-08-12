@@ -27,12 +27,15 @@
    ========================================================================== */
 
 
+#include <string.h>
+#include <signal.h>
 #include <confuse.h>
 #include <embedlog.h>
 
 #include "config.h"
 #include "bnwlist.h"
 #include "globals.h"
+#include "server.h"
 
 
 /* ==========================================================================
@@ -56,6 +59,32 @@ int                g_shutdown;  /* flag indicating that program should die */
 
 
 /* ==========================================================================
+                                   _                __
+                     ____   _____ (_)_   __ ____ _ / /_ ___
+                    / __ \ / ___// /| | / // __ `// __// _ \
+                   / /_/ // /   / / | |/ // /_/ // /_ /  __/
+                  / .___//_/   /_/  |___/ \__,_/ \__/ \___/
+                 /_/
+               ____                     __   _
+              / __/__  __ ____   _____ / /_ (_)____   ____   _____
+             / /_ / / / // __ \ / ___// __// // __ \ / __ \ / ___/
+            / __// /_/ // / / // /__ / /_ / // /_/ // / / /(__  )
+           /_/   \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/
+
+   ========================================================================== */
+
+
+static void sigint_handler(int signo)
+{
+    (void)signo;
+
+    el_print(ELI, "received SIGINT, exiting");
+
+    g_shutdown = 0;
+}
+
+
+/* ==========================================================================
                                         __     __ _
                          ____   __  __ / /_   / /(_)_____
                         / __ \ / / / // __ \ / // // ___/
@@ -73,8 +102,9 @@ int                g_shutdown;  /* flag indicating that program should die */
 
 int main(int argc, char *argv[])
 {
-    int          list_type;
-    const char  *list_file;
+    int               list_type;
+    const char       *list_file;
+    struct sigaction  sa;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -94,6 +124,11 @@ int main(int argc, char *argv[])
     el_ooption(&g_qlog, EL_OPT_FINFO, 0);
     el_ooption(&g_qlog, EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
 
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = sigint_handler;
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+
     config_print();
 
     list_type = cfg_getint(g_config, "list_type");
@@ -101,7 +136,17 @@ int main(int argc, char *argv[])
 
     bnw_init(list_file, list_type);
 
+    if (server_init() != 0)
+    {
+        el_print(ELE, "couldn't start server, aborting");
+        goto server_error;
+    }
+
+    server_loop_forever();
+
+server_error:
 error:
+    server_destroy();
     bnw_destroy();
     config_destroy();
 

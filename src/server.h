@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 
 int server_init(void);
+void server_destroy(void);
 void server_loop_forever(void);
 
 #endif

@@ -245,14 +245,14 @@ static int server_create_socket
      * connecting  to  that  socket  will  also  inherit  non  block  nature
      */
 
-    if ((flags = fcntl(fd, F_GETFL, 0)) != 0)
+    if ((flags = fcntl(fd, F_GETFL)) == -1)
     {
         el_perror(ELE, "error reading socket flags");
         close(fd);
         return INADDR_NONE;
     }
 
-    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0)
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
     {
         el_perror(ELE, "error setting socket to O_NONBLOCK");
         close(fd);
@@ -297,6 +297,7 @@ static void *server_handle_upload
 
 
     cfd = (intptr_t)arg;
+    clen = sizeof(client);
     getsockname(cfd, (struct sockaddr *)&client, &clen);
 
     strcpy(path, cfg_getstr(g_config, "output_dir"));
@@ -580,6 +581,8 @@ static void server_process_connection
      * process all awaiting connections in sfd socket
      */
 
+    clen = sizeof(client);
+
     for (;;)
     {
         if ((cfd = accept(sfd, (struct sockaddr *)&client, &clen)) < 0)
@@ -630,6 +633,9 @@ static void server_process_connection
             close(cfd);
             continue;
         }
+
+        el_print(ELI, "incoming connection from %s socket id %d",
+            inet_ntoa(client.sin_addr), cfd);
 
         /*
          * set timeout so read call on cfd can return if no new data has
@@ -788,19 +794,7 @@ int server_init(void)
     return 0;
 
 error:
-    /*
-     * close all sockets that might have been opened, it's ok  to  close  -1
-     * socket
-     */
-
-    for (i = 0; i != nsfds; ++i)
-    {
-        close(sfds[i]);
-    }
-
-    pthread_mutex_destroy(&lconn);
-    pthread_mutex_destroy(&lopen);
-    free(sfds);
+    server_destroy();
     return -1;
 }
 
@@ -918,4 +912,25 @@ void server_loop_forever(void)
             server_process_connection(sfds[i]);
         }
     }
+}
+
+void server_destroy(void)
+{
+    int  i;  /* simple iterator for loop */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    /*
+     * close all sockets that might have been opened, it's ok  to  close  -1
+     * socket
+     */
+
+    for (i = 0; i != nsfds; ++i)
+    {
+        close(sfds[i]);
+    }
+
+    pthread_mutex_destroy(&lconn);
+    pthread_mutex_destroy(&lopen);
+    free(sfds);
 }
