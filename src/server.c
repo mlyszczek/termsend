@@ -43,6 +43,7 @@
 #include <limits.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -155,7 +156,7 @@ static void server_reply
 
 
     va_start(ap, fmt);
-    mlen = snprintf(msg, sizeof(msg), fmt, ap);
+    mlen = vsprintf(msg, fmt, ap);
     va_end(ap);
 
     /*
@@ -204,6 +205,22 @@ static int server_create_socket
     if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
         el_perror(ELE, "couldn't create server socket");
+        return -1;
+    }
+
+    /*
+     * as TCP  is  all  about  reliability,  after  server  crashes  (or  is
+     * restarted), kernel still keep our server tuple in TIME_WAIT state, to
+     * make sure all connections are closed properly disallowing us to  bind
+     * to that address again.  We don't need such behaviour, thus  we  allos
+     * SO_REUSEADDR
+     */
+
+    flags = 1;
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &flags, sizeof(flags)) != 0)
+    {
+        el_perror(ELE, "failed to set socket to SO_REUSEADDR");
+        close(fd);
         return -1;
     }
 
@@ -279,6 +296,7 @@ static void *server_handle_upload
 {
     struct sockaddr_in  client;      /* address of connected client */
     socklen_t           clen;        /* size of client address */
+    sigset_t            set;         /* signals to mask in thread */
     int                 cfd;         /* socket associated with client */
     int                 fd;          /* file where data will be stored */
     int                 ncollision;  /* number of file name collisions hit */
@@ -303,6 +321,24 @@ static void *server_handle_upload
     strcpy(path, cfg_getstr(g_config, "output_dir"));
     strcat(path, "/");
     opathlen = strlen(path);
+
+    /*
+     * we don't want threads that handle client connection to receive signals,
+     * and thus interrupt system calls like write or read. Only main thread
+     * can handle signals, so we mask all signals here
+     */
+
+    sigfillset(&set);
+
+    if (pthread_sigmask(SIG_SETMASK, &set, NULL) != 0)
+    {
+        el_perror(ELW, "couldn't mask signals");
+        el_oprint(ELI, &g_qlog, "rejected [%s]: signal mask failed",
+                inet_ntoa(client.sin_addr));
+        server_reply(cfd, "internal server error, try again later\n");
+        close(fd);
+        return NULL;
+    }
 
     /*
      * generate unique file name for content that client will be sending  we
@@ -362,6 +398,9 @@ static void *server_handle_upload
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
         close(cfd);
+        pthread_mutex_lock(&lconn);
+        --cconn;
+        pthread_mutex_unlock(&lconn);
         return NULL;
     }
     pthread_mutex_unlock(&lopen);
@@ -381,6 +420,7 @@ static void *server_handle_upload
 
     memset(ends, 0, sizeof(ends));
     written = 0;
+    timeout = 0;
 
     for (;;)
     {
@@ -414,8 +454,8 @@ static void *server_handle_upload
                      */
 
                     server_reply(cfd, "disconnected due to inactivity for %d "
-                        "seconds, did you forget to append termination string?",
-                        maxto);
+                        "seconds, did you forget to append termination "
+                        "string - \"kurload\\n\"?\n", maxto);
                     goto error;
                 }
 
@@ -509,7 +549,7 @@ static void *server_handle_upload
              * transfer status
              */
 
-            server_reply(cfd, "uploaded %10d bytes\n");
+            server_reply(cfd, "uploaded %10d bytes\n", written);
             continue;
         }
 
@@ -541,6 +581,10 @@ static void *server_handle_upload
     server_reply(cfd, "upload complete, link to file %s\n", url);
     close(cfd);
 
+    pthread_mutex_lock(&lconn);
+    --cconn;
+    pthread_mutex_unlock(&lconn);
+
     return NULL;
 
 error:
@@ -552,6 +596,11 @@ error:
     close(cfd);
     close(fd);
     unlink(path);
+
+    pthread_mutex_lock(&lconn);
+    --cconn;
+    pthread_mutex_unlock(&lconn);
+
     return NULL;
 }
 
@@ -611,7 +660,7 @@ static void server_process_connection
         {
             el_oprint(ELI, &g_qlog, "rejected [%s]: not allowed",
                 inet_ntoa(client.sin_addr));
-            server_reply(cfd, "you are not allowed to upload to this server");
+            server_reply(cfd, "you are not allowed to upload to this server\n");
             close(cfd);
             continue;
         }
@@ -629,7 +678,7 @@ static void server_process_connection
         {
             el_oprint(ELI, &g_qlog, "rejected [%s]: connection limit",
                 inet_ntoa(client.sin_addr));
-            server_reply(cfd, "all upload slot are taken, try again later");
+            server_reply(cfd, "all upload slot are taken, try again later\n");
             close(cfd);
             continue;
         }
@@ -919,10 +968,9 @@ void server_destroy(void)
     int  i;  /* simple iterator for loop */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-
     /*
-     * close all sockets that might have been opened, it's ok  to  close  -1
-     * socket
+     * close all server sockets, so any new connection is automatically droped
+     * by the system
      */
 
     for (i = 0; i != nsfds; ++i)
@@ -933,4 +981,33 @@ void server_destroy(void)
     pthread_mutex_destroy(&lconn);
     pthread_mutex_destroy(&lopen);
     free(sfds);
+
+    /*
+     * when all cleaning is done, we wait for all  ongoing  transmisions  to
+     * finish
+     */
+
+    el_print(ELI, "waiting for all connections to finish");
+
+    for (;;)
+    {
+        int nconn;  /* number of currently active connections */
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+        pthread_mutex_lock(&lconn);
+        nconn = cconn;
+        pthread_mutex_unlock(&lconn);
+
+        if (nconn == 0)
+        {
+            /*
+             * all connections has been closed, we can proceed with cleaning
+             * up operations
+             */
+
+            return;
+        }
+
+        usleep(100 * 1000);  /* 100[ms] */
+    }
 }

@@ -74,13 +74,20 @@ int                g_shutdown;  /* flag indicating that program should die */
    ========================================================================== */
 
 
+/* ==========================================================================
+    handles SIGINT and SIGTERM signals,  it  basicly  sets  global  variable
+    g_shutdown to 1, to inform all module to exit.  Also accept() from  main
+    loop will receive EINTR so it doesn't stuck
+   ========================================================================== */
+
+
 static void sigint_handler(int signo)
 {
     (void)signo;
 
     el_print(ELI, "received SIGINT, exiting");
 
-    g_shutdown = 0;
+    g_shutdown = 1;
 }
 
 
@@ -144,9 +151,9 @@ int main(int argc, char *argv[])
 
     server_loop_forever();
 
-server_error:
 error:
     server_destroy();
+server_error:
     bnw_destroy();
     config_destroy();
 
