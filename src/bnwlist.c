@@ -308,9 +308,9 @@ int bnw_is_allowed
     in_addr_t ip      /* ip address to check */
 )
 {
-    size_t    begin;  /* begin index for binary search */
-    size_t    end;    /* end index for binary search */
-    size_t    i;      /* middle index to check for binary search */
+    int       begin;  /* begin index for binary search */
+    int       end;    /* end index for binary search */
+    int       i;      /* middle index to check for binary search */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
