@@ -244,6 +244,7 @@ static void config_parse_configuration
         CFG_INT(     "listen_port",      1337,                           0),
         CFG_INT(     "max_size",         1024 * 1024 /* 1MiB */,         0),
         CFG_INT(     "max_connections",  10,                             0),
+        CFG_INT(     "max_timeout",      60,                             0),
         CFG_INT(     "list_type",        0,                              0),
         CFG_STR(     "domain",           "localhost",                    0),
         CFG_STR(     "user",             "kurload",                      0),
@@ -353,6 +354,8 @@ void config_print(void)
     CONFIG_PRINT_INT(listen_port);
     CONFIG_PRINT_INT(max_size);
     CONFIG_PRINT_STR(domain);
+    CONFIG_PRINT_INT(max_connections);
+    CONFIG_PRINT_INT(max_timeout);
     CONFIG_PRINT_STR(user);
     CONFIG_PRINT_STR(group);
     CONFIG_PRINT_STR(query_log);
