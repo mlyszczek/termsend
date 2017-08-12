@@ -32,6 +32,28 @@
 
 #include "config.h"
 #include "bnwlist.h"
+#include "globals.h"
+
+
+/* ==========================================================================
+                               __        __            __
+                       ____ _ / /____   / /_   ____ _ / /
+                      / __ `// // __ \ / __ \ / __ `// /
+                     / /_/ // // /_/ // /_/ // /_/ // /
+                     \__, //_/ \____//_.___/ \__,_//_/
+                    /____/
+                                   _         __     __
+              _   __ ____ _ _____ (_)____ _ / /_   / /___   _____
+             | | / // __ `// ___// // __ `// __ \ / // _ \ / ___/
+             | |/ // /_/ // /   / // /_/ // /_/ // //  __/(__  )
+             |___/ \__,_//_/   /_/ \__,_//_.___//_/ \___//____/
+
+   ========================================================================== */
+
+
+struct el_options  g_qlog;      /* options for embedlog to print query logs */
+int                g_shutdown;  /* flag indicating that program should die */
+
 
 /* ==========================================================================
                                         __     __ _
@@ -63,6 +85,14 @@ int main(int argc, char *argv[])
     el_option(EL_OPT_FINFO, 1);
     el_option(EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
     el_option(EL_OPT_COLORS, cfg_getint(g_config, "colorful_output"));
+
+    el_options_init(&g_qlog);
+    el_olevel_set(&g_qlog, EL_LEVEL_INF);
+    el_ooutput_enable(&g_qlog, EL_OUT_STDERR);
+    el_ooption(&g_qlog, EL_OPT_TS, EL_OPT_TS_LONG);
+    el_ooption(&g_qlog, EL_OPT_COLORS, 0);
+    el_ooption(&g_qlog, EL_OPT_FINFO, 0);
+    el_ooption(&g_qlog, EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
 
     config_print();
 

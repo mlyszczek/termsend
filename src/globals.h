@@ -3,17 +3,14 @@
     Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
    ========================================================================== */
 
-
-#ifndef APP_CONFIG_H
-#define APP_CONFIG_H 1
-
+#ifndef GLOBALS_H
+#define GLOBALS_H 1
 
 #include <confuse.h>
+#include <embedlog.h>
 
-
-void config_init(int, char **);
-void config_destroy(void);
-void config_print(void);
-
+extern cfg_t             *g_config;
+extern int                g_shutdown;
+extern struct el_options  g_qlog;
 
 #endif

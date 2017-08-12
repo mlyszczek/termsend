@@ -3,17 +3,12 @@
     Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
    ========================================================================== */
 
+#ifndef SERVER_H
+#define SERVER_H 1
 
-#ifndef APP_CONFIG_H
-#define APP_CONFIG_H 1
+#include <arpa/inet.h>
 
-
-#include <confuse.h>
-
-
-void config_init(int, char **);
-void config_destroy(void);
-void config_print(void);
-
+int server_init(void);
+void server_loop_forever(void);
 
 #endif

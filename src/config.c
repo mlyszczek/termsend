@@ -238,11 +238,12 @@ static void config_parse_configuration
     {
     /*  type         field name          default value                 flags */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        CFG_STR_LIST("bind_if",          "{none}",                       0),
+        CFG_STR_LIST("bind_ip",          "{0.0.0.0}",                    0),
         CFG_INT(     "log_level",        EL_LEVEL_ERR,                   0),
         CFG_INT(     "colorful_output",  0,                              0),
         CFG_INT(     "listen_port",      1337,                           0),
         CFG_INT(     "max_size",         1024 * 1024 /* 1MiB */,         0),
+        CFG_INT(     "max_connections",  10,                             0),
         CFG_INT(     "list_type",        0,                              0),
         CFG_STR(     "domain",           "localhost",                    0),
         CFG_STR(     "user",             "kurload",                      0),
@@ -360,5 +361,5 @@ void config_print(void)
     CONFIG_PRINT_STR(blacklist);
     CONFIG_PRINT_INT(list_type);
     CONFIG_PRINT_STR(output_dir);
-    CONFIG_PRINT_STR(bind_if);
+    CONFIG_PRINT_STR(bind_ip);
 }

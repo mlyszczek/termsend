@@ -1,6 +1,33 @@
 /* ==========================================================================
     Licensed under BSD 2clause license See LICENSE file for more information
     Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
+   ==========================================================================
+
+   ------------------------------------------------------------
+  / This module is responsible for loading black or white list \
+  | from file, parse it and convert to sorted array of         |
+  | in_addr_t. It also allows to check if given IP address is  |
+  \ allowed, depening on mode, to upload or not                /
+   ------------------------------------------------------------
+              \         ,        ,
+               \       /(        )`
+                \      \ \___   / |
+                       /- _  `-/  '
+                      (/\/ \ \   /\
+                      / /   | `    \
+                      O O   ) /    |
+                      `-^--'`<     '
+                     (_.)  _  )   /
+                      `.___/`    /
+                        `-----' /
+           <----.     __ / __   \
+           <----|====O)))==) \) /====
+           <----'    `--' `.__,' \
+                        |        |
+                         \       /
+                   ______( (_  / \______
+                 ,'  ,-----'   |        \
+                 `--{__________)        \/
    ========================================================================== */
 
 
@@ -14,15 +41,15 @@
    ========================================================================== */
 
 
-#include <embedlog.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <arpa/inet.h>
+#include <embedlog.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
-#include <errno.h>
+#include <unistd.h>
 
 #include "bnwlist.h"
 
@@ -43,9 +70,9 @@
    ========================================================================== */
 
 
-in_addr_t  *ip_list;  /* list containing IPs black or white in host endianess */
-size_t      num_ip;   /* number of ips in ip_list */
-int         mode;     /* operation mode, 0 - none, -1 blacklist, 1 whitelist */
+static in_addr_t  *ip_list;  /* list containing IPs in host endianess */
+static size_t      num_ip;   /* number of ips in ip_list */
+static int         mode;     /* operation mode, 0 - none, -1 black, 1 white */
 
 
 /* ==========================================================================
@@ -71,9 +98,9 @@ int         mode;     /* operation mode, 0 - none, -1 blacklist, 1 whitelist */
 
 static int bnw_ip_comp
 (
-    const void       *a,   /* ip a */
-    const void       *b    /* ip b */
-    )
+    const void       *a,    /* ip a */
+    const void       *b     /* ip b */
+)
 {
     const in_addr_t  *ipa;  /* ip a */
     const in_addr_t  *ipb;  /* ip b */
