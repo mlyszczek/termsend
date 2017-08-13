@@ -27,6 +27,7 @@
    ========================================================================== */
 
 
+#include <errno.h>
 #include <string.h>
 #include <signal.h>
 #include <confuse.h>
@@ -127,20 +128,36 @@ int main(int argc, char *argv[])
 
 
     config_init(argc, argv);
+
+    el_init();
     el_level_set(cfg_getint(g_config, "log_level"));
-    el_output_enable(EL_OUT_STDERR);
+    el_output_enable(EL_OUT_FILE);
     el_option(EL_OPT_TS, EL_OPT_TS_LONG);
-    el_option(EL_OPT_FINFO, 1);
     el_option(EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
+    el_option(EL_OPT_FINFO, 1);
     el_option(EL_OPT_COLORS, cfg_getint(g_config, "colorful_output"));
+
+    if (el_option(EL_OPT_FNAME, cfg_getstr(g_config, "program_log")) != 0)
+    {
+        fprintf(stderr, "WARNING couldn't open program log file %s: %s\n",
+            cfg_getstr(g_config, "program_log"),  strerror(errno));
+        el_output_disable(EL_OUT_ALL);
+    }
 
     el_options_init(&g_qlog);
     el_olevel_set(&g_qlog, EL_LEVEL_INF);
-    el_ooutput_enable(&g_qlog, EL_OUT_STDERR);
+    el_ooutput_enable(&g_qlog, EL_OUT_FILE);
     el_ooption(&g_qlog, EL_OPT_TS, EL_OPT_TS_LONG);
-    el_ooption(&g_qlog, EL_OPT_COLORS, 0);
-    el_ooption(&g_qlog, EL_OPT_FINFO, 0);
     el_ooption(&g_qlog, EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
+    el_ooption(&g_qlog, EL_OPT_PRINT_LEVEL, 0);
+
+    if (el_ooption(&g_qlog, EL_OPT_FNAME, cfg_getstr(g_config, "query_log"))
+        != 0)
+    {
+        fprintf(stderr, "WARNING couldn't open query log file %s: %s\n",
+             cfg_getstr(g_config, "query_log"), strerror(errno));
+        el_ooutput_disable(&g_qlog, EL_OUT_ALL);
+    }
 
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = sigint_handler;

@@ -333,7 +333,7 @@ static void *server_handle_upload
     if (pthread_sigmask(SIG_SETMASK, &set, NULL) != 0)
     {
         el_perror(ELW, "couldn't mask signals");
-        el_oprint(ELI, &g_qlog, "rejected [%s]: signal mask failed",
+        el_oprint(ELI, &g_qlog, "[%s] rejected: signal mask failed",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
         close(fd);
@@ -394,7 +394,7 @@ static void *server_handle_upload
 
         pthread_mutex_unlock(&lopen);
         el_perror(ELW, "[%3d] couldn't open file %s", cfd, path);
-        el_oprint(ELI, &g_qlog, "rejected [%s]: file open error",
+        el_oprint(ELI, &g_qlog, "[%s] rejected: file open error",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
         close(cfd);
@@ -443,7 +443,7 @@ static void *server_handle_upload
                 {
                     el_print(ELW, "[%3d] client inactive for %d seconds",
                         cfd, maxto);
-                    el_oprint(ELI, &g_qlog, "rejected [%s]: inactivity",
+                    el_oprint(ELI, &g_qlog, "[%s] rejected: inactivity",
                         inet_ntoa(client.sin_addr));
 
                     /*
@@ -469,7 +469,7 @@ static void *server_handle_upload
              */
 
             el_perror(ELW, "[%3d] couldn't read from client", cfd);
-            el_oprint(ELI, &g_qlog, "rejected [%s]: read error",
+            el_oprint(ELI, &g_qlog, "[%s] rejected: read error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
             goto error;
@@ -482,7 +482,7 @@ static void *server_handle_upload
              * data could be uploaded, well, his choice
              */
 
-            el_oprint(ELI, &g_qlog, "rejected [%s]: connection closed by client",
+            el_oprint(ELI, &g_qlog, "[%s] rejected: connection closed by client",
                 inet_ntoa(client.sin_addr));
             goto error;
         }
@@ -496,7 +496,7 @@ static void *server_handle_upload
         if ((w = write(fd, buf, r)) != r)
         {
             el_perror(ELW, "[%3d] couldn't write to file", cfd);
-            el_oprint(ELI, &g_qlog, "rejected [%s]: write to file failed",
+            el_oprint(ELI, &g_qlog, "[%s] rejected: write to file failed",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
             goto error;
@@ -535,7 +535,7 @@ static void *server_handle_upload
              */
 
             el_perror(ELW, "[%3d] couldn't read end string", cfd);
-            el_oprint(ELI, &g_qlog, "rejected [%s]: end string read error",
+            el_oprint(ELI, &g_qlog, "[%s] rejected: end string read error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
             goto error;
@@ -577,7 +577,7 @@ static void *server_handle_upload
     strcpy(url, cfg_getstr(g_config, "domain"));
     strcat(url, "/");
     strcat(url, fname);
-    el_oprint(ELI, &g_qlog, "%s [%s]", fname, inet_ntoa(client.sin_addr));
+    el_oprint(ELI, &g_qlog, "[%s] %s", inet_ntoa(client.sin_addr), fname);
     server_reply(cfd, "upload complete, link to file %s\n", url);
     close(cfd);
 
@@ -658,7 +658,7 @@ static void server_process_connection
 
         if (bnw_is_allowed(ntohl(client.sin_addr.s_addr)) == 0)
         {
-            el_oprint(ELI, &g_qlog, "rejected [%s]: not allowed",
+            el_oprint(ELI, &g_qlog, "[%s] rejected: not allowed",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "you are not allowed to upload to this server\n");
             close(cfd);
@@ -676,7 +676,7 @@ static void server_process_connection
 
         if (nconn >= mconn)
         {
-            el_oprint(ELI, &g_qlog, "rejected [%s]: connection limit",
+            el_oprint(ELI, &g_qlog, "[%s] rejected: connection limit",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "all upload slot are taken, try again later\n");
             close(cfd);
