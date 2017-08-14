@@ -37,6 +37,7 @@
 #include "bnwlist.h"
 #include "globals.h"
 #include "server.h"
+#include "daemonize.h"
 
 
 /* ==========================================================================
@@ -129,6 +130,12 @@ int main(int argc, char *argv[])
 
     config_init(argc, argv);
 
+    if (cfg_getint(g_config, "daemonize"))
+    {
+        daemonize(cfg_getstr(g_config, "pid_file"),
+            cfg_getstr(g_config, "user"), cfg_getstr(g_config, "group"));
+    }
+
     el_init();
     el_level_set(cfg_getint(g_config, "log_level"));
     el_output_enable(EL_OUT_FILE);
@@ -183,7 +190,12 @@ error:
     server_destroy();
 server_error:
     bnw_destroy();
-    config_destroy();
 
+    if (cfg_getint(g_config, "daemonize"))
+    {
+        daemonize_cleanup(cfg_getstr(g_config, "pid_file"));
+    }
+
+    config_destroy();
     return 0;
 }

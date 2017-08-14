@@ -92,10 +92,12 @@ struct cfg_t  *g_config;  /* program configuration */
 
 
 #define CONFIG_PRINT_STR(field) \
-    el_print(ELI, "%-20s %s", #field, cfg_getstr(g_config, #field))
+    el_print(ELI, "%s%s %s", #field, padder + strlen(#field), \
+        cfg_getstr(g_config, #field));
 
 #define CONFIG_PRINT_INT(field) \
-    el_print(ELI, "%-20s %d", #field, cfg_getint(g_config, #field))
+    el_print(ELI, "%s%s %d", #field, padder + strlen(#field), \
+        cfg_getint(g_config, #field));
 
 
 /* ==========================================================================
@@ -127,6 +129,7 @@ static void config_parse_arguments
     char  *argv[],      /* argument list */
     int   *color,       /* colors enabled in argument? */
     int   *level,       /* log level from arguments */
+    int   *daemonize,   /* should we run as daemon? */
     char  *config_path  /* configuration path from arguments */
 )
 {
@@ -137,13 +140,14 @@ static void config_parse_arguments
     opterr = 0;
     *color = -1;
     *level = -1;
+    *daemonize = -1;
     strcpy(config_path, "/etc/kurload/kurload.conf");
 
     /*
      * first we parse command line arguments
      */
 
-    while ((arg = getopt(argc, argv, "hvcl:f:")) != -1)
+    while ((arg = getopt(argc, argv, "hvcdl:f:")) != -1)
     {
         switch (arg)
         {
@@ -156,6 +160,7 @@ static void config_parse_arguments
                     "\t-h         prints this help and quits\n"
                     "\t-v         prints version and quits\n"
                     "\t-c         if set, output will have nice colors\n"
+                    "\t-d         run as daemon\n"
                     "\t-l<num>    logging level 0-3 \n"
                     "\t-f<path>   path to configuration file\n"
                     "\n"
@@ -177,6 +182,10 @@ static void config_parse_arguments
 
         case 'c':
             *color = 1;
+            break;
+
+        case 'd':
+            *daemonize = 1;
             break;
 
         case 'l':
@@ -243,6 +252,7 @@ static void config_parse_configuration
         CFG_INT(     "colorful_output",  0,                              0),
         CFG_INT(     "listen_port",      1337,                           0),
         CFG_INT(     "max_size",         1024 * 1024 /* 1MiB */,         0),
+        CFG_INT(     "daemonize",        0,                              0),
         CFG_INT(     "max_connections",  10,                             0),
         CFG_INT(     "max_timeout",      60,                             0),
         CFG_INT(     "list_type",        0,                              0),
@@ -251,9 +261,10 @@ static void config_parse_configuration
         CFG_STR(     "group",            "kurload",                      0),
         CFG_STR(     "query_log",        "/var/log/kurload-query.log",   0),
         CFG_STR(     "program_log",      "/var/log/kurload.log",         0),
+        CFG_STR(     "pid_file",         "/var/run/kurload.pid",         0),
+        CFG_STR(     "output_dir",       "/var/lib/kurload",             0),
         CFG_STR(     "whitelist",        "/etc/kurload/whitelist",       0),
         CFG_STR(     "blacklist",        "/etc/kurload/blacklist",       0),
-        CFG_STR(     "output_dir",       "/var/lib/kurload",             0),
         CFG_END()
     };
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -306,10 +317,11 @@ void config_init
 {
     int    color;                      /* enable colorful output */
     int    level;                      /* logging level */
+    int    daemonize;                  /* should we run as daemon? */
     char   config_path[PATH_MAX + 1];  /* path to configuration file */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    config_parse_arguments(argc, argv, &color, &level, config_path);
+    config_parse_arguments(argc, argv, &color, &level, &daemonize, config_path);
     config_parse_configuration(config_path);
 
     /*
@@ -325,6 +337,11 @@ void config_init
     if (level != -1)
     {
         cfg_setint(g_config, "log_level", level);
+    }
+
+    if (daemonize != -1)
+    {
+        cfg_setint(g_config, "daemonize", daemonize);
     }
 }
 
@@ -347,6 +364,10 @@ void config_destroy(void)
 
 void config_print(void)
 {
+    char padder[] = "....................:";
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
     el_print(ELI, APP_VERSION);
     el_print(ELI, "kurload configuration");
     CONFIG_PRINT_INT(log_level);
@@ -354,6 +375,7 @@ void config_print(void)
     CONFIG_PRINT_INT(listen_port);
     CONFIG_PRINT_INT(max_size);
     CONFIG_PRINT_STR(domain);
+    CONFIG_PRINT_INT(daemonize);
     CONFIG_PRINT_INT(max_connections);
     CONFIG_PRINT_INT(max_timeout);
     CONFIG_PRINT_STR(user);
@@ -364,5 +386,6 @@ void config_print(void)
     CONFIG_PRINT_STR(blacklist);
     CONFIG_PRINT_INT(list_type);
     CONFIG_PRINT_STR(output_dir);
+    CONFIG_PRINT_STR(pid_file);
     CONFIG_PRINT_STR(bind_ip);
 }
