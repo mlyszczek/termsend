@@ -261,7 +261,7 @@ int bnw_init
 
     if (stat(flist, &st) == -1)
     {
-        if (errno = ENOENT)
+        if (errno == ENOENT)
         {
             el_print(ELW, "file list doesn't exist, assuming no filter");
             mode = 0;
