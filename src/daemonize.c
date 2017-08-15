@@ -43,6 +43,7 @@
 #include <fcntl.h>
 #include <grp.h>
 #include <pwd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -177,8 +178,7 @@ void daemonize
 
     drop_privilige_failed:
         close(fd);
-        int e = unlink(pid_file);
-        fprintf(stderr, "%d %s\n", e, strerror(errno));
+        unlink(pid_file);
         exit(2);
     }
 
@@ -217,7 +217,14 @@ drop_privilige_finished:
          */
 
         sprintf(pids, "%d", pid);
-        write(fd, pids, strlen(pids));
+
+        if (write(fd, pids, strlen(pids)) != strlen(pids))
+        {
+            kill(pid, SIGKILL);
+            fprintf(stderr, "error writing pid to file %s: %s\n", pid_file,
+                strerror(errno));
+        }
+
         close(fd);
         exit(0);
     }
