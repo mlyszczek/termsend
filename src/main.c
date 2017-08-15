@@ -176,7 +176,11 @@ int main(int argc, char *argv[])
     list_type = cfg_getint(g_config, "list_type");
     list_file = cfg_getstr(g_config, list_type == 1 ? "whitelist" : "blacklist");
 
-    bnw_init(list_file, list_type);
+    if (bnw_init(list_file, list_type) != 0)
+    {
+        el_print(ELE, "couldn't initialize black and white list");
+        goto bnw_error;
+    }
 
     if (server_init() != 0)
     {
@@ -185,12 +189,12 @@ int main(int argc, char *argv[])
     }
 
     server_loop_forever();
-
-error:
     server_destroy();
+
 server_error:
     bnw_destroy();
 
+bnw_error:
     if (cfg_getint(g_config, "daemonize"))
     {
         daemonize_cleanup(cfg_getstr(g_config, "pid_file"));
