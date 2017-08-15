@@ -118,10 +118,8 @@ void server_generate_fname
     size_t               l
 )
 {
-    static const size_t  lmin = 5;
     static const char    alphanum[] = "0123456789abcdefghijklmnopqrstuvwxyz";
-
-    int                  i;
+    size_t               i;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -305,9 +303,9 @@ static void *server_handle_upload
     char                path[PATH_MAX];  /* full path to the file */
     char                fname[32];   /* random generated file name */
     char                url[1024];   /* generated link to uploaded data */
+    char                ends[8 + 1]; /* buffer for end string detection */
     static int          flen = 5;    /* length of the filename to generate */
     unsigned char       buf[8192];   /* temp buffer we read uploaded data to */
-    unsigned char       ends[8 + 1]; /* buffer for end string detection */
     size_t              written;     /* total written bytes to file */
     ssize_t             w;           /* return from write function */
     ssize_t             r;           /* return from read function */
@@ -336,7 +334,6 @@ static void *server_handle_upload
         el_oprint(ELI, &g_qlog, "[%s] rejected: signal mask failed",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
-        close(fd);
         return NULL;
     }
 
@@ -566,7 +563,15 @@ static void *server_handle_upload
      * file and close it.
      */
 
-    ftruncate(fd, written - 8);
+    if (ftruncate(fd, written - 8) != 0)
+    {
+        el_perror(ELW, "[%3d] couldn't truncate file from ending string", cfd);
+        el_oprint(ELI, &g_qlog, "[%s] rejected: truncate failed",
+            inet_ntoa(client.sin_addr));
+        server_reply(cfd, "internal server error, try again later\n");
+        goto error;
+    }
+
     close(fd);
 
     /*
@@ -759,7 +764,6 @@ static void server_process_connection
 
 int server_init(void)
 {
-    int     numifs;
     int     port;
     int     i;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
