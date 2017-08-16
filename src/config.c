@@ -38,7 +38,7 @@
 
 
 #include "config.h"
-#include "version.h"
+#include "kurload.h"
 
 #include <confuse.h>
 #include <embedlog.h>
@@ -175,8 +175,8 @@ static void config_parse_arguments
 
         case 'v':
             fprintf(stdout,
-                    APP_VERSION"\n"
-                    "kurload by Michał Łyszczek <michal.lyszczek@bofc.pl>\n");
+                    PACKAGE_STRING"\n"
+                    "by Michał Łyszczek <michal.lyszczek@bofc.pl>\n");
 
             exit(1);
 
@@ -368,7 +368,7 @@ void config_print(void)
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    el_print(ELI, APP_VERSION);
+    el_print(ELI, PACKAGE_STRING);
     el_print(ELI, "kurload configuration");
     CONFIG_PRINT_INT(log_level);
     CONFIG_PRINT_INT(colorful_output);
