@@ -151,8 +151,8 @@ int main(int argc, char *argv[])
         el_output_disable(EL_OUT_ALL);
     }
 
-    el_options_init(&g_qlog);
-    el_olevel_set(&g_qlog, EL_LEVEL_INF);
+    el_oinit(&g_qlog);
+    el_olevel_set(&g_qlog, EL_INFO);
     el_ooutput_enable(&g_qlog, EL_OUT_FILE);
     el_ooption(&g_qlog, EL_OPT_TS, EL_OPT_TS_LONG);
     el_ooption(&g_qlog, EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);

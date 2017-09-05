@@ -248,7 +248,7 @@ static void config_parse_configuration
     /*  type         field name          default value                 flags */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         CFG_STR_LIST("bind_ip",          "{0.0.0.0}",                    0),
-        CFG_INT(     "log_level",        EL_LEVEL_ERR,                   0),
+        CFG_INT(     "log_level",        EL_ERROR,                       0),
         CFG_INT(     "colorful_output",  0,                              0),
         CFG_INT(     "listen_port",      1337,                           0),
         CFG_INT(     "max_size",         1024 * 1024 /* 1MiB */,         0),
