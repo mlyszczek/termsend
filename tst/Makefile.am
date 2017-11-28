@@ -12,7 +12,7 @@ test_SOURCES += ../src/bnwlist.c \
 				../src/globals.c
 
 test_CFLAGS = -I$(top_srcdir)/src \
-			  -I/usr/local/include
+			  -I/usr/local/include \
 			  -O0 -g3 -ggdb \
 			  $(COVERAGE_CFLAGS)
 

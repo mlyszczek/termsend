@@ -52,8 +52,10 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "bnwlist.h"
+#include "valid.h"
 
 
 /* ==========================================================================
@@ -131,6 +133,10 @@ static int bnw_ip_comp
     representation ("127.0.0.1") to in_addr_t type (uint32_t).   Parsed  IPs
     are stored in heap allocated memory 'ip_list'.  If sytax error is  found
     in list file, nothing is allocated and -1 is returned.
+
+    errno
+            ENOMEM      not enough memory to store all ips
+            EFAULT      found entry which is not an ip address
    ========================================================================== */
 
 
@@ -142,6 +148,7 @@ static int bnw_parse_list
 {
     size_t  n;   /* number of entries in file */
     int     i;   /* helper iterator for loop */
+    int     e;   /* errno cache */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -156,7 +163,9 @@ static int bnw_parse_list
 
     if ((ip_list = malloc(n * sizeof(in_addr_t))) == NULL)
     {
+        e = errno;
         el_print(ELE, "malloc error %d bytes for list", n * sizeof(in_addr_t));
+        errno = e;
         return -1;
     }
 
@@ -181,6 +190,8 @@ static int bnw_parse_list
             {
                 el_print(ELE, "error parsing list file in line %d", n + 1);
                 free(ip_list);
+                ip_list = NULL;
+                errno = EFAULT;
                 return -1;
             }
 
@@ -198,6 +209,8 @@ static int bnw_parse_list
         {
             el_print(ELE, "malformed ip (%s) in list on line %d", ip, n + 1);
             free(ip_list);
+            ip_list = NULL;
+            errno = EFAULT;
             return -1;
         }
 
@@ -248,14 +261,18 @@ int bnw_init
 {
     char        *f;      /* pointer to mmaped flist file */
     int          fd;     /* opened flist file descriptor */
+    int          e;      /* errno cache */
     struct stat  st;     /* information about flist file */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
 
     if ((mode = m) == 0)
     {
         el_print(ELI, "ip filtering is off");
         return 0;
     }
+
+    VALID(EINVAL, flist);
 
     el_print(ELI, "loading list file %s", flist);
 
@@ -272,9 +289,18 @@ int bnw_init
         return -1;
     }
 
+    if (st.st_size == 0)
+    {
+        num_ip = 0;
+        el_print(ELW, "file %s is empty", flist);
+        return 0;
+    }
+
     if ((fd = open(flist, O_RDONLY)) == -1)
     {
+        e = errno;
         el_perror(ELE, "coudln't open list file");
+        errno = e;
         return -1;
     }
 
@@ -288,9 +314,11 @@ int bnw_init
 
     if (bnw_parse_list(f, st.st_size) == -1)
     {
+        e = errno;
         el_print(ELE, "parsing list failed");
         munmap(f, st.st_size);
         close(fd);
+        errno = e;
         return -1;
     }
 
@@ -323,6 +351,11 @@ int bnw_is_allowed
          */
 
         return 1;
+    }
+
+    if (num_ip == 0)
+    {
+        return mode == 1 ? 0 : 1;
     }
 
     ip = ntohl(ip);
@@ -390,4 +423,5 @@ int bnw_is_allowed
 void bnw_destroy(void)
 {
     free(ip_list);
+    ip_list = NULL;
 }

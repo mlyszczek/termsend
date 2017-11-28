@@ -18,6 +18,10 @@ src/Makefile
 src/Makefile.in
 src/kurload
 *.o
+*.gcno
+*.gcda
+tst/coverage.info
+tst/coveragereport/
 stamp-h1
 test-driver
 tst/.deps/

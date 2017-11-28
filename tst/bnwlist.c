@@ -344,7 +344,7 @@ static void bnw_no_list_is_allowed(void)
 static void bnw_totally_random_test(void)
 {
 #define NUMIPS 1000
-    int        num_checks = 10000;
+    int        num_checks = 100000;
     in_addr_t  ips[NUMIPS];
     in_addr_t  ip;
     int        i;
@@ -372,7 +372,7 @@ static void bnw_totally_random_test(void)
         {
             if (ip == ips[j])
             {
-                allowed = 0;
+                allowed = 1;
                 break;
             }
         }
