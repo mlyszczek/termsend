@@ -136,9 +136,13 @@ int main(int argc, char *argv[])
             cfg_getstr(g_config, "user"), cfg_getstr(g_config, "group"));
     }
 
+    /*
+     * configure logger for diagnostic logs
+     */
+
     el_init();
-    el_level_set(cfg_getint(g_config, "log_level"));
-    el_output_enable(EL_OUT_FILE);
+    el_option(EL_OPT_LEVEL, cfg_getint(g_config, "log_level"));
+    el_option(EL_OPT_OUT, EL_OPT_OUT_FILE);
     el_option(EL_OPT_TS, EL_OPT_TS_LONG);
     el_option(EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
     el_option(EL_OPT_FINFO, 1);
@@ -148,12 +152,16 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "WARNING couldn't open program log file %s: %s\n",
             cfg_getstr(g_config, "program_log"),  strerror(errno));
-        el_output_disable(EL_OUT_ALL);
+        el_option(EL_OPT_OUT, EL_OPT_OUT_NONE);
     }
 
+    /*
+     * configure logger to log queries
+     */
+
     el_oinit(&g_qlog);
-    el_olevel_set(&g_qlog, EL_INFO);
-    el_ooutput_enable(&g_qlog, EL_OUT_FILE);
+    el_ooption(&g_qlog, EL_OPT_LEVEL, EL_INFO);
+    el_ooption(&g_qlog, EL_OPT_OUT, EL_OPT_OUT_FILE);
     el_ooption(&g_qlog, EL_OPT_TS, EL_OPT_TS_LONG);
     el_ooption(&g_qlog, EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
     el_ooption(&g_qlog, EL_OPT_PRINT_LEVEL, 0);
@@ -163,7 +171,7 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "WARNING couldn't open query log file %s: %s\n",
              cfg_getstr(g_config, "query_log"), strerror(errno));
-        el_ooutput_disable(&g_qlog, EL_OUT_ALL);
+        el_ooption(&g_qlog, EL_OPT_OUT, EL_OPT_OUT_NONE);
     }
 
     memset(&sa, 0, sizeof(sa));
