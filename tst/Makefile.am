@@ -1,4 +1,4 @@
-include Makefile.am.coverage
+include ../Makefile.am.coverage
 
 check_PROGRAMS = test
 test_SOURCES  = main.c \
@@ -13,12 +13,11 @@ test_SOURCES += ../src/bnwlist.c \
 
 test_CFLAGS = -I$(top_srcdir)/src \
 			  -I/usr/local/include \
-			  -O0 -g3 -ggdb \
 			  $(COVERAGE_CFLAGS)
 
 test_LDFLAGS = -L/usr/local/lib \
 			   $(COVERAGE_LDFLAGS)
 test_LDADD = -lembedlog -lconfuse -lpthread
 
-TESTS = $(check_PROGRAMS)
+TESTS = $(check_PROGRAMS) test-server.sh
 LOG_DRIVER = $(top_srcdir)/tap-driver
