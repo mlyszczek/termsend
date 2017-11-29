@@ -77,6 +77,7 @@
    ========================================================================== */
 
 
+static size_t           maxfs;  /* maximum size of file that can be uploaded */
 static int             *sfds;   /* sfds sockets for all interfaces */
 static int              nsfds;  /* number of sfds allocated */
 static int              cconn;  /* curently connected clients */
@@ -112,7 +113,7 @@ static int              maxto;  /* inactivity time after we close connection,
    ========================================================================== */
 
 
-void server_generate_fname
+static void server_generate_fname
 (
     char                *s,
     size_t               l
@@ -125,7 +126,7 @@ void server_generate_fname
 
     for (i = 0; i != l; ++i)
     {
-        *s++ = alphanum[rand() % sizeof(alphanum) - 1];
+        *s++ = alphanum[rand() % (sizeof(alphanum) - 1)];
     }
 
     *s = '\0';
@@ -229,7 +230,7 @@ static int server_create_socket
     memset(&srv, 0, sizeof(srv));
     srv.sin_family = AF_INET;
     srv.sin_port = htons(port);
-    srv.sin_addr.s_addr = htonl(ip);
+    srv.sin_addr.s_addr = ip;
 
     /*
      * bind socket to srv address, so it only accept connections  from  this
@@ -274,6 +275,8 @@ static int server_create_socket
         return INADDR_NONE;
     }
 
+    maxfs = cfg_getint(g_config, "max_size");
+
     return fd;
 }
 
@@ -304,7 +307,7 @@ static void *server_handle_upload
     char                fname[32];   /* random generated file name */
     char                url[1024];   /* generated link to uploaded data */
     char                ends[8 + 1]; /* buffer for end string detection */
-    static int          flen = 5;    /* length of the filename to generate */
+    static int          flen = 1;    /* length of the filename to generate */
     unsigned char       buf[8192];   /* temp buffer we read uploaded data to */
     size_t              written;     /* total written bytes to file */
     ssize_t             w;           /* return from write function */
@@ -484,6 +487,21 @@ static void *server_handle_upload
             goto error;
         }
 
+        if (written + r > maxfs + 8)
+        {
+            /*
+             * we received, in total, more bytes  then  we  can  accept,  we
+             * remove such file and return error to the client.  That +8  is
+             * for ending string "kurload\n" as we will delete  that  anyway
+             * and file will not get more than maxfs size.
+             */
+
+            el_oprint(ELI, &g_qlog, "[%s] rejected: file too big",
+                inet_ntoa(client.sin_addr));
+            server_reply(cfd, "file too big, max length is %zu bytes\n", maxfs);
+            goto error;
+        }
+
         /*
          * received some data, simply store them into  file,  right  now  we
          * don't care if ending string "kurload\n" ends up  in  a  file,  we
@@ -551,8 +569,8 @@ static void *server_handle_upload
         }
 
         /*
-         * full file received without errors, we event got ending string, we
-         * can not break out of loop to perform finishing touch  on  upload.
+         * full file received without errors, we even got ending string,  we
+         * can now break out of loop to perform finishing touch  on  upload.
          */
 
         break;
