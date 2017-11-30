@@ -86,8 +86,8 @@ static void add_ip
     const char  *ip
 )
 {
-    write(bnwfd, ip, strlen(ip));
-    write(bnwfd, "\n", 1);
+    (void) write(bnwfd, ip, strlen(ip));
+    (void) write(bnwfd, "\n", 1);
 }
 
 
