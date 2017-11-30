@@ -154,7 +154,7 @@ static void config_parse_arguments
                     "\t4          warnings\n"
                     "\t5          normal message, but of high importance\n"
                     "\t6          info log, doesn't print that much (default)\n"
-                    "\t7          debug, not needed in production\n"
+                    "\t7          debug, not needed in production\n",
                     argv[0]);
 
             exit(1);
