@@ -137,20 +137,24 @@ static void config_parse_arguments
             fprintf(stdout,
                     "kurload - easy file sharing\n"
                     "\n"
-                    "Usage: %s [-h | -v | -c -l<level> -f<path>]\n"
+                    "Usage: %s [-h | -v | -d -c -l<level> -f<config>]\n"
                     "\n"
                     "\t-h         prints this help and quits\n"
                     "\t-v         prints version and quits\n"
-                    "\t-c         if set, output will have nice colors\n"
                     "\t-d         run as daemon\n"
-                    "\t-l<num>    logging level 0-3 \n"
+                    "\t-c         if set, output will have nice colors\n"
+                    "\t-l<level>  logging level 0-7 \n"
                     "\t-f<path>   path to configuration file\n"
                     "\n"
                     "logging level\n"
-                    "\t0          log only critical error messages\n"
-                    "\t1          log also non-critical warning messages\n"
-                    "\t2          verbose output\n"
-                    "\t3          debug verbose, prints a lot\n",
+                    "\t0          fatal errors, application cannot continue\n"
+                    "\t1          major failure, needs immediate attention\n"
+                    "\t2          critical errors\n"
+                    "\t3          error but recoverable\n"
+                    "\t4          warnings\n"
+                    "\t5          normal message, but of high importance\n"
+                    "\t6          info log, doesn't print that much (default)\n"
+                    "\t7          debug, not needed in production\n"
                     argv[0]);
 
             exit(1);
@@ -230,7 +234,7 @@ static void config_parse_configuration
     /*  type         field name          default value                 flags */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         CFG_STR_LIST("bind_ip",          "{0.0.0.0}",                    0),
-        CFG_INT(     "log_level",        EL_ERROR,                       0),
+        CFG_INT(     "log_level",        EL_INFO,                        0),
         CFG_INT(     "colorful_output",  0,                              0),
         CFG_INT(     "listen_port",      1337,                           0),
         CFG_INT(     "max_size",         1024 * 1024 /* 1MiB */,         0),
