@@ -13,3 +13,4 @@ test_bnw_LDADD = -lembedlog -lpthread
 
 TESTS = $(check_PROGRAMS) test-server.sh
 LOG_DRIVER = $(top_srcdir)/tap-driver
+EXTRA_DIST = test-server.sh mtest.sh test-config.conf
