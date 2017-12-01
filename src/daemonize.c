@@ -218,7 +218,7 @@ drop_privilige_finished:
 
         sprintf(pids, "%d", pid);
 
-        if (write(fd, pids, strlen(pids)) != strlen(pids))
+        if (write(fd, pids, strlen(pids)) != (ssize_t)strlen(pids))
         {
             kill(pid, SIGKILL);
             fprintf(stderr, "error writing pid to file %s: %s\n", pid_file,

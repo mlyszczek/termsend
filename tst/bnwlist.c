@@ -205,7 +205,6 @@ static void bnw_empty_list_whitelist_is_allowed(void)
 {
     in_addr_t  ip;
     int        i;
-    int        allowed;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -295,7 +294,6 @@ static void bnw_empty_list_blacklist_is_allowed(void)
 {
     in_addr_t  ip;
     int        i;
-    int        allowed;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -320,7 +318,6 @@ static void bnw_no_list_is_allowed(void)
 {
     in_addr_t  ip;
     int        i;
-    int        allowed;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
