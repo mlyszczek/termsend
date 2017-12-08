@@ -42,44 +42,15 @@
 #include "globals.h"
 
 #include <confuse.h>
-#include <embedlog.h>
-#include <getopt.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <ctype.h>
+#include <embedlog.h>
 #include <errno.h>
+#include <getopt.h>
 #include <limits.h>
-
-
-/* ==========================================================================
-                                   _                __
-                     ____   _____ (_)_   __ ____ _ / /_ ___
-                    / __ \ / ___// /| | / // __ `// __// _ \
-                   / /_/ // /   / / | |/ // /_/ // /_ /  __/
-                  / .___//_/   /_/  |___/ \__,_/ \__/ \___/
-                 /_/
-
-                   ____ ___   ____ _ _____ _____ ____   _____
-                  / __ `__ \ / __ `// ___// ___// __ \ / ___/
-                 / / / / / // /_/ // /__ / /   / /_/ /(__  )
-                /_/ /_/ /_/ \__,_/ \___//_/    \____//____/
-
-   ========================================================================== */
-
-
-/* ==========================================================================
-    macros for easy field printing
-   ========================================================================== */
-
-
-#define CONFIG_PRINT_STR(field) \
-    el_print(ELI, "%s%s %s", #field, padder + strlen(#field), \
-        cfg_getstr(g_config, #field));
-
-#define CONFIG_PRINT_INT(field) \
-    el_print(ELI, "%s%s %d", #field, padder + strlen(#field), \
-        cfg_getint(g_config, #field));
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 /* ==========================================================================
@@ -99,63 +70,163 @@
 
 
 /* ==========================================================================
-    Parses command line arguments, if error is detected, program will commit
-    suicide. Arguments values are returned via function arguments, it's only
-    3 of them, no biggie.
+    simply sets given value to specified option and makes sure  argument  is
+    not too big
+   ========================================================================== */
+
+
+static void config_setstr
+(
+    const char  *option_argument,  /* really an optarg */
+    const char  *option_name,      /* config name really */
+    size_t       maxlen            /* maximum length of argument */
+)
+{
+    if (strlen(option_argument) > maxlen)
+    {
+        fprintf(stderr, "value '%s' for '%s' is too long, max is %zu\n",
+            option_argument, option_name, maxlen);
+        exit(2);
+    }
+
+    cfg_setstr(g_config, option_name, option_argument);
+}
+
+
+/* ==========================================================================
+    simple sets given integer value to specified option name and makes  sure
+    argument value is between specified range
+   ========================================================================== */
+
+
+static void config_setint
+(
+    const char  *option_argument,  /* really an optarg */
+    const char  *option_name,      /* config name really */
+    long         max,              /* maximum valid value */
+    long         min               /* minimum valid value */
+)
+{
+    long         val;              /* value converted from option_argument */
+    char        *endptr;           /* pointer for errors from strtol */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    val = strtol(option_argument, &endptr, 10);
+
+    if (*endptr != '\0')
+    {
+        /*
+         * error occured
+         */
+
+        fprintf(stderr, "wrong value '%s' for option '%s'\n",
+            option_argument, option_name);
+        exit(2);
+    }
+
+    if (val <= min || max <= val)
+    {
+        /*
+         * number is outside of defined domain
+         */
+
+        fprintf(stderr, "value for '%s' should be between %ld and %ld\n",
+            option_name, min, max);
+        exit(2);
+    }
+
+    cfg_setint(g_config, option_name, val);
+}
+
+
+/* ==========================================================================
+    parses arguments passed from command line and  overwrites  whatever  has
+    been set in configuration file
    ========================================================================== */
 
 
 static void config_parse_arguments
 (
     int    argc,        /* number of arguments in argv */
-    char  *argv[],      /* argument list */
-    int   *color,       /* colors enabled in argument? */
-    int   *level,       /* log level from arguments */
-    int   *daemonize,   /* should we run as daemon? */
-    char  *config_path  /* configuration path from arguments */
+    char  *argv[]       /* argument list */
 )
 {
-    int    arg;         /* argument "name" */
+    int                 arg;
+    int                 loptind;
+    static const char  *shortopts = ":hvl:cC:i:s:Dm:t:T:d:u:g:q:p:P:o:L:";
+    struct option       longopts[] =
+    {
+        {"help",            no_argument,       NULL, 'h'},
+        {"version",         no_argument,       NULL, 'v'},
+        {"level",           required_argument, NULL, 'l'},
+        {"colorful",        no_argument,       NULL, 'c'},
+        {"config-file",     required_argument, NULL, 'C'},
+        {"listen-port",     required_argument, NULL, 'i'},
+        {"max-filesize",    required_argument, NULL, 's'},
+        {"daemonize",       no_argument,       NULL, 'D'},
+        {"max-connections", required_argument, NULL, 'm'},
+        {"max-timeout",     required_argument, NULL, 't'},
+        {"list-type",       required_argument, NULL, 'T'},
+        {"domain",          required_argument, NULL, 'd'},
+        {"user",            required_argument, NULL, 'u'},
+        {"group",           required_argument, NULL, 'g'},
+        {"query-log",       required_argument, NULL, 'q'},
+        {"program-log",     required_argument, NULL, 'p'},
+        {"pid-file",        required_argument, NULL, 'P'},
+        {"output-dir",      required_argument, NULL, 'o'},
+        {"ip-list",         required_argument, NULL, 'L'},
+        {NULL, 0, NULL, 0}
+    };
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-
-    opterr = 0;
-    *color = -1;
-    *level = -1;
-    *daemonize = -1;
-    strcpy(config_path, "/etc/kurload/kurload.conf");
-
-    /*
-     * first we parse command line arguments
-     */
-
-    while ((arg = getopt(argc, argv, "hvcdl:f:")) != -1)
+    optind = 0;
+    while ((arg = getopt_long(argc, argv, shortopts, longopts, &loptind)) != -1)
     {
         switch (arg)
         {
         case 'h':
             fprintf(stdout,
-                    "kurload - easy file sharing\n"
-                    "\n"
-                    "Usage: %s [-h | -v | -d -c -l<level> -f<config>]\n"
-                    "\n"
-                    "\t-h         prints this help and quits\n"
-                    "\t-v         prints version and quits\n"
-                    "\t-d         run as daemon\n"
-                    "\t-c         if set, output will have nice colors\n"
-                    "\t-l<level>  logging level 0-7 \n"
-                    "\t-f<path>   path to configuration file\n"
-                    "\n"
-                    "logging level\n"
-                    "\t0          fatal errors, application cannot continue\n"
-                    "\t1          major failure, needs immediate attention\n"
-                    "\t2          critical errors\n"
-                    "\t3          error but recoverable\n"
-                    "\t4          warnings\n"
-                    "\t5          normal message, but of high importance\n"
-                    "\t6          info log, doesn't print that much (default)\n"
-                    "\t7          debug, not needed in production\n",
-                    argv[0]);
+"kurload - easy file sharing\n"
+"\n"
+"Usage: %s [-h | -v | options]\n"
+"\n"
+"options:\n"
+"\t-h, --help                       prints this help and quits\n"
+"\t-v, --version                    prints version and quits\n"
+"\t-l, --level=<level>              logging level 0-7\n"
+"\t-c, --colorful                   enable nice colors for logs\n"
+"\t-C, --config-file=<path>         path for config (default /etc/kurload.conf)\n"
+"\t-i, --listen-port=<port>         port on which program will listen\n"
+"\t-s, --max-filesize=<size>        maximum size of file client can upload\n"
+"\t-D, --daemonize                  run as daemon\n"
+"\t-m, --max-connections=<number>   max number of concurrent connections\n"
+"\t-t, --max-timeout=<seconds>      time before client is presumed dead\n"
+"\t-T, --list-type=<type>           type of the ip-list (black or white list)\n"
+"\t-d, --domain=<domain>            domain on which server works\n"
+"\t-u, --user=<user>                user that should run daemon\n"
+"\t-g, --group=<group>              group that should run daemon\n"
+"\t-q, --query-log=<path>           where to store query logs\n"
+"\t-p, --program-log=<path>         where to store program logs\n"
+"\t-P, --pid-file=<path>            where to store daemon pid file\n"
+"\t-o, --output-dir=<path>          where to store uploaded files\n"
+"\t-L, --ip-list=<list>             list of ips to listen on\n"
+"\n"
+"logging levels:\n"
+"\t0         fatal errors, application cannot continue\n"
+"\t1         major failure, needs immediate attention\n"
+"\t2         critical errors\n"
+"\t3         error but recoverable\n"
+"\t4         warnings\n"
+"\t5         normal message, but of high importance\n"
+"\t6         info log, doesn't print that much (default)\n"
+"\t7         debug, not needed in production\n"
+"\n"
+"list types:\n"
+"\t-1        blacklist mode, ips from list can NOT upload\n"
+"\t 0        disable list (everyone can upload\n"
+"\t 1        whitelist mode, only ips from list can upload\n",
+argv[0]);
 
             exit(1);
 
@@ -167,63 +238,138 @@ static void config_parse_arguments
             exit(1);
 
         case 'c':
-            *color = 1;
+            cfg_setint(g_config, "colorful_output", 1);
             break;
 
-        case 'd':
-            *daemonize = 1;
+        case 'D':
+            cfg_setint(g_config, "daemonize", 1);
             break;
 
         case 'l':
+            config_setint(optarg, "log_level", 0, 7);
+            break;
+
+        case 'i':
+            config_setint(optarg, "listen_port", 0, UINT16_MAX);
+            break;
+
+        case 's':
+            config_setint(optarg, "max_size", 0, LONG_MAX);
+            break;
+
+        case 'm':
+            config_setint(optarg, "max_connections", 0, LONG_MAX);
+            break;
+
+        case 't':
+            config_setint(optarg, "max_timeout", 1, LONG_MAX);
+            break;
+
+        case 'T':
+            config_setint(optarg, "list_type", -1, 1);
+            break;
+
+        case 'd':
+            config_setstr(optarg, "domain", UINT16_MAX);
+            break;
+
+        case 'u':
+            config_setstr(optarg, "user", 256);
+            break;
+
+        case 'g':
+            config_setstr(optarg, "group", 256);
+            break;
+
+        case 'q':
+            config_setstr(optarg, "query_log", PATH_MAX);
+            break;
+
+        case 'p':
+            config_setstr(optarg, "program_log", PATH_MAX);
+            break;
+
+        case 'P':
+            config_setstr(optarg, "pid_file", PATH_MAX);
+            break;
+
+        case 'o':
+            config_setstr(optarg, "output_dir", PATH_MAX);
+            break;
+
+        case 'L':
+            break;
+
+        case 'C':
             /*
-             * convert level char to int
+             * we don't parse path to config file, as it was already parsed
+             * earlier, and there is no point in parsing it here again.
              */
-
-            *level = optarg[0] - '0';
-
-            if (*level < 0 || 3 < *level)
-            {
-                /*
-                 * level is outside accepted values
-                 */
-
-                fprintf(stdout, "invalid log level %c\n", optarg[0]);
-                exit(2);
-            }
-
             break;
 
-        case 'f':
-            strncpy(config_path, optarg, PATH_MAX);
-            config_path[PATH_MAX] = '\0';
-            break;
+        case ':':
+            fprintf(stderr, "option -%c, --%s requires an argument\n",
+                optopt, longopts[loptind].name);
+            exit(3);
 
         case '?':
-            if (optopt == 'l' || optopt == 'f')
-            {
-                fprintf(stdout, "option -%c requires an argument\n", optopt);
-            }
-            else if (isprint(optopt))
-            {
-                fprintf(stdout, "unknown option -%c\n", optopt);
-            }
-            else
-            {
-                fprintf(stdout, "unknown option character '0x%02x'\n", optopt);
-            }
+            fprintf(stdout, "unknown option -%c\n", optopt);
+            exit(1);
 
         default:
+            fprintf(stderr, "unexpected return from getopt '0x%02x'\n", arg);
             exit(1);
         }
     }
 }
 
 
+/* ==========================================================================
+    Creates program configuration with hardcoded values, then  reads  config
+    file to overwrite any option defined in config file.  If config file  is
+    not provided in command line argument, hardcoded  default  one  will  be
+    used.
+   ========================================================================== */
+
+
 static void config_parse_configuration
 (
-    char  *config_path  /* configuration file - it is sure to be set */
+    int    argc,                       /* number of command line arguments */
+    char  *argv[]                      /* command line argument list */
 )
 {
+    char   config_path[PATH_MAX + 1];  /* path to configuration file */
+    int    opt;                        /* argument read from getopt_long */
+
+    struct option longopts[] =
+    {
+        { "config-file", required_argument, NULL, 'C' },
+        { NULL, 0, NULL, 0 }
+    };
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    strcpy(config_path, "/etc/kurload/kurload.conf");
+
+    /*
+     * check if location of config file has been overwriten with command line
+     * argument
+     */
+
+    while ((opt = getopt_long(argc, argv, "C:", longopts, NULL)) != -1)
+    {
+        /*
+         * we ignore any error here and look only for 'C' option
+         */
+
+        if (opt == 'C')
+        {
+            strncpy(config_path, optarg, PATH_MAX);
+            config_path[PATH_MAX] = '\0';
+            break;
+        }
+    }
+
     /*
      * List of all configuration fields options in file with their default
      * values
@@ -297,38 +443,13 @@ static void config_parse_configuration
 
 void config_init
 (
-    int    argc,                       /* number of arguments in argv */
-    char  *argv[]                      /* argument list */
+    int    argc,   /* number of arguments in argv */
+    char  *argv[]  /* argument list */
 )
 {
-    int    color;                      /* enable colorful output */
-    int    level;                      /* logging level */
-    int    daemonize;                  /* should we run as daemon? */
-    char   config_path[PATH_MAX + 1];  /* path to configuration file */
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    config_parse_arguments(argc, argv, &color, &level, &daemonize, config_path);
-    config_parse_configuration(config_path);
-
-    /*
-     * configuration file parsed, overwrite any option that was passed by
-     * command line arguments
-     */
-
-    if (color != -1)
-    {
-        cfg_setint(g_config, "colorful_output", color);
-    }
-
-    if (level != -1)
-    {
-        cfg_setint(g_config, "log_level", level);
-    }
-
-    if (daemonize != -1)
-    {
-        cfg_setint(g_config, "daemonize", daemonize);
-    }
+    opterr = 0;
+    config_parse_configuration(argc, argv);
+    config_parse_arguments(argc, argv);
 }
 
 
@@ -350,6 +471,19 @@ void config_destroy(void)
 
 void config_print(void)
 {
+    /*
+     * macros for easy field printing
+     */
+
+#define CONFIG_PRINT_STR(field) \
+    el_print(ELI, "%s%s %s", #field, padder + strlen(#field), \
+        cfg_getstr(g_config, #field));
+
+#define CONFIG_PRINT_INT(field) \
+    el_print(ELI, "%s%s %d", #field, padder + strlen(#field), \
+        cfg_getint(g_config, #field));
+
+
     char padder[] = "....................:";
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -374,4 +508,7 @@ void config_print(void)
     CONFIG_PRINT_STR(output_dir);
     CONFIG_PRINT_STR(pid_file);
     CONFIG_PRINT_STR(bind_ip);
+
+#undef CONFIG_PRINT_STR
+#undef CONFIG_PRINT_INT
 }
