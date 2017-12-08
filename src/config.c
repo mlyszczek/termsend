@@ -51,6 +51,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 
 /* ==========================================================================
@@ -366,6 +367,17 @@ static void config_parse_configuration
         {
             strncpy(config_path, optarg, PATH_MAX);
             config_path[PATH_MAX] = '\0';
+
+            /*
+             * config has been passed explicitly, we check if file exists
+             */
+
+            if (access(config_path, F_OK) != 0)
+            {
+                fprintf(stderr, "config file %s doesn't exist\n", config_path);
+                exit(2);
+            }
+
             break;
         }
     }
@@ -410,6 +422,19 @@ static void config_parse_configuration
 
     if (cfg_parse(g_config, config_path) != 0)
     {
+        if (errno = ENOENT)
+        {
+            /*
+             * if config file is specified via command line, file existance
+             * is already checkout out, and if we use default configuration,
+             * we don't fail as this is normal use case - like passing some
+             * options via command line and accepting default options for
+             * rest options
+             */
+
+            return;
+        }
+
         fprintf(stdout, "parsing %s error %s\n", config_path, strerror(errno));
         cfg_free(g_config);
         exit(2);
