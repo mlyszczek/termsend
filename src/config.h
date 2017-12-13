@@ -11,7 +11,7 @@
 #include <confuse.h>
 
 
-void config_init(int, char **);
+int config_init(int argc, char *argv[]);
 void config_destroy(void);
 void config_print(void);
 

@@ -40,6 +40,7 @@
 #include "kurload.h"
 #include "config.h"
 #include "globals.h"
+#include "valid.h"
 
 #include <confuse.h>
 #include <ctype.h>
@@ -76,7 +77,7 @@
    ========================================================================== */
 
 
-static void config_setstr
+static int config_setstr
 (
     const char  *option_argument,  /* really an optarg */
     const char  *option_name,      /* config name really */
@@ -87,10 +88,10 @@ static void config_setstr
     {
         fprintf(stderr, "value '%s' for '%s' is too long, max is %zu\n",
             option_argument, option_name, maxlen);
-        exit(2);
+        return -1;
     }
 
-    cfg_setstr(g_config, option_name, option_argument);
+    return cfg_setstr(g_config, option_name, option_argument);
 }
 
 
@@ -100,7 +101,7 @@ static void config_setstr
    ========================================================================== */
 
 
-static void config_setint
+static int config_setint
 (
     const char  *option_argument,  /* really an optarg */
     const char  *option_name,      /* config name really */
@@ -123,7 +124,7 @@ static void config_setint
 
         fprintf(stderr, "wrong value '%s' for option '%s'\n",
             option_argument, option_name);
-        exit(2);
+        return -1;
     }
 
     if (val <= min || max <= val)
@@ -134,10 +135,10 @@ static void config_setint
 
         fprintf(stderr, "value for '%s' should be between %ld and %ld\n",
             option_name, min, max);
-        exit(2);
+        return -1;
     }
 
-    cfg_setint(g_config, option_name, val);
+    return cfg_setint(g_config, option_name, val);
 }
 
 
@@ -147,7 +148,7 @@ static void config_setint
    ========================================================================== */
 
 
-static void config_parse_arguments
+static int config_parse_arguments
 (
     int    argc,        /* number of arguments in argv */
     char  *argv[]       /* argument list */
@@ -239,63 +240,63 @@ argv[0]);
             exit(1);
 
         case 'c':
-            cfg_setint(g_config, "colorful_output", 1);
+            VALID(cfg_setint(g_config, "colorful_output", 1), errno);
             break;
 
         case 'D':
-            cfg_setint(g_config, "daemonize", 1);
+            VALID(cfg_setint(g_config, "daemonize", 1), errno);
             break;
 
         case 'l':
-            config_setint(optarg, "log_level", 0, 7);
+            VALID(config_setint(optarg, "log_level", 0, 7), errno);
             break;
 
         case 'i':
-            config_setint(optarg, "listen_port", 0, UINT16_MAX);
+            VALID(config_setint(optarg, "listen_port", 0, UINT16_MAX), errno);
             break;
 
         case 's':
-            config_setint(optarg, "max_size", 0, LONG_MAX);
+            VALID(config_setint(optarg, "max_size", 0, LONG_MAX), errno);
             break;
 
         case 'm':
-            config_setint(optarg, "max_connections", 0, LONG_MAX);
+            VALID(config_setint(optarg, "max_connections", 0, LONG_MAX), errno);
             break;
 
         case 't':
-            config_setint(optarg, "max_timeout", 1, LONG_MAX);
+            VALID(config_setint(optarg, "max_timeout", 1, LONG_MAX), errno);
             break;
 
         case 'T':
-            config_setint(optarg, "list_type", -1, 1);
+            VALID(config_setint(optarg, "list_type", -1, 1), errno);
             break;
 
         case 'd':
-            config_setstr(optarg, "domain", UINT16_MAX);
+            VALID(config_setstr(optarg, "domain", UINT16_MAX), errno);
             break;
 
         case 'u':
-            config_setstr(optarg, "user", 256);
+            VALID(config_setstr(optarg, "user", 256), errno);
             break;
 
         case 'g':
-            config_setstr(optarg, "group", 256);
+            VALID(config_setstr(optarg, "group", 256), errno);
             break;
 
         case 'q':
-            config_setstr(optarg, "query_log", PATH_MAX);
+            VALID(config_setstr(optarg, "query_log", PATH_MAX), errno);
             break;
 
         case 'p':
-            config_setstr(optarg, "program_log", PATH_MAX);
+            VALID(config_setstr(optarg, "program_log", PATH_MAX), errno);
             break;
 
         case 'P':
-            config_setstr(optarg, "pid_file", PATH_MAX);
+            VALID(config_setstr(optarg, "pid_file", PATH_MAX), errno);
             break;
 
         case 'o':
-            config_setstr(optarg, "output_dir", PATH_MAX);
+            VALID(config_setstr(optarg, "output_dir", PATH_MAX), errno);
             break;
 
         case 'L':
@@ -311,17 +312,19 @@ argv[0]);
         case ':':
             fprintf(stderr, "option -%c, --%s requires an argument\n",
                 optopt, longopts[loptind].name);
-            exit(3);
+            return -1;
 
         case '?':
             fprintf(stdout, "unknown option -%c\n", optopt);
-            exit(1);
+            return -1;
 
         default:
             fprintf(stderr, "unexpected return from getopt '0x%02x'\n", arg);
-            exit(1);
+            return -1;
         }
     }
+
+    return 0;
 }
 
 
@@ -333,7 +336,7 @@ argv[0]);
    ========================================================================== */
 
 
-static void config_parse_configuration
+static int config_parse_configuration
 (
     int    argc,                       /* number of command line arguments */
     char  *argv[]                      /* command line argument list */
@@ -341,6 +344,8 @@ static void config_parse_configuration
 {
     char   config_path[PATH_MAX + 1];  /* path to configuration file */
     int    opt;                        /* argument read from getopt_long */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
 
     struct option longopts[] =
     {
@@ -374,8 +379,9 @@ static void config_parse_configuration
 
             if (access(config_path, F_OK) != 0)
             {
-                fprintf(stderr, "config file %s doesn't exist\n", config_path);
-                exit(2);
+                fprintf(stderr, "couldn't access config file %s: %s\n",
+                    config_path, strerror(errno));
+                return -1;
             }
 
             break;
@@ -416,8 +422,9 @@ static void config_parse_configuration
 
     if ((g_config = cfg_init(options, 0)) == NULL)
     {
-        fprintf(stdout, "couldn't allocate memory for config parse\n");
-        exit(2);
+        fprintf(stdout, "couldn't allocate memory for config parse: %s\n",
+            strerror(errno));
+        return -1;
     }
 
     if (cfg_parse(g_config, config_path) != 0)
@@ -425,20 +432,23 @@ static void config_parse_configuration
         if (errno = ENOENT)
         {
             /*
-             * if config file is specified via command line, file existance
-             * is already checkout out, and if we use default configuration,
-             * we don't fail as this is normal use case - like passing some
-             * options via command line and accepting default options for
-             * rest options
+             * if config file is specified via command line, file  existance
+             * is already checkout out and this error will not occur in such
+             * case.  But if we use default configuration  and  config  file
+             * doesn't exist we don't fail as this is normal use case - like
+             * passing some options via command line and  accepting  default
+             * options for rest options
              */
 
-            return;
+            return 0;
         }
 
         fprintf(stdout, "parsing %s error %s\n", config_path, strerror(errno));
         cfg_free(g_config);
-        exit(2);
+        return -1;
     }
+
+    return 0;
 }
 
 
@@ -459,22 +469,40 @@ static void config_parse_configuration
 
 
 /* ==========================================================================
-    Parses configuration from command line and file and stores it in  global
-    config variable.  Options from command line arguments will overwrite any
-    option in configuration file.   Function  is  crucial  for  working,  if
-    anything here fails, whole program will go dawn.
+    parses options from configuration file and command line arguments.
    ========================================================================== */
 
 
-void config_init
+int config_init
 (
     int    argc,   /* number of arguments in argv */
     char  *argv[]  /* argument list */
 )
 {
+    int   rv;      /* return value */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    /*
+     * disable error printing from getopt library
+     */
+
     opterr = 0;
-    config_parse_configuration(argc, argv);
-    config_parse_arguments(argc, argv);
+
+    /*
+     * first we parse configuration from file
+     */
+
+    rv = config_parse_configuration(argc, argv);
+
+    /*
+     * then we parse options from command line argument overwriting
+     * already parsed options from config file
+     */
+
+    rv |= config_parse_arguments(argc, argv);
+
+    return rv;
 }
 
 

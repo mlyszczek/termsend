@@ -101,13 +101,18 @@ static void sigint_handler(int signo)
 
 int main(int argc, char *argv[])
 {
+    int               rv;
     int               list_type;
     const char       *list_file;
     struct sigaction  sa;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    config_init(argc, argv);
+    if (config_init(argc, argv) != 0)
+    {
+        fprintf(stderr, "fatal error parsing configuration, cannot continue\n");
+        return 1;
+    }
 
     if (cfg_getint(g_config, "daemonize"))
     {
@@ -165,18 +170,21 @@ int main(int argc, char *argv[])
 
     if (bnw_init(list_file, list_type) != 0)
     {
+        rv = 1;
         el_print(ELE, "couldn't initialize black and white list");
         goto bnw_error;
     }
 
     if (server_init() != 0)
     {
+        rv = 1;
         el_print(ELE, "couldn't start server, aborting");
         goto server_error;
     }
 
     server_loop_forever();
     server_destroy();
+    rv = 0;
 
 server_error:
     bnw_destroy();
@@ -188,5 +196,5 @@ bnw_error:
     }
 
     config_destroy();
-    return 0;
+    return rv;
 }
