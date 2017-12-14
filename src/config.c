@@ -319,6 +319,8 @@ static int config_parse_configuration
                 val, #OPTNAME, (long)MINV, (long)MAXV, config_path);           \
             rc = -1;                                                           \
         }                                                                      \
+                                                                               \
+        g_config.OPTNAME = val;                                                \
     }
 
 
@@ -341,6 +343,8 @@ static int config_parse_configuration
                 "than %zu \n", #OPTNAME, sizeof(g_config.OPTNAME));            \
             rc = -1;                                                           \
         }                                                                      \
+                                                                               \
+        strcpy(g_config.OPTNAME, val);                                         \
     }
 
 
