@@ -26,7 +26,7 @@ data="/tmp/kurload-test/data"
 mt_prepare_test()
 {
     mkdir -p /tmp/kurload-test/out
-    ../src/kurload -d -f./test-config.conf
+    ../src/kurload -D -C./test-config.conf
 }
 
 
