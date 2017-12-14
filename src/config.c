@@ -6,7 +6,7 @@
    -------------------------------------------------------------
   / This is configuration module, here we parse configuration   \
   | passed by the user. Configuration can be accessed by global |
-  | config variable that is not modified outside this module.   |
+  | g_config variable that is not modified outside this module. |
   \ Never.                                                      /
    -------------------------------------------------------------
     \                                  ___-------___
@@ -72,77 +72,6 @@
 
 
 /* ==========================================================================
-    simply sets given value to specified option and makes sure  argument  is
-    not too big
-   ========================================================================== */
-
-
-static int config_setstr
-(
-    const char  *option_argument,  /* really an optarg */
-    const char  *option_name,      /* config name really */
-    size_t       maxlen            /* maximum length of argument */
-)
-{
-    if (strlen(option_argument) > maxlen)
-    {
-        fprintf(stderr, "value '%s' for '%s' is too long, max is %zu\n",
-            option_argument, option_name, maxlen);
-        return -1;
-    }
-
-    return cfg_setstr(g_config, option_name, option_argument);
-}
-
-
-/* ==========================================================================
-    simple sets given integer value to specified option name and makes  sure
-    argument value is between specified range
-   ========================================================================== */
-
-
-static int config_setint
-(
-    const char  *option_argument,  /* really an optarg */
-    const char  *option_name,      /* config name really */
-    long         max,              /* maximum valid value */
-    long         min               /* minimum valid value */
-)
-{
-    long         val;              /* value converted from option_argument */
-    char        *endptr;           /* pointer for errors from strtol */
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-
-    val = strtol(option_argument, &endptr, 10);
-
-    if (*endptr != '\0')
-    {
-        /*
-         * error occured
-         */
-
-        fprintf(stderr, "wrong value '%s' for option '%s'\n",
-            option_argument, option_name);
-        return -1;
-    }
-
-    if (val <= min || max <= val)
-    {
-        /*
-         * number is outside of defined domain
-         */
-
-        fprintf(stderr, "value for '%s' should be between %ld and %ld\n",
-            option_name, min, max);
-        return -1;
-    }
-
-    return cfg_setint(g_config, option_name, val);
-}
-
-
-/* ==========================================================================
     parses arguments passed from command line and  overwrites  whatever  has
     been set in configuration file
    ========================================================================== */
@@ -154,6 +83,72 @@ static int config_parse_arguments
     char  *argv[]       /* argument list */
 )
 {
+    /*
+     * macros to parse arguments in switch(opt) block
+     */
+
+
+    /*
+     * check if optarg is between MINV and MAXV  values  and  if  so,  store
+     * converted optarg in to config.OPTNAME field.  If error occurs,  force
+     * function to return with -1 error
+     */
+
+
+#   define PARSE_INT(OPTNAME, MINV, MAXV)                                      \
+    {                                                                          \
+        long   val;     /* value converted from OPTARG */                      \
+        char  *endptr;  /* pointer for errors fron strtol */                   \
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/   \
+                                                                               \
+        val = strtol(optarg, &endptr, 10);                                     \
+                                                                               \
+        if (*endptr != '\0')                                                   \
+        {                                                                      \
+            /*                                                                 \
+             * error occured                                                   \
+             */                                                                \
+                                                                               \
+            fprintf(stderr, "wrong value '%s' for option '%s\n",               \
+                optarg, #OPTNAME);                                             \
+            return -1;                                                         \
+        }                                                                      \
+                                                                               \
+        if (val <= (long)MINV || (long)MAXV <= val)                            \
+        {                                                                      \
+            /*                                                                 \
+             * number is outside of defined domain                             \
+             */                                                                \
+                                                                               \
+            fprintf(stderr, "value for '%s' should be between %ld and %ld\n",  \
+                #OPTNAME, (long)MINV, (long)MAXV);                             \
+            return -1;                                                         \
+        }                                                                      \
+                                                                               \
+        g_config.OPTNAME = val;                                                \
+    }
+
+
+    /*
+     * check if string length of optarg is less or equal than
+     * sizeof(config.OPTNAME) and if so store optarg in config.OPTNAME.
+     * If error occurs, force  function  to return with -1 error.
+     */
+
+
+#   define PARSE_STR(OPTNAME)                                                  \
+    {                                                                          \
+        if (strlen(optarg) >= sizeof(g_config.OPTNAME))                        \
+        {                                                                      \
+            fprintf(stderr, "value '%s' for '%s' is too long, max is %zu\n",   \
+                optarg, #OPTNAME, sizeof(g_config.OPTNAME) - 1);               \
+            return -1;                                                         \
+        }                                                                      \
+                                                                               \
+        strcpy(g_config.OPTNAME, optarg);                                      \
+    }
+
+
     int                 arg;
     int                 loptind;
     static const char  *shortopts = ":hvl:cC:i:s:Dm:t:T:d:u:g:q:p:P:o:L:";
@@ -187,6 +182,23 @@ static int config_parse_arguments
     {
         switch (arg)
         {
+        case 'c': g_config.colorful_output = 1; break;
+        case 'D': g_config.daemonize = 1; break;
+        case 'l': PARSE_INT(log_level, 0, 7); break;
+        case 'i': PARSE_INT(listen_port, 0, UINT16_MAX); break;
+        case 's': PARSE_INT(max_size, 0, LONG_MAX); break;
+        case 'm': PARSE_INT(max_connections, 0, LONG_MAX); break;
+        case 't': PARSE_INT(max_timeout, 1, LONG_MAX); break;
+        case 'T': PARSE_INT(list_type, -1, 1); break;
+        case 'd': PARSE_STR(domain); break;
+        case 'u': PARSE_STR(user); break;
+        case 'g': PARSE_STR(group); break;
+        case 'q': PARSE_STR(query_log); break;
+        case 'p': PARSE_STR(program_log); break;
+        case 'P': PARSE_STR(pid_file); break;
+        case 'o': PARSE_STR(output_dir); break;
+        case 'L': PARSE_STR(list_file); break;
+
         case 'h':
             fprintf(stdout,
 "kurload - easy file sharing\n"
@@ -239,69 +251,6 @@ argv[0]);
 
             exit(1);
 
-        case 'c':
-            VALID(cfg_setint(g_config, "colorful_output", 1), errno);
-            break;
-
-        case 'D':
-            VALID(cfg_setint(g_config, "daemonize", 1), errno);
-            break;
-
-        case 'l':
-            VALID(config_setint(optarg, "log_level", 0, 7), errno);
-            break;
-
-        case 'i':
-            VALID(config_setint(optarg, "listen_port", 0, UINT16_MAX), errno);
-            break;
-
-        case 's':
-            VALID(config_setint(optarg, "max_size", 0, LONG_MAX), errno);
-            break;
-
-        case 'm':
-            VALID(config_setint(optarg, "max_connections", 0, LONG_MAX), errno);
-            break;
-
-        case 't':
-            VALID(config_setint(optarg, "max_timeout", 1, LONG_MAX), errno);
-            break;
-
-        case 'T':
-            VALID(config_setint(optarg, "list_type", -1, 1), errno);
-            break;
-
-        case 'd':
-            VALID(config_setstr(optarg, "domain", UINT16_MAX), errno);
-            break;
-
-        case 'u':
-            VALID(config_setstr(optarg, "user", 256), errno);
-            break;
-
-        case 'g':
-            VALID(config_setstr(optarg, "group", 256), errno);
-            break;
-
-        case 'q':
-            VALID(config_setstr(optarg, "query_log", PATH_MAX), errno);
-            break;
-
-        case 'p':
-            VALID(config_setstr(optarg, "program_log", PATH_MAX), errno);
-            break;
-
-        case 'P':
-            VALID(config_setstr(optarg, "pid_file", PATH_MAX), errno);
-            break;
-
-        case 'o':
-            VALID(config_setstr(optarg, "output_dir", PATH_MAX), errno);
-            break;
-
-        case 'L':
-            break;
-
         case 'C':
             /*
              * we don't parse path to config file, as it was already parsed
@@ -325,6 +274,9 @@ argv[0]);
     }
 
     return 0;
+
+#   undef PARSE_INT
+#   undef PARSE_STR
 }
 
 
@@ -342,9 +294,60 @@ static int config_parse_configuration
     char  *argv[]                      /* command line argument list */
 )
 {
-    char   config_path[PATH_MAX + 1];  /* path to configuration file */
-    int    opt;                        /* argument read from getopt_long */
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*
+     * macros for copying data from confuse object to our simple struct
+     */
+
+
+    /*
+     * copy integer and validate if value is between MINV and MAXV, on
+     * error macro sets rc to -1
+     */
+
+
+#   define COPY_INT(OPTNAME, MINV, MAXV)                                       \
+    {                                                                          \
+        long  val;                                                             \
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/   \
+                                                                               \
+        val = cfg_getint(cfg, #OPTNAME);                                       \
+                                                                               \
+        if (val < (long)MINV || (long)MAXV < val)                              \
+        {                                                                      \
+            fprintf(stderr, "value '%ld' for option '%s' should be bigger than"\
+                "%ld and less than %ld, in config file %s\n",                  \
+                val, #OPTNAME, (long)MINV, (long)MAXV, config_path);           \
+            rc = -1;                                                           \
+        }                                                                      \
+    }
+
+
+    /*
+     * copy  string  and  validate  if  length  of  string  is  less   than
+     * sizeof(g_config.OPTNAME)  -  1.   On  error  macro  sets  rc  to  -1
+     */
+
+
+#   define COPY_STR(OPTNAME)                                                   \
+    {                                                                          \
+        const char  *val;                                                      \
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/   \
+                                                                               \
+        val = cfg_getstr(cfg, #OPTNAME);                                       \
+                                                                               \
+        if (strlen(val) >= sizeof(g_config.OPTNAME))                           \
+        {                                                                      \
+            fprintf(stderr, "string length of option '%s' should be less"      \
+                "than %zu \n", #OPTNAME, sizeof(g_config.OPTNAME));            \
+            rc = -1;                                                           \
+        }                                                                      \
+    }
+
+
+    char    config_path[PATH_MAX + 1];  /* path to configuration file */
+    int     opt;                        /* argument read from getopt_long */
+    int     rc;                         /* return code of function */
+    cfg_t  *cfg;                        /* confuse object */
 
 
     struct option longopts[] =
@@ -395,41 +398,45 @@ static int config_parse_configuration
 
     cfg_opt_t options[] =
     {
-    /*  type         field name          default value                 flags */
+    /*  type    field name          default value                   flags */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        CFG_STR_LIST("bind_ip",          "{0.0.0.0}",                    0),
-        CFG_INT(     "log_level",        EL_INFO,                        0),
-        CFG_INT(     "colorful_output",  0,                              0),
-        CFG_INT(     "listen_port",      1337,                           0),
-        CFG_INT(     "max_size",         1024 * 1024 /* 1MiB */,         0),
-        CFG_INT(     "daemonize",        0,                              0),
-        CFG_INT(     "max_connections",  10,                             0),
-        CFG_INT(     "max_timeout",      60,                             0),
-        CFG_INT(     "list_type",        0,                              0),
-        CFG_STR(     "domain",           "localhost",                    0),
-        CFG_STR(     "user",             "kurload",                      0),
-        CFG_STR(     "group",            "kurload",                      0),
-        CFG_STR(     "query_log",        "/var/log/kurload-query.log",   0),
-        CFG_STR(     "program_log",      "/var/log/kurload.log",         0),
-        CFG_STR(     "pid_file",         "/var/run/kurload.pid",         0),
-        CFG_STR(     "output_dir",       "/var/lib/kurload",             0),
-        CFG_STR(     "whitelist",        "/etc/kurload/whitelist",       0),
-        CFG_STR(     "blacklist",        "/etc/kurload/blacklist",       0),
+        CFG_INT("log_level",        EL_INFO,                        0),
+        CFG_INT("colorful_output",  0,                              0),
+        CFG_INT("listen_port",      1337,                           0),
+        CFG_INT("max_size",         1024 * 1024 /* 1MiB */,         0),
+        CFG_INT("daemonize",        0,                              0),
+        CFG_INT("max_connections",  10,                             0),
+        CFG_INT("max_timeout",      60,                             0),
+        CFG_INT("list_type",        0,                              0),
+        CFG_STR("bind_ip",          "0.0.0.0",                      0),
+        CFG_STR("domain",           "localhost",                    0),
+        CFG_STR("user",             "kurload",                      0),
+        CFG_STR("group",            "kurload",                      0),
+        CFG_STR("query_log",        "/var/log/kurload-query.log",   0),
+        CFG_STR("program_log",      "/var/log/kurload.log",         0),
+        CFG_STR("pid_file",         "/var/run/kurload.pid",         0),
+        CFG_STR("output_dir",       "/var/lib/kurload",             0),
+        CFG_STR("list_file",        "/etc/kurload/whitelist",       0),
         CFG_END()
     };
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    if ((g_config = cfg_init(options, 0)) == NULL)
+    /*
+     * parse configuration file and overwrite default parameters.
+     */
+
+
+    if ((cfg = cfg_init(options, 0)) == NULL)
     {
         fprintf(stdout, "couldn't allocate memory for config parse: %s\n",
             strerror(errno));
         return -1;
     }
 
-    if (cfg_parse(g_config, config_path) != 0)
+    if (cfg_parse(cfg, config_path) != 0)
     {
-        if (errno = ENOENT)
+        if (errno == ENOENT)
         {
             /*
              * if config file is specified via command line, file  existance
@@ -444,11 +451,42 @@ static int config_parse_configuration
         }
 
         fprintf(stdout, "parsing %s error %s\n", config_path, strerror(errno));
-        cfg_free(g_config);
+        cfg_free(cfg);
         return -1;
     }
 
-    return 0;
+    /*
+     * move data from confuse to our struct  for  easier  access.   Not  the
+     * fastest operation, but done only once at startup. If any of the COPY_
+     * macro fails to copy data, rc will be set to -1 and function will fail
+     * with -1 error
+     */
+
+    rc = 0;
+    COPY_INT(log_level, 0, 7);
+    COPY_INT(colorful_output, 0, 1);
+    COPY_INT(listen_port, 0, UINT16_MAX);
+    COPY_INT(max_size, 0, LONG_MAX);
+    COPY_INT(daemonize, 0, 1);
+    COPY_INT(max_connections, 0, LONG_MAX);
+    COPY_INT(max_timeout, 1, LONG_MAX);
+    COPY_INT(list_type, -1, 1);
+    COPY_STR(bind_ip);
+    COPY_STR(domain);
+    COPY_STR(user);
+    COPY_STR(group);
+    COPY_STR(query_log);
+    COPY_STR(program_log);
+    COPY_STR(pid_file);
+    COPY_STR(output_dir);
+    COPY_STR(list_file);
+
+    /*
+     * free cfg as we don't need confuse anymore
+     */
+
+    cfg_free(cfg);
+    return rc;
 }
 
 
@@ -507,17 +545,6 @@ int config_init
 
 
 /* ==========================================================================
-    destroy config object and frees memory allocated by it.
-   ========================================================================== */
-
-
-void config_destroy(void)
-{
-   cfg_free(g_config);
-}
-
-
-/* ==========================================================================
     prints configuration to default logging facility
    ========================================================================== */
 
@@ -528,14 +555,8 @@ void config_print(void)
      * macros for easy field printing
      */
 
-#define CONFIG_PRINT_STR(field) \
-    el_print(ELI, "%s%s %s", #field, padder + strlen(#field), \
-        cfg_getstr(g_config, #field));
-
-#define CONFIG_PRINT_INT(field) \
-    el_print(ELI, "%s%s %d", #field, padder + strlen(#field), \
-        cfg_getint(g_config, #field));
-
+#define CONFIG_PRINT(field, type) \
+    el_print(ELI, "%s%s "type, #field, padder + strlen(#field), g_config.field)
 
     char padder[] = "....................:";
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -543,25 +564,23 @@ void config_print(void)
 
     el_print(ELI, PACKAGE_STRING);
     el_print(ELI, "kurload configuration");
-    CONFIG_PRINT_INT(log_level);
-    CONFIG_PRINT_INT(colorful_output);
-    CONFIG_PRINT_INT(listen_port);
-    CONFIG_PRINT_INT(max_size);
-    CONFIG_PRINT_STR(domain);
-    CONFIG_PRINT_INT(daemonize);
-    CONFIG_PRINT_INT(max_connections);
-    CONFIG_PRINT_INT(max_timeout);
-    CONFIG_PRINT_STR(user);
-    CONFIG_PRINT_STR(group);
-    CONFIG_PRINT_STR(query_log);
-    CONFIG_PRINT_STR(program_log);
-    CONFIG_PRINT_STR(whitelist);
-    CONFIG_PRINT_STR(blacklist);
-    CONFIG_PRINT_INT(list_type);
-    CONFIG_PRINT_STR(output_dir);
-    CONFIG_PRINT_STR(pid_file);
-    CONFIG_PRINT_STR(bind_ip);
+    CONFIG_PRINT(log_level, "%ld");
+    CONFIG_PRINT(colorful_output, "%ld");
+    CONFIG_PRINT(listen_port, "%ld");
+    CONFIG_PRINT(max_size, "%ld");
+    CONFIG_PRINT(domain, "%s");
+    CONFIG_PRINT(daemonize, "%ld");
+    CONFIG_PRINT(max_connections, "%ld");
+    CONFIG_PRINT(max_timeout, "%ld");
+    CONFIG_PRINT(user, "%s");
+    CONFIG_PRINT(group, "%s");
+    CONFIG_PRINT(query_log, "%s");
+    CONFIG_PRINT(program_log, "%s");
+    CONFIG_PRINT(list_file, "%s");
+    CONFIG_PRINT(list_type, "%ld");
+    CONFIG_PRINT(output_dir, "%s");
+    CONFIG_PRINT(pid_file, "%s");
+    CONFIG_PRINT(bind_ip, "%s");
 
-#undef CONFIG_PRINT_STR
-#undef CONFIG_PRINT_INT
+#undef CONFIG_PRINT
 }

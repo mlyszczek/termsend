@@ -8,7 +8,38 @@
 #define APP_CONFIG_H 1
 
 
-#include <confuse.h>
+#include <embedlog.h>
+#include <limits.h>
+
+
+enum list_type
+{
+    list_type_black = -1,
+    list_type_none  =  0,
+    list_type_white =  1
+};
+
+
+struct config
+{
+    enum el_level   log_level;
+    enum list_type  list_type;
+    long            colorful_output;
+    long            listen_port;
+    long            max_size;
+    long            daemonize;
+    long            max_connections;
+    long            max_timeout;
+    char            domain[4096 + 1];
+    char            bind_ip[1024 + 1];
+    char            user[255 + 1];
+    char            group[255 + 1];
+    char            query_log[PATH_MAX + 1];
+    char            program_log[PATH_MAX + 1];
+    char            pid_file[PATH_MAX + 1];
+    char            output_dir[PATH_MAX + 1];
+    char            list_file[PATH_MAX + 1];
+};
 
 
 int config_init(int argc, char *argv[]);

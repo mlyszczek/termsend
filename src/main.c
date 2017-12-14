@@ -30,7 +30,6 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
-#include <confuse.h>
 #include <embedlog.h>
 
 #include "config.h"
@@ -102,8 +101,6 @@ static void sigint_handler(int signo)
 int main(int argc, char *argv[])
 {
     int               rv;
-    int               list_type;
-    const char       *list_file;
     struct sigaction  sa;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -114,10 +111,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (cfg_getint(g_config, "daemonize"))
+    if (g_config.daemonize)
     {
-        daemonize(cfg_getstr(g_config, "pid_file"),
-            cfg_getstr(g_config, "user"), cfg_getstr(g_config, "group"));
+        daemonize(g_config.pid_file, g_config.user, g_config.group);
     }
 
     /*
@@ -125,17 +121,17 @@ int main(int argc, char *argv[])
      */
 
     el_init();
-    el_option(EL_OPT_LEVEL, cfg_getint(g_config, "log_level"));
+    el_option(EL_OPT_LEVEL, g_config.log_level);
     el_option(EL_OPT_OUT, EL_OPT_OUT_FILE);
     el_option(EL_OPT_TS, EL_OPT_TS_LONG);
     el_option(EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
     el_option(EL_OPT_FINFO, 1);
-    el_option(EL_OPT_COLORS, cfg_getint(g_config, "colorful_output"));
+    el_option(EL_OPT_COLORS, g_config.colorful_output);
 
-    if (el_option(EL_OPT_FNAME, cfg_getstr(g_config, "program_log")) != 0)
+    if (el_option(EL_OPT_FNAME, g_config.program_log) != 0)
     {
         fprintf(stderr, "WARNING couldn't open program log file %s: %s\n",
-            cfg_getstr(g_config, "program_log"),  strerror(errno));
+            g_config.program_log,  strerror(errno));
         el_option(EL_OPT_OUT, EL_OPT_OUT_NONE);
     }
 
@@ -150,11 +146,10 @@ int main(int argc, char *argv[])
     el_ooption(&g_qlog, EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
     el_ooption(&g_qlog, EL_OPT_PRINT_LEVEL, 0);
 
-    if (el_ooption(&g_qlog, EL_OPT_FNAME, cfg_getstr(g_config, "query_log"))
-        != 0)
+    if (el_ooption(&g_qlog, EL_OPT_FNAME, g_config.query_log) != 0)
     {
         fprintf(stderr, "WARNING couldn't open query log file %s: %s\n",
-             cfg_getstr(g_config, "query_log"), strerror(errno));
+             g_config.query_log, strerror(errno));
         el_ooption(&g_qlog, EL_OPT_OUT, EL_OPT_OUT_NONE);
     }
 
@@ -165,13 +160,11 @@ int main(int argc, char *argv[])
 
     config_print();
 
-    list_type = cfg_getint(g_config, "list_type");
-    list_file = cfg_getstr(g_config, list_type == 1 ? "whitelist" : "blacklist");
-
-    if (bnw_init(list_file, list_type) != 0)
+    if (bnw_init(g_config.list_file, g_config.list_type) != 0)
     {
         rv = 1;
-        el_print(ELE, "couldn't initialize black and white list");
+        el_print(ELE, "couldn't initialize list from file %s",
+            g_config.list_file);
         goto bnw_error;
     }
 
@@ -190,11 +183,10 @@ server_error:
     bnw_destroy();
 
 bnw_error:
-    if (cfg_getint(g_config, "daemonize"))
+    if (g_config.daemonize)
     {
-        daemonize_cleanup(cfg_getstr(g_config, "pid_file"));
+        daemonize_cleanup(g_config.pid_file);
     }
 
-    config_destroy();
     return rv;
 }

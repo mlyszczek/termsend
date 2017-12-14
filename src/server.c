@@ -77,16 +77,11 @@
    ========================================================================== */
 
 
-static size_t           maxfs;  /* maximum size of file that can be uploaded */
 static int             *sfds;   /* sfds sockets for all interfaces */
 static int              nsfds;  /* number of sfds allocated */
 static int              cconn;  /* curently connected clients */
-static int              mconn;  /* maximum number of connected clients */
 static pthread_mutex_t  lconn;  /* mutex lock for operation on cconn */
 static pthread_mutex_t  lopen;  /* mutex for opening file */
-static int              maxto;  /* inactivity time after we close connection,
-                                   although it is not const, it is const after
-                                   initialization by convention */
 
 
 /* ==========================================================================
@@ -103,6 +98,31 @@ static int              maxto;  /* inactivity time after we close connection,
            /_/   \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/
 
    ========================================================================== */
+
+
+/* ==========================================================================
+    returns number of ip in g_config.bind_ip list. List is a comma separated
+    list of ips.
+   ========================================================================== */
+
+
+static int server_bind_num(void)
+{
+    int         n;     /* number of ip to bind to */
+    const char  *ips;  /* comma separated list of ips to bind to */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    for (n = 1, ips = g_config.bind_ip; *ips; ++ips)
+    {
+        if (*ips == ',')
+        {
+            ++n;
+        }
+    }
+
+    return n;
+}
 
 
 /* ==========================================================================
@@ -191,8 +211,7 @@ static void server_reply
 
 static int server_create_socket
 (
-    in_addr_t           ip,     /* local ip to bind server to */
-    int                 port    /* port to listen on */
+    in_addr_t           ip      /* local ip to bind server to */
 )
 {
     int                 fd;     /* new server file descriptor */
@@ -229,7 +248,7 @@ static int server_create_socket
 
     memset(&srv, 0, sizeof(srv));
     srv.sin_family = AF_INET;
-    srv.sin_port = htons(port);
+    srv.sin_port = htons(g_config.listen_port);
     srv.sin_addr.s_addr = ip;
 
     /*
@@ -275,8 +294,6 @@ static int server_create_socket
         return INADDR_NONE;
     }
 
-    maxfs = cfg_getint(g_config, "max_size");
-
     return fd;
 }
 
@@ -319,7 +336,7 @@ static void *server_handle_upload
     clen = sizeof(client);
     getsockname(cfd, (struct sockaddr *)&client, &clen);
 
-    strcpy(path, cfg_getstr(g_config, "output_dir"));
+    strcpy(path, g_config.output_dir);
     strcat(path, "/");
     opathlen = strlen(path);
 
@@ -439,10 +456,10 @@ static void *server_handle_upload
                  * connection without saving uploaded data
                  */
 
-                if (++timeout == maxto)
+                if (++timeout == g_config.max_timeout)
                 {
                     el_print(ELW, "[%3d] client inactive for %d seconds",
-                        cfd, maxto);
+                        cfd, g_config.max_timeout);
                     el_oprint(ELI, &g_qlog, "[%s] rejected: inactivity",
                         inet_ntoa(client.sin_addr));
 
@@ -455,7 +472,7 @@ static void *server_handle_upload
 
                     server_reply(cfd, "disconnected due to inactivity for %d "
                         "seconds, did you forget to append termination "
-                        "string - \"kurload\\n\"?\n", maxto);
+                        "string - \"kurload\\n\"?\n", g_config.max_timeout);
                     goto error;
                 }
 
@@ -487,18 +504,19 @@ static void *server_handle_upload
             goto error;
         }
 
-        if (written + r > maxfs + 8)
+        if (written + r > g_config.max_size + 8)
         {
             /*
              * we received, in total, more bytes  then  we  can  accept,  we
              * remove such file and return error to the client.  That +8  is
              * for ending string "kurload\n" as we will delete  that  anyway
-             * and file will not get more than maxfs size.
+             * and file will not get more than g_config.max_size size.
              */
 
             el_oprint(ELI, &g_qlog, "[%s] rejected: file too big",
                 inet_ntoa(client.sin_addr));
-            server_reply(cfd, "file too big, max length is %zu bytes\n", maxfs);
+            server_reply(cfd, "file too big, max length is %ld bytes\n",
+                g_config.max_size);
             goto error;
         }
 
@@ -597,7 +615,7 @@ static void *server_handle_upload
      * download his newly uploaded file
      */
 
-    strcpy(url, cfg_getstr(g_config, "domain"));
+    strcpy(url, g_config.domain);
     strcat(url, "/");
     strcat(url, fname);
     el_oprint(ELI, &g_qlog, "[%s] %s", inet_ntoa(client.sin_addr), fname);
@@ -697,7 +715,7 @@ static void server_process_connection
         nconn = cconn;
         pthread_mutex_unlock(&lconn);
 
-        if (nconn >= mconn)
+        if (nconn >= g_config.max_connections)
         {
             el_oprint(ELI, &g_qlog, "[%s] rejected: connection limit",
                 inet_ntoa(client.sin_addr));
@@ -782,16 +800,15 @@ static void server_process_connection
 
 int server_init(void)
 {
-    int     port;
-    int     i;
+    int          i;                              /* simple interator */
+    char         bip[sizeof(g_config.bind_ip)];  /* copy of g_config.bind_ip */
+    const char  *ip;                             /* tokenized ip from bip */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
 
     el_print(ELI, "creating server");
 
-    maxto = cfg_getint(g_config, "max_timeout");
-    mconn = cfg_getint(g_config, "max_connections");
-    nsfds = cfg_size(g_config, "bind_ip");
-    port = cfg_getint(g_config, "listen_port");
+    nsfds = server_bind_num();
 
     /*
      * allocate memory for all server  sockets,  one  interface  equals  one
@@ -838,20 +855,23 @@ int server_init(void)
      *  specified in configuration file.
      */
 
+    strcpy(bip, g_config.bind_ip);
+    ip = strtok(bip, ",");
+
     for (i = 0; i != nsfds; ++i)
     {
         in_addr_t    netip;  /* ip of the interface to listen on */
-        const char  *ip;     /* string representation of IP */
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-        ip = cfg_getnstr(g_config, "bind_ip", i);
         netip = inet_addr(ip);
 
-        if ((sfds[i] = server_create_socket(netip, port)) < 0)
+        if ((sfds[i] = server_create_socket(netip)) < 0)
         {
             el_print(ELE, "couldn't create socket for bind ip %s", ip);
             goto error;
         }
+
+        ip = strtok(NULL, ",");
     }
 
     /*
@@ -1039,8 +1059,7 @@ void server_destroy(void)
              */
 
             el_print(ELW, "exiting without waiting for connection to finish "
-                "this may lead to invalid files in %s",
-                cfg_getstr(g_config, "output_dir"));
+                "this may lead to invalid files in %s", g_config.output_dir);
 
             return;
         }

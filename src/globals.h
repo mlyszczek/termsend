@@ -6,10 +6,10 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H 1
 
-#include <confuse.h>
+#include "config.h"
 #include <embedlog.h>
 
-extern cfg_t             *g_config;
+extern struct config      g_config;
 extern int                g_shutdown;
 extern int                g_stfu;
 extern struct el_options  g_qlog;
