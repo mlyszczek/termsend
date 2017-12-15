@@ -62,6 +62,56 @@
                    / /_/ // /   / / | |/ // /_/ // /_ /  __/
                   / .___//_/   /_/  |___/ \__,_/ \__/ \___/
                  /_/
+                                   _         __     __
+              _   __ ____ _ _____ (_)____ _ / /_   / /___   _____
+             | | / // __ `// ___// // __ `// __ \ / // _ \ / ___/
+             | |/ // /_/ // /   / // /_/ // /_/ // //  __/(__  )
+             |___/ \__,_//_/   /_/ \__,_//_.___//_/ \___//____/
+
+   ========================================================================== */
+
+/*
+ * list of short options for getopt_long
+ */
+
+static const char  *shortopts = ":hvcDl:C:i:s:m:t:T:d:u:g:q:p:P:o:L:";
+
+/*
+ * array of long options for getopt_long
+ */
+
+struct option       longopts[] =
+{
+    {"help",            no_argument,       NULL, 'h'},
+    {"version",         no_argument,       NULL, 'v'},
+    {"level",           required_argument, NULL, 'l'},
+    {"colorful",        no_argument,       NULL, 'c'},
+    {"config-file",     required_argument, NULL, 'C'},
+    {"listen-port",     required_argument, NULL, 'i'},
+    {"max-filesize",    required_argument, NULL, 's'},
+    {"daemonize",       no_argument,       NULL, 'D'},
+    {"max-connections", required_argument, NULL, 'm'},
+    {"max-timeout",     required_argument, NULL, 't'},
+    {"list-type",       required_argument, NULL, 'T'},
+    {"domain",          required_argument, NULL, 'd'},
+    {"user",            required_argument, NULL, 'u'},
+    {"group",           required_argument, NULL, 'g'},
+    {"query-log",       required_argument, NULL, 'q'},
+    {"program-log",     required_argument, NULL, 'p'},
+    {"pid-file",        required_argument, NULL, 'P'},
+    {"output-dir",      required_argument, NULL, 'o'},
+    {"ip-list",         required_argument, NULL, 'L'},
+    {NULL, 0, NULL, 0}
+};
+
+
+/* ==========================================================================
+                                   _                __
+                     ____   _____ (_)_   __ ____ _ / /_ ___
+                    / __ \ / ___// /| | / // __ `// __// _ \
+                   / /_/ // /   / / | |/ // /_/ // /_ /  __/
+                  / .___//_/   /_/  |___/ \__,_/ \__/ \___/
+                 /_/
                ____                     __   _
               / __/__  __ ____   _____ / /_ (_)____   ____   _____
              / /_ / / / // __ \ / ___// __// // __ \ / __ \ / ___/
@@ -149,32 +199,8 @@ static int config_parse_arguments
     }
 
 
-    int                 arg;
-    int                 loptind;
-    static const char  *shortopts = ":hvl:cC:i:s:Dm:t:T:d:u:g:q:p:P:o:L:";
-    struct option       longopts[] =
-    {
-        {"help",            no_argument,       NULL, 'h'},
-        {"version",         no_argument,       NULL, 'v'},
-        {"level",           required_argument, NULL, 'l'},
-        {"colorful",        no_argument,       NULL, 'c'},
-        {"config-file",     required_argument, NULL, 'C'},
-        {"listen-port",     required_argument, NULL, 'i'},
-        {"max-filesize",    required_argument, NULL, 's'},
-        {"daemonize",       no_argument,       NULL, 'D'},
-        {"max-connections", required_argument, NULL, 'm'},
-        {"max-timeout",     required_argument, NULL, 't'},
-        {"list-type",       required_argument, NULL, 'T'},
-        {"domain",          required_argument, NULL, 'd'},
-        {"user",            required_argument, NULL, 'u'},
-        {"group",           required_argument, NULL, 'g'},
-        {"query-log",       required_argument, NULL, 'q'},
-        {"program-log",     required_argument, NULL, 'p'},
-        {"pid-file",        required_argument, NULL, 'P'},
-        {"output-dir",      required_argument, NULL, 'o'},
-        {"ip-list",         required_argument, NULL, 'L'},
-        {NULL, 0, NULL, 0}
-    };
+    int  arg;
+    int  loptind;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     optind = 0;
@@ -349,16 +375,9 @@ static int config_parse_configuration
 
 
     char    config_path[PATH_MAX + 1];  /* path to configuration file */
-    int     opt;                        /* argument read from getopt_long */
+    int     arg;                        /* argument read from getopt_long */
     int     rc;                         /* return code of function */
     cfg_t  *cfg;                        /* confuse object */
-
-
-    struct option longopts[] =
-    {
-        { "config-file", required_argument, NULL, 'C' },
-        { NULL, 0, NULL, 0 }
-    };
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -369,13 +388,13 @@ static int config_parse_configuration
      * argument
      */
 
-    while ((opt = getopt_long(argc, argv, "C:", longopts, NULL)) != -1)
+    while ((arg = getopt_long(argc, argv, shortopts, longopts, NULL)) != -1)
     {
         /*
          * we ignore any error here and look only for 'C' option
          */
 
-        if (opt == 'C')
+        if (arg == 'C')
         {
             strncpy(config_path, optarg, PATH_MAX);
             config_path[PATH_MAX] = '\0';
@@ -420,7 +439,7 @@ static int config_parse_configuration
         CFG_STR("program_log",      "/var/log/kurload.log",         0),
         CFG_STR("pid_file",         "/var/run/kurload.pid",         0),
         CFG_STR("output_dir",       "/var/lib/kurload",             0),
-        CFG_STR("list_file",        "/etc/kurload/whitelist",       0),
+        CFG_STR("list_file",        "/etc/kurload/iplist",          0),
         CFG_END()
     };
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
