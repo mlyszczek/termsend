@@ -164,7 +164,7 @@ static int config_parse_arguments
             return -1;                                                         \
         }                                                                      \
                                                                                \
-        if (val <= (long)MINV || (long)MAXV <= val)                            \
+        if (val < (long)MINV || (long)MAXV < val)                              \
         {                                                                      \
             /*                                                                 \
              * number is outside of defined domain                             \
