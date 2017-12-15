@@ -74,7 +74,7 @@
  * list of short options for getopt_long
  */
 
-static const char  *shortopts = ":hvcDl:C:i:s:m:t:T:d:u:g:q:p:P:o:L:";
+static const char  *shortopts = ":hvcDl:C:i:s:m:t:T:b:d:u:g:q:p:P:o:L:";
 
 /*
  * array of long options for getopt_long
@@ -93,6 +93,7 @@ struct option       longopts[] =
     {"max-connections", required_argument, NULL, 'm'},
     {"max-timeout",     required_argument, NULL, 't'},
     {"list-type",       required_argument, NULL, 'T'},
+    {"bind-ip",         required_argument, NULL, 'b'},
     {"domain",          required_argument, NULL, 'd'},
     {"user",            required_argument, NULL, 'u'},
     {"group",           required_argument, NULL, 'g'},
@@ -216,6 +217,7 @@ static int config_parse_arguments
         case 'm': PARSE_INT(max_connections, 0, LONG_MAX); break;
         case 't': PARSE_INT(max_timeout, 1, LONG_MAX); break;
         case 'T': PARSE_INT(list_type, -1, 1); break;
+        case 'b': PARSE_STR(bind_ip); break;
         case 'd': PARSE_STR(domain); break;
         case 'u': PARSE_STR(user); break;
         case 'g': PARSE_STR(group); break;
@@ -243,6 +245,7 @@ static int config_parse_arguments
 "\t-m, --max-connections=<number>   max number of concurrent connections\n"
 "\t-t, --max-timeout=<seconds>      time before client is presumed dead\n"
 "\t-T, --list-type=<type>           type of the ip-list (black or white list)\n"
+"\t-b, --bind-ip=<ip-list>          comma separated list of ips to bind to\n"
 "\t-d, --domain=<domain>            domain on which server works\n"
 "\t-u, --user=<user>                user that should run daemon\n"
 "\t-g, --group=<group>              group that should run daemon\n"
@@ -265,8 +268,8 @@ static int config_parse_arguments
 "list types:\n"
 "\t-1        blacklist mode, ips from list can NOT upload\n"
 "\t 0        disable list (everyone can upload\n"
-"\t 1        whitelist mode, only ips from list can upload\n",
-argv[0]);
+"\t 1        whitelist mode, only ips from list can upload\n"
+,argv[0]);
 
             exit(1);
 
