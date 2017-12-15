@@ -391,6 +391,7 @@ static int config_parse_configuration
      * argument
      */
 
+    optind = 0;
     while ((arg = getopt_long(argc, argv, shortopts, longopts, NULL)) != -1)
     {
         /*
