@@ -85,7 +85,7 @@ struct option       longopts[] =
     {"help",            no_argument,       NULL, 'h'},
     {"version",         no_argument,       NULL, 'v'},
     {"level",           required_argument, NULL, 'l'},
-    {"colorful",        no_argument,       NULL, 'c'},
+    {"colorful-output", no_argument,       NULL, 'c'},
     {"config-file",     required_argument, NULL, 'C'},
     {"listen-port",     required_argument, NULL, 'i'},
     {"max-filesize",    required_argument, NULL, 's'},
@@ -101,7 +101,7 @@ struct option       longopts[] =
     {"program-log",     required_argument, NULL, 'p'},
     {"pid-file",        required_argument, NULL, 'P'},
     {"output-dir",      required_argument, NULL, 'o'},
-    {"ip-list",         required_argument, NULL, 'L'},
+    {"list-file",       required_argument, NULL, 'L'},
     {NULL, 0, NULL, 0}
 };
 
@@ -237,14 +237,14 @@ static int config_parse_arguments
 "\t-h, --help                       prints this help and quits\n"
 "\t-v, --version                    prints version and quits\n"
 "\t-l, --level=<level>              logging level 0-7\n"
-"\t-c, --colorful                   enable nice colors for logs\n"
+"\t-c, --colorful-output            enable nice colors for logs\n"
 "\t-C, --config-file=<path>         path for config (default /etc/kurload.conf)\n"
 "\t-i, --listen-port=<port>         port on which program will listen\n"
 "\t-s, --max-filesize=<size>        maximum size of file client can upload\n"
 "\t-D, --daemonize                  run as daemon\n"
 "\t-m, --max-connections=<number>   max number of concurrent connections\n"
 "\t-t, --max-timeout=<seconds>      time before client is presumed dead\n"
-"\t-T, --list-type=<type>           type of the ip-list (black or white list)\n"
+"\t-T, --list-type=<type>           type of the list_file (black or white)\n"
 "\t-b, --bind-ip=<ip-list>          comma separated list of ips to bind to\n"
 "\t-d, --domain=<domain>            domain on which server works\n"
 "\t-u, --user=<user>                user that should run daemon\n"
@@ -253,7 +253,7 @@ static int config_parse_arguments
 "\t-p, --program-log=<path>         where to store program logs\n"
 "\t-P, --pid-file=<path>            where to store daemon pid file\n"
 "\t-o, --output-dir=<path>          where to store uploaded files\n"
-"\t-L, --ip-list=<list>             list of ips to listen on\n"
+"\t-L, --list_file=<path>           path with ip list for black/white list\n"
 "\n"
 "logging levels:\n"
 "\t0         fatal errors, application cannot continue\n"
@@ -553,6 +553,7 @@ int config_init
      */
 
     opterr = 0;
+    memset(&g_config, 0, sizeof(g_config));
 
     /*
      * first we parse configuration from file
