@@ -689,6 +689,7 @@ static void server_process_connection
             }
 
             el_perror(ELC, "couldn't accept connection");
+            continue;
         }
 
         /*
