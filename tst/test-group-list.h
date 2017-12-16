@@ -7,5 +7,6 @@
 #define TEST_GROUP_LIST 1
 
 void bnwlist_test_group();
+void config_test_group();
 
 #endif

@@ -11,5 +11,6 @@ mt_defs();
 int main(void)
 {
     bnwlist_test_group();
+    config_test_group();
     mt_return();
 }
