@@ -13,6 +13,7 @@ config.sub
 configure
 depcomp
 install-sh
+kurload-*.tar.gz
 kurload.h
 kurload.h.in
 missing
@@ -26,9 +27,9 @@ test-driver
 tst/.deps/
 tst/coverage.info
 tst/coveragereport/
+tst/test
 tst/test-server.sh.log
 tst/test-server.sh.trs
 tst/test-suite.log
-tst/test-bnw
-tst/test-bnw.log
-tst/test-bnw.trs
+tst/test.log
+tst/test.trs
