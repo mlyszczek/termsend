@@ -1,0 +1,27 @@
+#!/bin/bash
+
+kurload()
+{
+    cat - <(echo 'kurload') | nc 127.6.13.37 61337 2>/dev/null
+}
+
+mkdir -p /tmp/kurload-test/out
+i=0
+
+../src/kurload -D -C./test-config.conf
+data=`head -c 1000 < /dev/urandom`
+
+while :
+do
+    ((i++))
+    echo "$data" | kurload >/dev/null 2>&1  &
+    if [ $i -eq 10000 ]
+    then
+        i=0
+        rm /tmp/kurload-test/out/*
+        echo "" > /tmp/kurload-test/kurload-query.log
+    fi
+done
+
+kill -15 `cat /tmp/kurload-test/kurload.pid`
+rm -rf /tmp/kurload-test
