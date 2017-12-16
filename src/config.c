@@ -354,7 +354,7 @@ int config_init
     strcpy(g_config.program_log, "/var/log/kurload.log");
     strcpy(g_config.pid_file, "/var/run/kurload.pid");
     strcpy(g_config.output_dir, "/var/lib/kurload");
-    strcpy(g_config.list_file, "/etc/kurload/iplist");
+    strcpy(g_config.list_file, "/etc/kurload-iplist");
 
     /*
      * parse options from command line argument overwriting default ones

@@ -73,7 +73,7 @@ static void test_prepare(void)
     strcpy(config.program_log, "/var/log/kurload.log");
     strcpy(config.pid_file, "/var/run/kurload.pid");
     strcpy(config.output_dir, "/var/lib/kurload");
-    strcpy(config.list_file, "/etc/kurload/iplist");
+    strcpy(config.list_file, "/etc/kurload-iplist");
 }
 
 
