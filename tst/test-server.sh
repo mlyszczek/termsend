@@ -26,7 +26,11 @@ data="/tmp/kurload-test/data"
 mt_prepare_test()
 {
     mkdir -p /tmp/kurload-test/out
-    ../src/kurload -D -C./test-config.conf
+    ../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m2 -dlocalhost -ukurload \
+        -gkurload -P/tmp/kurload-test/kurload.pid \
+        -q/tmp/kurload-test/kurload-query.log -p/tmp/kurload-test/kurload.log \
+        -L/tmp/kurload-test/blacklist -T-1 -o/tmp/kurload-test/out \
+        -b127.6.13.37
 }
 
 

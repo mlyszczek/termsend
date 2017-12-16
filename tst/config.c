@@ -103,36 +103,7 @@ static void config_all_default(void)
    ========================================================================== */
 
 
-static void config_overwrite_only_from_file(void)
-{
-    char *argv[] = { "kurload", "-C./test-config.conf" };
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    config_init(2, argv);
-
-    config.log_level = 6;
-    config.list_type = -1;
-    config.colorful_output = 1;
-    config.listen_port = 61337;
-    config.max_size = 1024;
-    config.max_connections = 2;
-    config.max_timeout = 1;
-    strcpy(config.bind_ip, "127.6.13.37");
-    strcpy(config.query_log, "/tmp/kurload-test/kurload-query.log");
-    strcpy(config.program_log, "/tmp/kurload-test/kurload.log");
-    strcpy(config.pid_file, "/tmp/kurload-test/kurload.pid");
-    strcpy(config.output_dir, "/tmp/kurload-test/out");
-    strcpy(config.list_file, "/tmp/kurload-test/blacklist");
-
-    mt_fok(memcmp(&config, &g_config, sizeof(config)));
-}
-
-
-/* ==========================================================================
-   ========================================================================== */
-
-
-static void config_overwrite_only_from_command_line_short_opts(void)
+static void config_short_opts(void)
 {
     char *argv[] =
     {
@@ -186,7 +157,7 @@ static void config_overwrite_only_from_command_line_short_opts(void)
    ========================================================================== */
 
 
-static void config_overwrite_only_from_command_line_long_opts(void)
+static void config_long_opts(void)
 {
     char *argv[] =
     {
@@ -238,7 +209,7 @@ static void config_overwrite_only_from_command_line_long_opts(void)
    ========================================================================== */
 
 
-static void config_overwrite_only_from_command_line_mixed_opts(void)
+static void config_mixed_opts(void)
 {
     char *argv[] =
     {
@@ -289,82 +260,6 @@ static void config_overwrite_only_from_command_line_mixed_opts(void)
 
 
 /* ==========================================================================
-   ========================================================================== */
-
-
-static void config_overwrite_from_file_and_then_from_command_line(void)
-{
-    char *argv[] =
-    {
-        "kurload",
-        "-l4",
-        "--colorful-output",
-        "--listen-port=100",
-        "--max-filesize=512",
-        "-D",
-        "-C./test-config.conf",
-        "--user=kur",
-        "--group=load",
-        "-q/query",
-        "-p", "/program",
-        "--output-dir=/output",
-        "--bind-ip=0.0.0.0,1.3.3.7"
-    };
-    int argc = sizeof(argv) / sizeof(const char *);
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    config_init(argc, argv);
-
-    /*
-     * config_init will first parse options from file
-     */
-
-    config.log_level = 6;
-    config.list_type = -1;
-    config.colorful_output = 1;
-    config.listen_port = 61337;
-    config.max_size = 1024;
-    config.max_connections = 2;
-    config.max_timeout = 1;
-    strcpy(config.bind_ip, "127.6.13.37");
-    strcpy(config.query_log, "/tmp/kurload-test/kurload-query.log");
-    strcpy(config.program_log, "/tmp/kurload-test/kurload.log");
-    strcpy(config.pid_file, "/tmp/kurload-test/kurload.pid");
-    strcpy(config.output_dir, "/tmp/kurload-test/out");
-    strcpy(config.list_file, "/tmp/kurload-test/blacklist");
-
-    /*
-     * and then options from command line will overwrite those set from file
-     */
-
-    config.log_level = 4;
-    config.colorful_output = 1;
-    config.listen_port = 100;
-    config.max_size = 512;
-    config.daemonize = 1;
-    strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
-    strcpy(config.user, "kur");
-    strcpy(config.group, "load");
-    strcpy(config.query_log, "/query");
-    strcpy(config.program_log, "/program");
-    strcpy(config.output_dir, "/output");
-
-    mt_fok(memcmp(&config, &g_config, sizeof(config)));
-}
-
-
-/* ==========================================================================
-   ========================================================================== */
-
-
-static void config_config_file_doesnt_exist(void)
-{
-    char *argv[] = { "kurload", "-C/i/dont/exist" };
-    mt_ferr(config_init(2, argv), ENOENT);
-}
-
-
-/* ==========================================================================
              __               __
             / /_ ___   _____ / /_   ____ _ _____ ____   __  __ ____
            / __// _ \ / ___// __/  / __ `// ___// __ \ / / / // __ \
@@ -379,10 +274,7 @@ void config_test_group()
     mt_prepare_test = &test_prepare;
 
     mt_run(config_all_default);
-    mt_run(config_overwrite_only_from_file);
-    mt_run(config_overwrite_only_from_command_line_short_opts);
-    mt_run(config_overwrite_only_from_command_line_long_opts);
-    mt_run(config_overwrite_only_from_command_line_mixed_opts);
-    mt_run(config_overwrite_from_file_and_then_from_command_line);
-    mt_run(config_config_file_doesnt_exist);
+    mt_run(config_short_opts);
+    mt_run(config_long_opts);
+    mt_run(config_mixed_opts);
 }

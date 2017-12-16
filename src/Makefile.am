@@ -17,4 +17,4 @@ kurload_SOURCES = bnwlist.c \
 
 kurload_CFLAGS = $(COVERAGE_CFLAGS)
 kurload_LDFLAGS = $(COVERAGE_LDFLAGS)
-kurload_LDADD = -lconfuse -lembedlog -lpthread
+kurload_LDADD = -lembedlog -lpthread

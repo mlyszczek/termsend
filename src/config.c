@@ -42,7 +42,6 @@
 #include "globals.h"
 #include "valid.h"
 
-#include <confuse.h>
 #include <ctype.h>
 #include <embedlog.h>
 #include <errno.h>
@@ -74,7 +73,7 @@
  * list of short options for getopt_long
  */
 
-static const char  *shortopts = ":hvcDl:C:i:s:m:t:T:b:d:u:g:q:p:P:o:L:";
+static const char  *shortopts = ":hvcDl:i:s:m:t:T:b:d:u:g:q:p:P:o:L:";
 
 /*
  * array of long options for getopt_long
@@ -86,7 +85,6 @@ struct option       longopts[] =
     {"version",         no_argument,       NULL, 'v'},
     {"level",           required_argument, NULL, 'l'},
     {"colorful-output", no_argument,       NULL, 'c'},
-    {"config-file",     required_argument, NULL, 'C'},
     {"listen-port",     required_argument, NULL, 'i'},
     {"max-filesize",    required_argument, NULL, 's'},
     {"daemonize",       no_argument,       NULL, 'D'},
@@ -238,7 +236,6 @@ static int config_parse_arguments
 "\t-v, --version                    prints version and quits\n"
 "\t-l, --level=<level>              logging level 0-7\n"
 "\t-c, --colorful-output            enable nice colors for logs\n"
-"\t-C, --config-file=<path>         config file (default /etc/kurload.conf)\n"
 "\t-i, --listen-port=<port>         port on which program will listen\n"
 "\t-s, --max-filesize=<size>        maximum size of file client can upload\n"
 "\t-D, --daemonize                  run as daemon\n"
@@ -280,13 +277,6 @@ static int config_parse_arguments
 
             exit(1);
 
-        case 'C':
-            /*
-             * we don't parse path to config file, as it was already parsed
-             * earlier, and there is no point in parsing it here again.
-             */
-            break;
-
         case ':':
             fprintf(stderr, "option -%c, --%s requires an argument\n",
                 optopt, longopts[loptind].name);
@@ -306,214 +296,6 @@ static int config_parse_arguments
 
 #   undef PARSE_INT
 #   undef PARSE_STR
-}
-
-
-/* ==========================================================================
-    Creates program configuration with hardcoded values, then  reads  config
-    file to overwrite any option defined in config file.  If config file  is
-    not provided in command line argument, hardcoded  default  one  will  be
-    used.
-   ========================================================================== */
-
-
-static int config_parse_configuration
-(
-    int    argc,                       /* number of command line arguments */
-    char  *argv[]                      /* command line argument list */
-)
-{
-    /*
-     * macros for copying data from confuse object to our simple struct
-     */
-
-
-    /*
-     * copy integer and validate if value is between MINV and MAXV, on
-     * error macro sets rc to -1
-     */
-
-
-#   define COPY_INT(OPTNAME, MINV, MAXV)                                       \
-    {                                                                          \
-        long  val;                                                             \
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/   \
-                                                                               \
-        val = cfg_getint(cfg, #OPTNAME);                                       \
-                                                                               \
-        if (val < (long)MINV || (long)MAXV < val)                              \
-        {                                                                      \
-            fprintf(stderr, "value '%ld' for option '%s' should be bigger than"\
-                "%ld and less than %ld, in config file %s\n",                  \
-                val, #OPTNAME, (long)MINV, (long)MAXV, config_path);           \
-            rc = -1;                                                           \
-        }                                                                      \
-                                                                               \
-        g_config.OPTNAME = val;                                                \
-    }
-
-
-    /*
-     * copy  string  and  validate  if  length  of  string  is  less   than
-     * sizeof(g_config.OPTNAME)  -  1.   On  error  macro  sets  rc  to  -1
-     */
-
-
-#   define COPY_STR(OPTNAME)                                                   \
-    {                                                                          \
-        const char  *val;                                                      \
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/   \
-                                                                               \
-        val = cfg_getstr(cfg, #OPTNAME);                                       \
-                                                                               \
-        if (strlen(val) >= sizeof(g_config.OPTNAME))                           \
-        {                                                                      \
-            fprintf(stderr, "string length of option '%s' should be less"      \
-                "than %zu \n", #OPTNAME, sizeof(g_config.OPTNAME));            \
-            rc = -1;                                                           \
-        }                                                                      \
-                                                                               \
-        strcpy(g_config.OPTNAME, val);                                         \
-    }
-
-
-    char    config_path[PATH_MAX + 1];  /* path to configuration file */
-    int     arg;                        /* argument read from getopt_long */
-    int     rc;                         /* return code of function */
-    cfg_t  *cfg;                        /* confuse object */
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-
-    strcpy(config_path, "/etc/kurload/kurload.conf");
-
-    /*
-     * check if location of config file has been overwriten with command line
-     * argument
-     */
-
-    optind = 0;
-    while ((arg = getopt_long(argc, argv, shortopts, longopts, NULL)) != -1)
-    {
-        /*
-         * we ignore any error here and look only for 'C' option
-         */
-
-        if (arg == 'C')
-        {
-            strncpy(config_path, optarg, PATH_MAX);
-            config_path[PATH_MAX] = '\0';
-
-            /*
-             * config has been passed explicitly, we check if file exists
-             */
-
-            if (access(config_path, F_OK) != 0)
-            {
-                fprintf(stderr, "couldn't access config file %s: %s\n",
-                    config_path, strerror(errno));
-                return -1;
-            }
-
-            break;
-        }
-    }
-
-    /*
-     * List of all configuration fields options in file with their default
-     * values
-     */
-
-    cfg_opt_t options[] =
-    {
-    /*  type    field name          default value                   flags */
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        CFG_INT("log_level",        EL_INFO,                        0),
-        CFG_INT("colorful_output",  0,                              0),
-        CFG_INT("listen_port",      1337,                           0),
-        CFG_INT("max_size",         1024 * 1024 /* 1MiB */,         0),
-        CFG_INT("daemonize",        0,                              0),
-        CFG_INT("max_connections",  10,                             0),
-        CFG_INT("max_timeout",      60,                             0),
-        CFG_INT("list_type",        0,                              0),
-        CFG_STR("bind_ip",          "0.0.0.0",                      0),
-        CFG_STR("domain",           "localhost",                    0),
-        CFG_STR("user",             "kurload",                      0),
-        CFG_STR("group",            "kurload",                      0),
-        CFG_STR("query_log",        "/var/log/kurload-query.log",   0),
-        CFG_STR("program_log",      "/var/log/kurload.log",         0),
-        CFG_STR("pid_file",         "/var/run/kurload.pid",         0),
-        CFG_STR("output_dir",       "/var/lib/kurload",             0),
-        CFG_STR("list_file",        "/etc/kurload/iplist",          0),
-        CFG_END()
-    };
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-
-    /*
-     * parse configuration file and overwrite default parameters.
-     */
-
-
-    if ((cfg = cfg_init(options, 0)) == NULL)
-    {
-        fprintf(stdout, "couldn't allocate memory for config parse: %s\n",
-            strerror(errno));
-        return -1;
-    }
-
-    if (cfg_parse(cfg, config_path) != 0)
-    {
-        if (errno == ENOENT)
-        {
-            /*
-             * if config file is specified via command line, file  existance
-             * is already checkout out and this error will not occur in such
-             * case.  But if we use default configuration  and  config  file
-             * doesn't exist we don't fail as this is normal use case - like
-             * passing some options via command line and  accepting  default
-             * options for rest options
-             */
-
-            return 0;
-        }
-
-        fprintf(stdout, "parsing %s error %s\n", config_path, strerror(errno));
-        cfg_free(cfg);
-        return -1;
-    }
-
-    /*
-     * move data from confuse to our struct  for  easier  access.   Not  the
-     * fastest operation, but done only once at startup. If any of the COPY_
-     * macro fails to copy data, rc will be set to -1 and function will fail
-     * with -1 error
-     */
-
-    rc = 0;
-    COPY_INT(log_level, 0, 7);
-    COPY_INT(colorful_output, 0, 1);
-    COPY_INT(listen_port, 0, UINT16_MAX);
-    COPY_INT(max_size, 0, LONG_MAX);
-    COPY_INT(daemonize, 0, 1);
-    COPY_INT(max_connections, 0, LONG_MAX);
-    COPY_INT(max_timeout, 1, LONG_MAX);
-    COPY_INT(list_type, -1, 1);
-    COPY_STR(bind_ip);
-    COPY_STR(domain);
-    COPY_STR(user);
-    COPY_STR(group);
-    COPY_STR(query_log);
-    COPY_STR(program_log);
-    COPY_STR(pid_file);
-    COPY_STR(output_dir);
-    COPY_STR(list_file);
-
-    /*
-     * free cfg as we don't need confuse anymore
-     */
-
-    cfg_free(cfg);
-    return rc;
 }
 
 
@@ -544,31 +326,41 @@ int config_init
     char  *argv[]  /* argument list */
 )
 {
-    int   rv;      /* return value */
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-
     /*
      * disable error printing from getopt library
      */
 
     opterr = 0;
+
+    /*
+     * set g_config object to well-known default state
+     */
+
     memset(&g_config, 0, sizeof(g_config));
 
+    g_config.log_level = EL_INFO;
+    g_config.list_type = 0;
+    g_config.colorful_output = 0;
+    g_config.listen_port = 1337;
+    g_config.max_size = 1024 * 1024; /* 1MiB */
+    g_config.daemonize = 0;
+    g_config.max_connections = 10;
+    g_config.max_timeout = 60;
+    strcpy(g_config.domain, "localhost");
+    strcpy(g_config.bind_ip, "0.0.0.0");
+    strcpy(g_config.user, "kurload");
+    strcpy(g_config.group, "kurload");
+    strcpy(g_config.query_log, "/var/log/kurload-query.log");
+    strcpy(g_config.program_log, "/var/log/kurload.log");
+    strcpy(g_config.pid_file, "/var/run/kurload.pid");
+    strcpy(g_config.output_dir, "/var/lib/kurload");
+    strcpy(g_config.list_file, "/etc/kurload/iplist");
+
     /*
-     * first we parse configuration from file
+     * parse options from command line argument overwriting default ones
      */
 
-    rv = config_parse_configuration(argc, argv);
-
-    /*
-     * then we parse options from command line argument overwriting
-     * already parsed options from config file
-     */
-
-    rv |= config_parse_arguments(argc, argv);
-
-    return rv;
+    return config_parse_arguments(argc, argv);
 }
 
 
