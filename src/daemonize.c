@@ -110,18 +110,32 @@ void daemonize
      * way of  already  run  process,  as  it  may  lead  to  lose  of  data
      */
 
-    if ((fd = open(pid_file, O_WRONLY | O_CREAT | O_EXCL, 0644)) < 0)
+    if ((fd = open(pid_file, O_WRONLY | O_CREAT, 0644)) < 0)
     {
-        if (errno == EEXIST)
-        {
-            fprintf(stderr, "pid file %s already exists, check if process is "
-                "running and remove pid file to start daemon\n", pid_file);
-            exit(1);
-        }
-
         fprintf(stderr, "couldn't create pid file %s, refusing to start: %s\n",
             pid_file, strerror(errno));
         exit(2);
+    }
+
+    /*
+     * if file exists but is empty, we accept it and belive  another  daemon
+     * is not running. Empty pid file can exist when daemon starts with root
+     * permissions (and creates pid file) but when daemon  dies,  as  normal
+     * user it may not be able to delete file, in  such  case  it  truncates
+     * file to be 0 bytes in size
+     */
+
+    if (lseek(fd, 0, SEEK_END) > 0)
+    {
+        /*
+         * file exists AND is NOT empty, we assume pid is in there
+         */
+
+        fprintf(stderr, "pid file %s already exists, check "
+            "if process is running and remove pid file "
+            "to start daemon\n", pid_file);
+        close(fd);
+        exit(1);
     }
 
     /*
@@ -250,9 +264,26 @@ void daemonize_cleanup
     const char  *pid_file
 )
 {
-    if (unlink(pid_file) != 0)
+    if (unlink(pid_file) == 0)
     {
-        fprintf(stderr, "couldn't remove pid file %s: %s\n", pid_file,
-            strerror(errno));
+        /*
+         * pid file deleted, nothing else to be done
+         */
+
+        return;
+    }
+
+    /*
+     * pid file couldn't be deleted,  we  don't  have  access  to  write  to
+     * directory where pid file exists, but we still should be able to write
+     * to pid file itself, so empty the file to indicate daemon doesn't  run
+     * anymore
+     */
+
+    if (truncate(pid_file, 0) != 0)
+    {
+        fprintf(stderr, "could not remove pid file %s "
+            "nor we could truncate pid file to 0 bytes %s\n",
+            pid_file, strerror(errno));
     }
 }
