@@ -130,9 +130,10 @@ int main(int argc, char *argv[])
 
     if (el_option(EL_OPT_FNAME, g_config.program_log) != 0)
     {
-        fprintf(stderr, "WARNING couldn't open program log file %s: %s\n",
+        fprintf(stderr, "WARNING couldn't open program log file %s: %s "
+            "logs will be printed to stderr\n",
             g_config.program_log,  strerror(errno));
-        el_option(EL_OPT_OUT, EL_OPT_OUT_NONE);
+        el_option(EL_OPT_OUT, EL_OPT_OUT_STDERR);
     }
 
     /*
