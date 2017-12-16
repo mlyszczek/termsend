@@ -187,14 +187,14 @@ static void server_reply
     while (written != mlen)
     {
         ssize_t  w;  /* number of bytes written by write */
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
         w = write(fd, msg + written, mlen - written);
 
         if (w == -1)
         {
-            el_perror(ELW, "[%3d] error writing reply to the client", fd);
+            el_perror(ELE, "[%3d] error writing reply to the client", fd);
             return;
         }
 
@@ -222,7 +222,7 @@ static int server_create_socket
 
     if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
-        el_perror(ELE, "couldn't create server socket");
+        el_perror(ELF, "couldn't create server socket");
         return -1;
     }
 
@@ -237,7 +237,7 @@ static int server_create_socket
     flags = 1;
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &flags, sizeof(flags)) != 0)
     {
-        el_perror(ELE, "failed to set socket to SO_REUSEADDR");
+        el_perror(ELF, "failed to set socket to SO_REUSEADDR");
         close(fd);
         return -1;
     }
@@ -258,7 +258,7 @@ static int server_create_socket
 
     if (bind(fd, (struct sockaddr *)&srv, sizeof(srv)) != 0)
     {
-        el_perror(ELE, "failed to bind to socket");
+        el_perror(ELF, "failed to bind to socket");
         close(fd);
         return -1;
     }
@@ -270,7 +270,7 @@ static int server_create_socket
 
     if (listen(fd, 256) != 0)
     {
-        el_perror(ELE, "failed to make socket to listen");
+        el_perror(ELF, "failed to make socket to listen");
         close(fd);
         return -1;
     }
@@ -282,14 +282,14 @@ static int server_create_socket
 
     if ((flags = fcntl(fd, F_GETFL)) == -1)
     {
-        el_perror(ELE, "error reading socket flags");
+        el_perror(ELF, "error reading socket flags");
         close(fd);
         return INADDR_NONE;
     }
 
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
     {
-        el_perror(ELE, "error setting socket to O_NONBLOCK");
+        el_perror(ELF, "error setting socket to O_NONBLOCK");
         close(fd);
         return INADDR_NONE;
     }
@@ -350,7 +350,7 @@ static void *server_handle_upload
 
     if (pthread_sigmask(SIG_SETMASK, &set, NULL) != 0)
     {
-        el_perror(ELW, "couldn't mask signals");
+        el_perror(ELA, "couldn't mask signals");
         el_oprint(ELI, &g_qlog, "[%s] rejected: signal mask failed",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
@@ -410,7 +410,7 @@ static void *server_handle_upload
          */
 
         pthread_mutex_unlock(&lopen);
-        el_perror(ELW, "[%3d] couldn't open file %s", cfd, path);
+        el_perror(ELA, "[%3d] couldn't open file %s", cfd, path);
         el_oprint(ELI, &g_qlog, "[%s] rejected: file open error",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
@@ -458,7 +458,7 @@ static void *server_handle_upload
 
                 if (++timeout == g_config.max_timeout)
                 {
-                    el_print(ELW, "[%3d] client inactive for %d seconds",
+                    el_print(ELN, "[%3d] client inactive for %d seconds",
                         cfd, g_config.max_timeout);
                     el_oprint(ELI, &g_qlog, "[%s] rejected: inactivity",
                         inet_ntoa(client.sin_addr));
@@ -485,7 +485,7 @@ static void *server_handle_upload
              * inform client and close connection
              */
 
-            el_perror(ELW, "[%3d] couldn't read from client", cfd);
+            el_perror(ELC, "[%3d] couldn't read from client", cfd);
             el_oprint(ELI, &g_qlog, "[%s] rejected: read error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
@@ -528,7 +528,7 @@ static void *server_handle_upload
 
         if ((w = write(fd, buf, r)) != r)
         {
-            el_perror(ELW, "[%3d] couldn't write to file", cfd);
+            el_perror(ELC, "[%3d] couldn't write to file", cfd);
             el_oprint(ELI, &g_qlog, "[%s] rejected: write to file failed",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
@@ -567,7 +567,7 @@ static void *server_handle_upload
              * call it a day for this client
              */
 
-            el_perror(ELW, "[%3d] couldn't read end string", cfd);
+            el_perror(ELC, "[%3d] couldn't read end string", cfd);
             el_oprint(ELI, &g_qlog, "[%s] rejected: end string read error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
@@ -601,7 +601,7 @@ static void *server_handle_upload
 
     if (ftruncate(fd, written - 8) != 0)
     {
-        el_perror(ELW, "[%3d] couldn't truncate file from ending string", cfd);
+        el_perror(ELC, "[%3d] couldn't truncate file from ending string", cfd);
         el_oprint(ELI, &g_qlog, "[%s] rejected: truncate failed",
             inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
@@ -688,7 +688,7 @@ static void server_process_connection
                 return;
             }
 
-            el_perror(ELW, "couldn't accept connection");
+            el_perror(ELC, "couldn't accept connection");
         }
 
         /*
@@ -737,7 +737,7 @@ static void server_process_connection
 
         if (setsockopt(cfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) != 0)
         {
-            el_perror(ELW, "[%3d] couldn't set timeout for client socket", cfd);
+            el_perror(ELC, "[%3d] couldn't set timeout for client socket", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
             continue;
@@ -751,7 +751,7 @@ static void server_process_connection
         if (pthread_create(&t, NULL, server_handle_upload,
                 (void *)(intptr_t)cfd) != 0)
         {
-            el_perror(ELW, "[%3d] couldn't start processing thread", cfd);
+            el_perror(ELC, "[%3d] couldn't start processing thread", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
             continue;
@@ -806,7 +806,7 @@ int server_init(void)
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    el_print(ELI, "creating server");
+    el_print(ELN, "creating server");
 
     nsfds = server_bind_num();
 
@@ -817,7 +817,7 @@ int server_init(void)
 
     if ((sfds = malloc(nsfds * sizeof(*sfds))) == NULL)
     {
-        el_print(ELE, "couldn't allocate memory for %d server(s)", nsfds);
+        el_print(ELF, "couldn't allocate memory for %d server(s)", nsfds);
         return -1;
     }
 
@@ -827,14 +827,14 @@ int server_init(void)
 
     if (pthread_mutex_init(&lconn, NULL) != 0)
     {
-        el_perror(ELE, "couldn't initialize current connection mutex");
+        el_perror(ELF, "couldn't initialize current connection mutex");
         free(sfds);
         return -1;
     }
 
     if (pthread_mutex_init(&lopen, NULL) != 0)
     {
-        el_perror(ELE, "couldn't initialize open mutex");
+        el_perror(ELF, "couldn't initialize open mutex");
         free(sfds);
         pthread_mutex_destroy(&lconn);
         return -1;
@@ -867,7 +867,7 @@ int server_init(void)
 
         if ((sfds[i] = server_create_socket(netip)) < 0)
         {
-            el_print(ELE, "couldn't create socket for bind ip %s", ip);
+            el_print(ELF, "couldn't create socket for bind ip %s", ip);
             goto error;
         }
 
@@ -968,11 +968,11 @@ void server_loop_forever(void)
 
             if (errno == EINTR)
             {
-                el_print(ELI, "select interrupted by signal");
+                el_print(ELN, "select interrupted by signal");
             }
             else
             {
-                el_perror(ELE, "error waiting on socket activity");
+                el_perror(ELF, "error waiting on socket activity");
             }
 
             return;
@@ -1029,7 +1029,7 @@ void server_destroy(void)
      * finish
      */
 
-    el_print(ELI, "waiting for all connections to finish");
+    el_print(ELN, "waiting for all connections to finish");
 
     for (;;)
     {

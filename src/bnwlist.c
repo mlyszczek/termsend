@@ -164,7 +164,7 @@ static int bnw_parse_list
     if ((ip_list = malloc(n * sizeof(in_addr_t))) == NULL)
     {
         e = errno;
-        el_print(ELE, "malloc error %d bytes for list", n * sizeof(in_addr_t));
+        el_print(ELF, "malloc error %d bytes for list", n * sizeof(in_addr_t));
         errno = e;
         return -1;
     }
@@ -188,7 +188,7 @@ static int bnw_parse_list
         {
             if (j == 15)
             {
-                el_print(ELE, "error parsing list file in line %d", n + 1);
+                el_print(ELF, "error parsing list file in line %d", n + 1);
                 free(ip_list);
                 ip_list = NULL;
                 errno = EFAULT;
@@ -207,7 +207,7 @@ static int bnw_parse_list
 
         if ((ip_list[n] = ntohl(inet_addr(ip))) == INADDR_NONE)
         {
-            el_print(ELE, "malformed ip (%s) in list on line %d", ip, n + 1);
+            el_print(ELF, "malformed ip (%s) in list on line %d", ip, n + 1);
             free(ip_list);
             ip_list = NULL;
             errno = EFAULT;
@@ -223,7 +223,7 @@ static int bnw_parse_list
 
     num_ip = n;
     qsort(ip_list, n, sizeof(in_addr_t), bnw_ip_comp);
-    el_print(ELI, "%d IPs added to the list, list size in mem %zu bytes",
+    el_print(ELN, "%d IPs added to the list, list size in mem %zu bytes",
         n, n * sizeof(in_addr_t));
 
     return 0;
@@ -268,13 +268,13 @@ int bnw_init
 
     if ((mode = m) == 0)
     {
-        el_print(ELI, "ip filtering is off");
+        el_print(ELN, "ip filtering is off");
         return 0;
     }
 
     VALID(EINVAL, flist);
 
-    el_print(ELI, "loading list file %s", flist);
+    el_print(ELN, "loading list file %s", flist);
 
     if (stat(flist, &st) == -1)
     {
@@ -285,7 +285,7 @@ int bnw_init
             return 0;
         }
 
-        el_perror(ELE, "couldn't stat list file");
+        el_perror(ELF, "couldn't stat list file");
         return -1;
     }
 
@@ -299,7 +299,7 @@ int bnw_init
     if ((fd = open(flist, O_RDONLY)) == -1)
     {
         e = errno;
-        el_perror(ELE, "coudln't open list file");
+        el_perror(ELF, "couldn't open list file");
         errno = e;
         return -1;
     }
@@ -307,7 +307,7 @@ int bnw_init
     f = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (f == MAP_FAILED)
     {
-        el_perror(ELE, "couldn't mmap flist file");
+        el_perror(ELF, "couldn't mmap flist file");
         close(fd);
         return -1;
     }
@@ -315,7 +315,7 @@ int bnw_init
     if (bnw_parse_list(f, st.st_size) == -1)
     {
         e = errno;
-        el_print(ELE, "parsing list failed");
+        el_print(ELF, "parsing list failed");
         munmap(f, st.st_size);
         close(fd);
         errno = e;
