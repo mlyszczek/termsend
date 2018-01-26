@@ -8,6 +8,8 @@ AX_PTHREAD(, [AC_MSG_ERROR(pthread not found)])
 AC_PROG_CC
 AC_PROG_CC_C89
 AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile])
+AC_CONFIG_LINKS([tst/test-server.sh:tst/test-server.sh])
+AC_CONFIG_LINKS([tst/mtest.sh:tst/mtest.sh])
 
 
 m4_include([m4/gcov.m4])
