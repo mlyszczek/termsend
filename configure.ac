@@ -4,7 +4,7 @@ AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_HEADERS([kurload.h])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_CHECK_FUNCS(sigaction sigfillset ftruncate usleep fchown stat)
-AX_PTHREAD(, [AC_MSG_ERROR(pthread not found)])
+AX_PTHREAD
 AC_PROG_CC
 AC_PROG_CC_C89
 AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile])
