@@ -1,0 +1,99 @@
+#!/sbin/openrc-run
+
+LOG_LEVEL=${LOG_LEVEL:="6"}
+COLORFUL_OUTPUT=${COLORFUL_OUTPUT:="0"}
+LISTEN_PORT=${LISTEN_PORT:="1337"}
+MAX_SIZE=${MAX_SIZE:="1048576"}
+MAX_TIMEOUT=${MAX_TIMEOUT:="60"}
+MAX_CONNECTIONS=${MAX_CONNECTIONS:="10"}
+DOMAIN=${DOMAIN:="http://kurload.kurwinet.pl"}
+USER=${USER:="kurload"}
+GROUP=${GROUP:="kurload"}
+QUERY_LOG=${QUERY_LOG:="/var/log/kurload-query.log"}
+PROGRAM_LOG=${PROGRAM_LOG:="/var/log/kurload.log"}
+LIST_FILE=${LIST_FILE:="/etc/kurload-iplist"}
+LIST_TYPE=${LIST_TYPE:="0"}
+OUTPUT_DIR=${OUTPUT_DIR:="/var/lib/kurload"}
+BIND_IP=${BIND_IP:="0.0.0.0"}
+
+command=/usr/bin/kurload
+colors=
+
+depend() {
+    need net localmount
+    after bootmisc
+}
+
+start_pre()
+{
+    ebegin "Checking configuration for kurload server"
+
+    if [ "${COLORFUL_OUTPUT}" -eq "1" ] ; then
+        colors="-c"
+    fi
+
+    # check if ${USER} and ${GROUP} exist in the system
+    if ! /usr/bin/id -u ${USER} > /dev/null 2>&1 ; then
+        eerror "User \"${USER}\" doesn't exist in current system"
+        eend 1 "failed to start kurload server"
+        exit 1
+    fi
+
+    if ! /usr/bin/id -g ${GROUP} > /dev/null 2>&1 ; then
+        eerror "Group \"${GROUP}\" doesn't exist in current system"
+        eend 1 "failed to start kurload server"
+        exit 1
+    fi
+
+    # chcek if output directory exists and is writeable by configured user
+    if [ ! -d ${OUTPUT_DIR} ] ; then
+        eerror "Output directory \"${OUTPUT_DIR}\" doesn\'t exist"
+        eerror "You need to create it first before you can start server"
+        eend 1 "failed to start kurload server"
+        exit 1
+    fi
+
+    if /bin/su ${USER} -c "if [ -w ${OUTPUT_DIR} ]; then exit 1; fi"; then
+        eerror "Output directory \"${OUTPUT_DIR}\" is not writeable"
+        eerror "for user ${USER}"
+        eend 1 "failed to start kurload server"
+        exit 1
+    fi
+
+    # create log files if they don't exist and set proper permissions
+    if [ -f ${QUERY_LOG} ] ; then
+        /bin/touch ${QUERY_LOG}
+        /bin/chown ${USER} ${QUERY_LOG}
+        /bin/chgrp adm ${QUERY_LOG}
+        /bin/chmod 640 ${QUERY_LOG}
+    fi
+
+    if [ -f ${PROGRAM_LOG} ] ; then
+        /bin/touch ${PROGRAM_LOG}
+        /bin/chown ${USER} ${PROGRAM_LOG}
+        /bin/chgrp adm ${PROGRAM_LOG}
+        /bin/chmod 640 ${PROGRAM_LOG}
+    fi
+
+    eend 0
+}
+
+start() {
+    ebegin "Starting kurload server"
+
+    /sbin/start-stop-daemon --make-pidfile --pidfile /var/run/kurload.pid \
+        --start --background --user ${USER} --group ${GROUP} --name kurload \
+        --stdout ${PROGRAM_LOG} --stderr ${PROGRAM_LOG} \
+        --exec ${command} -- \
+        -l${LOG_LEVEL} ${colors} -i${LISTEN_PORT} -s${MAX_SIZE} \
+        -t${MAX_TIMEOUT} -m${MAX_CONNECTIONS} -d${DOMAIN} -q${QUERY_LOG} \
+        -p${PROGRAM_LOG} -o${OUTPUT_DIR} -T${LIST_TYPE} -L${LIST_FILE} \
+        -b${BIND_IP}
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping kurload server"
+    /sbin/start-stop-daemon --stop --signal 15 --pidfile /var/run/kurload.pid
+    eend $?
+}

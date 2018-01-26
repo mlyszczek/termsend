@@ -1,0 +1,238 @@
+#!/bin/sh
+## ==========================================================================
+#   Licensed under BSD 2clause license See LICENSE file for more information
+#   Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
+## ==========================================================================
+
+
+## ==========================================================================
+#                                                 ____ _  __
+#        _____ ____   __  __ _____ _____ ___     / __/(_)/ /___   _____
+#       / ___// __ \ / / / // ___// ___// _ \   / /_ / // // _ \ / ___/
+#      (__  )/ /_/ // /_/ // /   / /__ /  __/  / __// // //  __/(__  )
+#     /____/ \____/ \__,_//_/    \___/ \___/  /_/  /_//_/ \___//____/
+#
+## ==========================================================================
+
+
+. /usr/local/etc/kurload.conf
+
+
+## ==========================================================================
+#                    _                __
+#      ____   _____ (_)_   __ ____ _ / /_ ___     _   __ ____ _ _____ _____
+#     / __ \ / ___// /| | / // __ `// __// _ \   | | / // __ `// ___// ___/
+#    / /_/ // /   / / | |/ // /_/ // /_ /  __/   | |/ // /_/ // /   (__  )
+#   / .___//_/   /_/  |___/ \__,_/ \__/ \___/    |___/ \__,_//_/   /____/
+#  /_/
+## ==========================================================================
+
+
+LOG_LEVEL=${LOG_LEVEL:="6"}
+COLORFUL_OUTPUT=${COLORFUL_OUTPUT:="0"}
+LISTEN_PORT=${LISTEN_PORT:="1337"}
+MAX_SIZE=${MAX_SIZE:="1048576"}
+MAX_TIMEOUT=${MAX_TIMEOUT:="60"}
+MAX_CONNECTIONS=${MAX_CONNECTIONS:="10"}
+DOMAIN=${DOMAIN:="http://kurload.kurwinet.pl"}
+USER=${USER:="kurload"}
+GROUP=${GROUP:="kurload"}
+QUERY_LOG=${QUERY_LOG:="/var/log/kurload-query.log"}
+PROGRAM_LOG=${PROGRAM_LOG:="/var/log/kurload.log"}
+LIST_FILE=${LIST_FILE:="/etc/kurload-iplist"}
+LIST_TYPE=${LIST_TYPE:="0"}
+OUTPUT_DIR=${OUTPUT_DIR:="/var/lib/kurload"}
+BIND_IP=${BIND_IP:="0.0.0.0"}
+
+command=/usr/local/bin/kurload
+colors=
+
+
+## ==========================================================================
+#                         __     __ _          ____
+#          ____   __  __ / /_   / /(_)_____   / __/__  __ ____   _____
+#         / __ \ / / / // __ \ / // // ___/  / /_ / / / // __ \ / ___/
+#        / /_/ // /_/ // /_/ // // // /__   / __// /_/ // / / /(__  )
+#       / .___/ \__,_//_.___//_//_/ \___/  /_/   \__,_//_/ /_//____/
+#      /_/
+## ==========================================================================
+
+
+## ==========================================================================
+#   pre start function, that performs some sanity check of the system before
+#   server can be started
+## ==========================================================================
+
+
+start_pre()
+{
+    echo -n "Checking configuration for kurload server... "
+
+    # check if ${USER} and ${GROUP} exist in the system
+    if ! /usr/bin/id -u ${USER} > /dev/null 2>&1 ; then
+        echo "error"
+        echo "User \"${USER}\" doesn't exist in current system"
+        echo "failed to start kurload server"
+        exit 1
+    fi
+
+    if ! /usr/bin/id -g ${GROUP} > /dev/null 2>&1 ; then
+        echo "error"
+        echo "Group \"${GROUP}\" doesn't exist in current system"
+        echo "failed to start kurload server"
+        exit 1
+    fi
+
+    # chcek if output directory exists and is writeable by configured user
+    if [ ! -d ${OUTPUT_DIR} ] ; then
+        echo "error"
+        echo "Output directory \"${OUTPUT_DIR}\" doesn\'t exist"
+        echo "You need to create it first before you can start server"
+        echo "failed to start kurload server"
+        exit 1
+    fi
+
+    if /bin/su ${USER} -c "if [ -w ${OUTPUT_DIR} ]; then exit 1; fi"; then
+        echo "error"
+        echo "Output directory \"${OUTPUT_DIR}\" is not writeable"
+        echo "for user ${USER}"
+        echo "failed to start kurload server"
+        exit 1
+    fi
+
+    # create log files if they don't exist and set proper permissions
+    if [ -f ${QUERY_LOG} ] ; then
+        /bin/touch ${QUERY_LOG}
+        /bin/chown ${USER} ${QUERY_LOG}
+        /bin/chgrp adm ${QUERY_LOG}
+        /bin/chmod 640 ${QUERY_LOG}
+    fi
+
+    if [ -f ${PROGRAM_LOG} ] ; then
+        /bin/touch ${PROGRAM_LOG}
+        /bin/chown ${USER} ${PROGRAM_LOG}
+        /bin/chgrp adm ${PROGRAM_LOG}
+        /bin/chmod 640 ${PROGRAM_LOG}
+    fi
+
+    echo "ok"
+}
+
+
+## ==========================================================================
+#   starts server as daemon
+## ==========================================================================
+
+
+start() {
+    echo -n "Starting kurload server... "
+    if [ "${COLORFUL_OUTPUT}" -eq "1" ] ; then
+        colors="-c"
+    fi
+
+    ${command} -l${LOG_LEVEL} ${colors} -i${LISTEN_PORT} -s${MAX_SIZE} \
+        -t${MAX_TIMEOUT} -m${MAX_CONNECTIONS} -d${DOMAIN} -q${QUERY_LOG} \
+        -p${PROGRAM_LOG} -o${OUTPUT_DIR} -T${LIST_TYPE} -L${LIST_FILE} \
+        -b${BIND_IP} -D -P/var/run/kurload.pid -u${USER} -g${GROUP}
+
+    if [ "$?" -ne "0" ] ; then
+        echo "error"
+        echo "Failed to start program, please check ${PROGRAM_LOG}" \
+            "to see more information about what went wrong"
+        exit 1
+    fi
+
+    echo "ok"
+}
+
+
+## ==========================================================================
+#   stops the server but lets it finish any job it currently performs.  If
+#   stop gets called twice, server will abandon any job and will exit asap
+## ==========================================================================
+
+
+stop() {
+    echo -n "Stopping kurload server... "
+    if /bin/kill -15 `cat /var/run/kurload.pid` > /dev/null 2>&1; then
+        echo "ok"
+        return 0
+    fi
+
+    echo "already stopped"
+}
+
+
+## ==========================================================================
+#                                __                __
+#                         _____ / /_ ____ _ _____ / /_
+#                        / ___// __// __ `// ___// __/
+#                       (__  )/ /_ / /_/ // /   / /_
+#                      /____/ \__/ \__,_//_/    \__/
+#
+## ==========================================================================
+
+
+case "$1" in
+    "start")
+        start_pre
+        start
+        ;;
+
+    "stop")
+        stop
+        ;;
+
+    "restart")
+        stop
+        start_pre
+        start
+        ;;
+
+    "status")
+        if [ ! -f /var/run/kurload.pid ] ; then
+            # file doesn't exist, server wasn't started yet, or it was closed
+            # and server removed pid file
+            echo "server is not running"
+            exit 1
+        fi
+
+        if [ `/usr/bin/stat -c %s /var/run/kurload.pid` -eq 0 ] ; then
+            # file exists but its size is 0, meaning server started and ended
+            # but couldn't remove pid, so it truncated it to 0 bytes size
+            echo "server is not running"
+            exit 1
+        fi
+
+        if /bin/ps -p `cat /var/run/kurload.pid` > /dev/null 2>&1 ; then
+            # process exists and is alive
+            echo "server is running"
+            exit 0
+        fi
+
+        # information about pid exists in pid file, but process is not running
+        # that means server exited in non-clean way and didn't clean pid file
+        echo "server crashed"
+        exit 2
+        ;;
+    *)
+        echo -e "usage: $0 {start|stop|status|restart}"
+        echo -e ""
+        echo -e "exit codes"
+        echo -e "\tstart"
+        echo -e "\t\t0\tstarted with success"
+        echo -e "\t\t1\terror starting server"
+        echo -e ""
+        echo -e "\tstop"
+        echo -e "\t\t0\tserver stopped with success"
+        echo -e "\t\t1\tcouldn't stop server (already stopped or crashed)"
+        echo -e ""
+        echo -e "\tstatus"
+        echo -e "\t\t0\tserver is running"
+        echo -e "\t\t1\tserver is not running"
+        echo -e "\t\t2\tserver crashed"
+        echo -e ""
+        echo -e "\trestart"
+        echo -e "\t\t0\tserver restarted"
+        echo -e "\t\t1\terror restarting server"
+esac
