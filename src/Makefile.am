@@ -1,20 +1,33 @@
 include ../Makefile.am.coverage
 
+source = bnwlist.c \
+	config.c \
+	daemonize.c \
+	main.c \
+	server.c \
+	globals.c
+
 bin_PROGRAMS = kurload
-kurload_SOURCES = bnwlist.c \
-				config.c \
-				daemonize.c \
-				main.c \
-				server.c \
-				globals.c \
-				bnwlist.h \
-				config.h \
-				daemonize.h \
-				globals.h \
-				server.h \
-				valid.h \
-				version.h
+kurload_SOURCES = $(source) \
+	bnwlist.h \
+	config.h \
+	daemonize.h \
+	globals.h \
+	server.h \
+	valid.h \
+	version.h
 
 kurload_CFLAGS = $(COVERAGE_CFLAGS)
 kurload_LDFLAGS = $(COVERAGE_LDFLAGS)
 kurload_LDADD = -lembedlog -lpthread
+
+# static code analyzer
+
+analyze_plists = $(source:%.c=%.plist)
+MOSTLYCLEANFILES = $(analyze_plists)
+
+$(analyze_plists): %.plist: %.c
+	@echo "  CCSA  " $@
+	@clang --analyze -I.. $< -o $@
+
+analyze: $(analyze_plists)

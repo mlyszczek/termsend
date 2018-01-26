@@ -1,6 +1,7 @@
 *.gcda
 *.gcno
 *.o
+*.plist
 Makefile
 Makefile.in
 aclocal.m4
