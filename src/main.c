@@ -121,19 +121,19 @@ int main(int argc, char *argv[])
      */
 
     el_init();
-    el_option(EL_OPT_LEVEL, g_config.log_level);
-    el_option(EL_OPT_OUT, EL_OPT_OUT_FILE);
-    el_option(EL_OPT_TS, EL_OPT_TS_LONG);
-    el_option(EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
-    el_option(EL_OPT_FINFO, 1);
-    el_option(EL_OPT_COLORS, g_config.colorful_output);
+    el_option(EL_LEVEL, g_config.log_level);
+    el_option(EL_OUT, EL_OUT_FILE);
+    el_option(EL_TS, EL_TS_LONG);
+    el_option(EL_TS_TM, EL_TS_TM_REALTIME);
+    el_option(EL_FINFO, 1);
+    el_option(EL_COLORS, g_config.colorful_output);
 
-    if (el_option(EL_OPT_FNAME, g_config.program_log) != 0)
+    if (el_option(EL_FNAME, g_config.program_log) != 0)
     {
         fprintf(stderr, "WARNING couldn't open program log file %s: %s "
             "logs will be printed to stderr\n",
             g_config.program_log,  strerror(errno));
-        el_option(EL_OPT_OUT, EL_OPT_OUT_STDERR);
+        el_option(EL_OUT, EL_OUT_STDERR);
     }
 
     /*
@@ -141,17 +141,17 @@ int main(int argc, char *argv[])
      */
 
     el_oinit(&g_qlog);
-    el_ooption(&g_qlog, EL_OPT_LEVEL, EL_INFO);
-    el_ooption(&g_qlog, EL_OPT_OUT, EL_OPT_OUT_FILE);
-    el_ooption(&g_qlog, EL_OPT_TS, EL_OPT_TS_LONG);
-    el_ooption(&g_qlog, EL_OPT_TS_TM, EL_OPT_TS_TM_REALTIME);
-    el_ooption(&g_qlog, EL_OPT_PRINT_LEVEL, 0);
+    el_ooption(&g_qlog, EL_LEVEL, EL_INFO);
+    el_ooption(&g_qlog, EL_OUT, EL_OUT_FILE);
+    el_ooption(&g_qlog, EL_TS, EL_TS_LONG);
+    el_ooption(&g_qlog, EL_TS_TM, EL_TS_TM_REALTIME);
+    el_ooption(&g_qlog, EL_PRINT_LEVEL, 0);
 
-    if (el_ooption(&g_qlog, EL_OPT_FNAME, g_config.query_log) != 0)
+    if (el_ooption(&g_qlog, EL_FNAME, g_config.query_log) != 0)
     {
         fprintf(stderr, "WARNING couldn't open query log file %s: %s\n",
              g_config.query_log, strerror(errno));
-        el_ooption(&g_qlog, EL_OPT_OUT, EL_OPT_OUT_NONE);
+        el_ooption(&g_qlog, EL_OUT, EL_OUT_NONE);
     }
 
     memset(&sa, 0, sizeof(sa));
