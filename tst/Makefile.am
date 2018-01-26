@@ -11,8 +11,15 @@ test_SOURCES  = main.c \
 	config.c \
 	globals.c
 
-test_CFLAGS = -I$(top_srcdir)/src -I/usr/local/include $(COVERAGE_CFLAGS)
-test_LDFLAGS = -L/usr/local/lib $(COVERAGE_LDFLAGS)
+test_CFLAGS = -I$(top_srcdir)/src \
+	-I/usr/local/include \
+	-I/usr/include \
+	$(COVERAGE_CFLAGS)
+
+test_LDFLAGS = -L/usr/local/lib \
+	-L/usr/lib \
+	$(COVERAGE_LDFLAGS)
+
 test_LDADD = -lembedlog -lpthread
 
 TESTS = $(check_PROGRAMS) $(check_SCRIPTS)

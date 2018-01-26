@@ -17,8 +17,15 @@ kurload_SOURCES = $(source) \
 	valid.h \
 	version.h
 
-kurload_CFLAGS = $(COVERAGE_CFLAGS)
-kurload_LDFLAGS = $(COVERAGE_LDFLAGS)
+kurload_CFLAGS = -I$(top_srcdir) \
+	-I/usr/local/include \
+	-I/usr/include \
+	$(COVERAGE_CFLAGS)
+
+kurload_LDFLAGS = -L/usr/local/lib \
+	-L/usr/lib \
+	$(COVERAGE_LDFLAGS)
+
 kurload_LDADD = -lembedlog -lpthread
 
 # static code analyzer
