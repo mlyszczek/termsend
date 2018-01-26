@@ -16,5 +16,6 @@ test_LDFLAGS = -L/usr/local/lib $(COVERAGE_LDFLAGS)
 test_LDADD = -lembedlog -lpthread
 
 TESTS = $(check_PROGRAMS) test-server.sh
-LOG_DRIVER = $(top_srcdir)/tap-driver
-EXTRA_DIST = test-server.sh mtest.sh test-config.conf
+LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+	$(top_srcdir)/tap-driver.sh
+EXTRA_DIST = test-server.sh mtest.sh
