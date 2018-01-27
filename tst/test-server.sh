@@ -5,7 +5,13 @@ updir="./kurload-test/out"
 data="./kurload-test/data"
 
 . ./mtest.sh
-server="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 254 + 2))"
+
+if [ "$(uname)" = "Linux" ]
+then
+    server="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 254 + 2))"
+else
+    server="127.0.0.1"
+fi
 
 ## ==========================================================================
 #                                  _                __
