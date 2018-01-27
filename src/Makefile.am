@@ -30,6 +30,8 @@ kurload_LDADD = -lembedlog -lpthread
 
 # static code analyzer
 
+if ENABLE_ANALYZER
+
 analyze_plists = $(source:%.c=%.plist)
 MOSTLYCLEANFILES = $(analyze_plists)
 
@@ -38,3 +40,5 @@ $(analyze_plists): %.plist: %.c
 	@clang --analyze -I.. $< -o $@
 
 analyze: $(analyze_plists)
+
+endif
