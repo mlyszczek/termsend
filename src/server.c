@@ -660,6 +660,7 @@ static void server_process_connection
 {
     int                 nconn;   /* current number of active connection */
     int                 cfd;     /* socket associated with connected client */
+    int                 flags;   /* flags for cfd socket */
     socklen_t           clen;    /* length of 'client' variable */
     struct sockaddr_in  client;  /* address of remote client */
     struct timeval      tv;      /* read timeout */
@@ -727,6 +728,29 @@ static void server_process_connection
 
         el_print(ELI, "incoming connection from %s socket id %d",
             inet_ntoa(client.sin_addr), cfd);
+
+        /*
+         * on some systems (like BSDs) socket after accept will inherit
+         * flags from accept server socket. In our case we may inherit
+         * O_NONBLOCK property which is not what we want. We turn that
+         * flag explicitly
+         */
+
+        if ((flags = fcntl(cfd, F_GETFL)) == -1)
+        {
+            el_perror(ELF, "[%3d] error reading socket flags", cfd);
+            server_reply(cfd, "internal server error, try again later\n");
+            close(cfd);
+            continue;
+        }
+
+        if (fcntl(cfd, F_SETFL, flags & ~O_NONBLOCK) == -1)
+        {
+            el_perror(ELF, "[%3d] error setting socket into block mode", cfd);
+            server_reply(cfd, "internal server error, try again later\n");
+            close(cfd);
+            continue;
+        }
 
         /*
          * set timeout so read call on cfd can return if no new data has
