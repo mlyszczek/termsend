@@ -102,7 +102,7 @@ randstr()
 
 randbin()
 {
-    head -c $1 < /dev/urandom
+    dd if=/dev/urandom bs=1 count=${1}
 }
 
 
