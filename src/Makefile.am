@@ -26,8 +26,6 @@ kurload_LDFLAGS = -L/usr/local/lib \
 	-L/usr/lib \
 	$(COVERAGE_LDFLAGS)
 
-kurload_LDADD = -lembedlog -lpthread
-
 # static code analyzer
 
 if ENABLE_ANALYZER

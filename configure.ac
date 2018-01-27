@@ -28,4 +28,13 @@ AC_ARG_ENABLE([analyzer],
     [enable_analyzer="yes"], [enable_analyzer="no"])
 AM_CONDITIONAL([ENABLE_ANALYZER], [test "x$enable_analyzer" = "xyes"])
 
+
+AC_SEARCH_LIBS([socket], [socket])
+AC_SEARCH_LIBS([gethostent], [nsl])
+AC_SEARCH_LIBS([el_init], [embedlog])
+
+LIBS="$PTHREAD_LIBS $LIBS"
+CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+CC="$PTHREAD_CC"
+
 AC_OUTPUT
