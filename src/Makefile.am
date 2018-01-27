@@ -18,13 +18,9 @@ kurload_SOURCES = $(source) \
 	version.h
 
 kurload_CFLAGS = -I$(top_srcdir) \
-	-I/usr/local/include \
-	-I/usr/include \
 	$(COVERAGE_CFLAGS)
 
-kurload_LDFLAGS = -L/usr/local/lib \
-	-L/usr/lib \
-	$(COVERAGE_LDFLAGS)
+kurload_LDFLAGS = $(COVERAGE_LDFLAGS)
 
 # static code analyzer
 

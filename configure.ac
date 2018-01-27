@@ -5,13 +5,14 @@ AC_CONFIG_HEADERS([kurload.h])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CHECK_FUNCS(sigaction sigfillset ftruncate usleep fchown stat)
-AX_PTHREAD
 AC_PROG_CC
 AC_PROG_CC_C89
 AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile])
 AC_CONFIG_LINKS([tst/test-server.sh:tst/test-server.sh])
 AC_CONFIG_LINKS([tst/mtest.sh:tst/mtest.sh])
 
+LDFLAGS="$LDFLAGS -L/usr/local/lib -L/usr/lib"
+CFLAGS="$CFLAGS -I/usr/local/include -I/usr/include"
 
 m4_include([m4/gcov.m4])
 AC_TDD_GCOV
@@ -33,6 +34,8 @@ AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([gethostent], [nsl])
 AC_SEARCH_LIBS([el_init], [embedlog])
 
+
+AX_PTHREAD
 LIBS="$PTHREAD_LIBS $LIBS"
 CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 CC="$PTHREAD_CC"
