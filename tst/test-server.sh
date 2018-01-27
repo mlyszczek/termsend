@@ -5,12 +5,19 @@ updir="./kurload-test/out"
 data="./kurload-test/data"
 
 . ./mtest.sh
-
-if [ "$(uname)" = "Linux" ]
+os="$(uname)"
+if [ "${os}" = "Linux" ]
 then
     server="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 254 + 2))"
 else
     server="127.0.0.1"
+fi
+
+if [ "${os}" = "SunOS" ]
+then
+    nc="nc -F"
+else
+    nc="nc"
 fi
 
 ## ==========================================================================
@@ -56,7 +63,7 @@ mt_cleanup_test()
 
 kurload()
 {
-    cat - <(echo 'kurload') | nc ${server} 61337 2>/dev/null
+    cat - <(echo 'kurload') | ${nc} ${server} 61337 2>/dev/null
 }
 
 
@@ -194,7 +201,7 @@ test_send_bin_too_big()
 test_send_and_timeout()
 {
     randbin 128 > $data
-    out=`cat $data | nc ${server} 61337 2> /dev/null | tail -n1`
+    out=`cat $data | ${nc} ${server} 61337 2> /dev/null | tail -n1`
     mt_fail "[ \"$out\" == \"disconnected due to inactivity for 1 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
 }
 
@@ -219,7 +226,7 @@ test_totally_random()
             fi
 
             randbin $numbytes > $data
-            out=`cat $data | nc ${server} 61337 2> /dev/null | tail -n1`
+            out=`cat $data | ${nc} ${server} 61337 2> /dev/null | tail -n1`
 
             mt_fail "[ \"$out\" == \"disconnected due to inactivity for 1 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
         else
