@@ -5,7 +5,7 @@ updir="/tmp/kurload-test/out"
 data="/tmp/kurload-test/data"
 
 . ./mtest.sh
-
+server="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 254 + 2))"
 
 ## ==========================================================================
 #                                  _                __
@@ -25,18 +25,21 @@ data="/tmp/kurload-test/data"
 
 mt_prepare_test()
 {
+    u="$(whoami)"
     mkdir -p /tmp/kurload-test/out
-    ../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m2 -dlocalhost -ukurload \
-        -gkurload -P/tmp/kurload-test/kurload.pid \
+    ../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m2 -dlocalhost -u${u} \
+        -g${u} -P/tmp/kurload-test/kurload.pid \
         -q/tmp/kurload-test/kurload-query.log -p/tmp/kurload-test/kurload.log \
         -L/tmp/kurload-test/blacklist -T-1 -o/tmp/kurload-test/out \
-        -b127.6.13.37
+        -b${server}
+    sleep 0.2
 }
 
 
 mt_cleanup_test()
 {
     kill -15 `cat /tmp/kurload-test/kurload.pid`
+    sleep 0.2
     rm -rf /tmp/kurload-test
 }
 
@@ -48,7 +51,7 @@ mt_cleanup_test()
 
 kurload()
 {
-    cat - <(echo 'kurload') | nc 127.6.13.37 61337 2>/dev/null
+    cat - <(echo 'kurload') | nc ${server} 61337 2>/dev/null
 }
 
 
@@ -186,7 +189,7 @@ test_send_bin_too_big()
 test_send_and_timeout()
 {
     randbin 128 > $data
-    out=`cat $data | nc 127.6.13.37 61337 2> /dev/null | tail -n1`
+    out=`cat $data | nc ${server} 61337 2> /dev/null | tail -n1`
     mt_fail "[ \"$out\" == \"disconnected due to inactivity for 1 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
 }
 
@@ -211,7 +214,7 @@ test_totally_random()
             fi
 
             randbin $numbytes > $data
-            out=`cat $data | nc 127.6.13.37 61337 2> /dev/null | tail -n1`
+            out=`cat $data | nc ${server} 61337 2> /dev/null | tail -n1`
 
             mt_fail "[ \"$out\" == \"disconnected due to inactivity for 1 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
         else
