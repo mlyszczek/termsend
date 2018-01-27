@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-updir="/tmp/kurload-test/out"
-data="/tmp/kurload-test/data"
+updir="./kurload-test/out"
+data="./kurload-test/data"
 
 . ./mtest.sh
 server="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 254 + 2))"
@@ -25,12 +25,11 @@ server="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 254 + 2))"
 
 mt_prepare_test()
 {
-    u="$(whoami)"
-    mkdir -p /tmp/kurload-test/out
-    ../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m2 -dlocalhost -u${u} \
-        -g${u} -P/tmp/kurload-test/kurload.pid \
-        -q/tmp/kurload-test/kurload-query.log -p/tmp/kurload-test/kurload.log \
-        -L/tmp/kurload-test/blacklist -T-1 -o/tmp/kurload-test/out \
+    mkdir -p ./kurload-test/out
+    ../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m2 -dlocalhost -ukurload \
+        -gkurload -P./kurload-test/kurload.pid \
+        -q./kurload-test/kurload-query.log -p./kurload-test/kurload.log \
+        -L./kurload-test/blacklist -T-1 -o./kurload-test/out \
         -b${server}
     sleep 0.2
 }
@@ -38,9 +37,9 @@ mt_prepare_test()
 
 mt_cleanup_test()
 {
-    kill -15 `cat /tmp/kurload-test/kurload.pid`
+    kill -15 `cat ./kurload-test/kurload.pid`
     sleep 0.2
-    rm -rf /tmp/kurload-test
+    rm -rf ./kurload-test
 }
 
 
@@ -106,7 +105,7 @@ randbin()
 
 test_is_running()
 {
-    mt_fail "kill -s 0 `cat /tmp/kurload-test/kurload.pid`"
+    mt_fail "kill -s 0 `cat ./kurload-test/kurload.pid`"
 }
 
 
