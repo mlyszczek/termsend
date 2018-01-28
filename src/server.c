@@ -554,7 +554,7 @@ static void *server_handle_upload
         /*
          * we seek 8 bytes back, as its length of "kurload\n" and read last
          * 8 bytes to check for end string existance. We don't need to seek
-         * back to end of file, as reading will move the pointer itself.
+         * back to end of file, as reading will move the pointer by itself.
          */
 
         lseek(fd, -8, SEEK_CUR);
@@ -690,8 +690,12 @@ static void server_process_connection
             }
 
             el_perror(ELC, "couldn't accept connection");
+            el_oprint(ELI, &g_qlog, "[NULL] rejected: accept error");
             continue;
         }
+
+        el_print(ELD, "incoming connection from %s socket id %d",
+            inet_ntoa(client.sin_addr), cfd);
 
         /*
          * after accepting connection, we have client's ip, now we check
@@ -726,8 +730,6 @@ static void server_process_connection
             continue;
         }
 
-        el_print(ELI, "incoming connection from %s socket id %d",
-            inet_ntoa(client.sin_addr), cfd);
 
         /*
          * on some systems (like BSDs) socket after accept will inherit
@@ -738,6 +740,7 @@ static void server_process_connection
 
         if ((flags = fcntl(cfd, F_GETFL)) == -1)
         {
+            el_oprint(ELI, &g_qlog, "[%s] rejected: socket config error");
             el_perror(ELF, "[%3d] error reading socket flags", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
@@ -746,6 +749,7 @@ static void server_process_connection
 
         if (fcntl(cfd, F_SETFL, flags & ~O_NONBLOCK) == -1)
         {
+            el_oprint(ELI, &g_qlog, "[%s] rejected: socket config error");
             el_perror(ELF, "[%3d] error setting socket into block mode", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
@@ -762,6 +766,7 @@ static void server_process_connection
 
         if (setsockopt(cfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) != 0)
         {
+            el_oprint(ELI, &g_qlog, "[%s] rejected: socket config error");
             el_perror(ELC, "[%3d] couldn't set timeout for client socket", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
@@ -776,6 +781,7 @@ static void server_process_connection
         if (pthread_create(&t, NULL, server_handle_upload,
                 (void *)(intptr_t)cfd) != 0)
         {
+            el_oprint(ELI, &g_qlog, "[%s] rejected: pthread_create error");
             el_perror(ELC, "[%3d] couldn't start processing thread", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
