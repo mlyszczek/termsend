@@ -152,6 +152,64 @@ static void server_generate_fname
     *s = '\0';
 }
 
+
+/* ==========================================================================
+    Function sends FIN to the client and waits for FIN from client. This is
+    done so we can know when client received all of our messages we sent to
+    him.
+   ========================================================================== */
+
+
+static void server_linger
+(
+    int            fd          /* connected clients file descriptor */
+)
+{
+    unsigned char  buf[8192];  /* dummy buffer to get data from read */
+    size_t         r;          /* return value from read */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    /*
+     * inform client that writing any more data is not allowed
+     */
+
+    shutdown(fd, SHUT_WR);
+
+    for (;;)
+    {
+        r = read(fd, buf, sizeof(buf));
+
+        if (r < 0)
+        {
+            /*
+             * some error occured, It doesn't why, we stop lingering anyway.
+             * Worst thing  can  do  is  that  client  won't  receive  error
+             * message.  We can live with that
+             */
+
+            el_perror(ELW, "read error");
+            return;
+        }
+
+        if (r == 0)
+        {
+            /*
+             * Client received our FIN, and sends back his FIN.  Now we  can
+             * be fairly sure, client received all our messages.
+             */
+
+            return;
+        }
+
+        /*
+         * we ignore any data received from the client - time for talking is
+         * done.
+         */
+    }
+}
+
+
 /* ==========================================================================
     formats message pointer by fmt and sends it  all  to  client  associated
     with fd. In case of any error from write function, we just log situation
@@ -620,6 +678,7 @@ static void *server_handle_upload
     strcat(url, fname);
     el_oprint(ELI, &g_qlog, "[%s] %s", inet_ntoa(client.sin_addr), fname);
     server_reply(cfd, "upload complete, link to file %s\n", url);
+    server_linger(cfg);
     close(cfd);
 
     pthread_mutex_lock(&lconn);
@@ -634,6 +693,7 @@ error:
      * upload and close client's connection
      */
 
+    server_linger(cfd);
     close(cfd);
     close(fd);
     unlink(path);
