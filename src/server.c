@@ -385,11 +385,13 @@ static void *server_handle_upload
     static int          flen = 5;    /* length of the filename to generate */
     unsigned char       buf[8192];   /* temp buffer we read uploaded data to */
     size_t              written;     /* total written bytes to file */
+    size_t              notify;      /* when to notify client about transfer */
     ssize_t             w;           /* return from write function */
     ssize_t             r;           /* return from read function */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
+    notify = 1048576; /* 1MiB */
     cfd = (intptr_t)arg;
     clen = sizeof(client);
     getsockname(cfd, (struct sockaddr *)&client, &clen);
@@ -641,7 +643,12 @@ static void *server_handle_upload
              * transfer status
              */
 
-            server_reply(cfd, "uploaded %10d bytes\n", written);
+            if (written >= notify)
+            {
+                server_reply(cfd, "uploaded %5d MiB\n", written / 1048576);
+                notify += 1048576;
+            }
+
             continue;
         }
 
