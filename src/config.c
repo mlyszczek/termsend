@@ -384,7 +384,7 @@ void config_print(void)
 
     el_print(ELI, PACKAGE_STRING);
     el_print(ELI, "kurload configuration");
-    CONFIG_PRINT(log_level, "%ld");
+    CONFIG_PRINT(log_level, "%d");
     CONFIG_PRINT(colorful_output, "%ld");
     CONFIG_PRINT(listen_port, "%ld");
     CONFIG_PRINT(max_size, "%ld");
