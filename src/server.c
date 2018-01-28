@@ -53,6 +53,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "bnwlist.h"
@@ -371,6 +372,8 @@ static void *server_handle_upload
 )
 {
     struct sockaddr_in  client;      /* address of connected client */
+    time_t              last_notif;  /* when last notif was sent */
+    time_t              now;         /* current time */
     socklen_t           clen;        /* size of client address */
     sigset_t            set;         /* signals to mask in thread */
     int                 cfd;         /* socket associated with client */
@@ -391,7 +394,7 @@ static void *server_handle_upload
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    notify = 1048576; /* 1MiB */
+    last_notif = time(NULL);
     cfd = (intptr_t)arg;
     clen = sizeof(client);
     getsockname(cfd, (struct sockaddr *)&client, &clen);
@@ -502,6 +505,7 @@ static void *server_handle_upload
 
     for (;;)
     {
+        now = time(NULL);
         r = read(cfd, buf, sizeof(buf));
 
         if (r == -1)
@@ -640,13 +644,13 @@ static void *server_handle_upload
             /*
              * ending string has not yet been received, we continue  getting
              * data from client, and we send information to the client about
-             * transfer status
+             * transfer status. We sent status about progres once per second
              */
 
-            if (written >= notify)
+            if (last_notif != now)
             {
-                server_reply(cfd, "uploaded %5d MiB\n", written / 1048576);
-                notify += 1048576;
+                server_reply(cfd, "uploaded %10d bytes\n", written);
+                last_notif = now;
             }
 
             continue;
