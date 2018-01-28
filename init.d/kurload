@@ -37,6 +37,7 @@ MAX_CONNECTIONS=${MAX_CONNECTIONS:="10"}
 DOMAIN=${DOMAIN:="http://kurload.kurwinet.pl"}
 USER=${USER:="kurload"}
 GROUP=${GROUP:="kurload"}
+PID_FILE=${PID_FILE:="/var/run/kurload.pid"}
 QUERY_LOG=${QUERY_LOG:="/var/log/kurload-query.log"}
 PROGRAM_LOG=${PROGRAM_LOG:="/var/log/kurload.log"}
 LIST_FILE=${LIST_FILE:="/etc/kurload-iplist"}
@@ -71,20 +72,20 @@ start_pre()
     # check if ${USER} and ${GROUP} exist in the system
     if ! /usr/bin/id -u ${USER} > /dev/null 2>&1 ; then
         echo "error"
-        echo "User \"${USER}\" doesn't exist in current system"
+        echo "User ${USER} doesn't exist in current system"
         echo "failed to start kurload server"
         exit 1
     fi
 
     if ! /usr/bin/id -g ${GROUP} > /dev/null 2>&1 ; then
         echo "error"
-        echo "Group \"${GROUP}\" doesn't exist in current system"
+        echo "Group ${GROUP} doesn't exist in current system"
         echo "failed to start kurload server"
         exit 1
     fi
 
     # chcek if output directory exists and is writeable by configured user
-    if [ ! -d ${OUTPUT_DIR} ] ; then
+    if [ ! -d "${OUTPUT_DIR}" ] ; then
         echo "error"
         echo "Output directory \"${OUTPUT_DIR}\" doesn\'t exist"
         echo "You need to create it first before you can start server"
@@ -92,7 +93,7 @@ start_pre()
         exit 1
     fi
 
-    if /bin/su ${USER} -c "if [ -w ${OUTPUT_DIR} ]; then exit 1; fi"; then
+    if /bin/su ${USER} -c "if [ -w "${OUTPUT_DIR}" ]; then exit 1; fi"; then
         echo "error"
         echo "Output directory \"${OUTPUT_DIR}\" is not writeable"
         echo "for user ${USER}"
@@ -101,18 +102,18 @@ start_pre()
     fi
 
     # create log files if they don't exist and set proper permissions
-    if [ -f ${QUERY_LOG} ] ; then
-        /bin/touch ${QUERY_LOG}
-        /bin/chown ${USER} ${QUERY_LOG}
-        /bin/chgrp adm ${QUERY_LOG}
-        /bin/chmod 640 ${QUERY_LOG}
+    if [ ! -f "${QUERY_LOG}" ] ; then
+        /bin/touch "${QUERY_LOG}"
+        /bin/chown ${USER} "${QUERY_LOG}"
+        /bin/chgrp adm "${QUERY_LOG}"
+        /bin/chmod 640 "${QUERY_LOG}"
     fi
 
-    if [ -f ${PROGRAM_LOG} ] ; then
-        /bin/touch ${PROGRAM_LOG}
-        /bin/chown ${USER} ${PROGRAM_LOG}
-        /bin/chgrp adm ${PROGRAM_LOG}
-        /bin/chmod 640 ${PROGRAM_LOG}
+    if [ ! -f "${PROGRAM_LOG}" ] ; then
+        /bin/touch "${PROGRAM_LOG}"
+        /bin/chown ${USER} "${PROGRAM_LOG}"
+        /bin/chgrp adm "${PROGRAM_LOG}"
+        /bin/chmod 640 "${PROGRAM_LOG}"
     fi
 
     echo "ok"
@@ -131,9 +132,9 @@ start() {
     fi
 
     ${command} -l${LOG_LEVEL} ${colors} -i${LISTEN_PORT} -s${MAX_SIZE} \
-        -t${MAX_TIMEOUT} -m${MAX_CONNECTIONS} -d${DOMAIN} -q${QUERY_LOG} \
-        -p${PROGRAM_LOG} -o${OUTPUT_DIR} -T${LIST_TYPE} -L${LIST_FILE} \
-        -b${BIND_IP} -D -P/var/run/kurload.pid -u${USER} -g${GROUP}
+        -t${MAX_TIMEOUT} -m${MAX_CONNECTIONS} -d"${DOMAIN}" -q"${QUERY_LOG}" \
+        -p"${PROGRAM_LOG}" -o"${OUTPUT_DIR}" -T"${LIST_TYPE}" -L"${LIST_FILE}" \
+        -b${BIND_IP} -D -P"${PID_FILE}" -u${USER} -g${GROUP}
 
     if [ "$?" -ne "0" ] ; then
         echo "error"
@@ -154,7 +155,7 @@ start() {
 
 stop() {
     echo -n "Stopping kurload server... "
-    if /bin/kill -15 `cat /var/run/kurload.pid` > /dev/null 2>&1; then
+    if /bin/kill -15 $(cat "${PID_FILE}") > /dev/null 2>&1; then
         echo "ok"
         return 0
     fi
@@ -190,21 +191,21 @@ case "$1" in
         ;;
 
     "status")
-        if [ ! -f /var/run/kurload.pid ] ; then
+        if [ ! -f "${PID_FILE}" ] ; then
             # file doesn't exist, server wasn't started yet, or it was closed
             # and server removed pid file
             echo "server is not running"
             exit 1
         fi
 
-        if [ `/usr/bin/stat -c %s /var/run/kurload.pid` -eq 0 ] ; then
+        if [ $(/usr/bin/stat -c %s "${PID_FILE}") -eq 0 ] ; then
             # file exists but its size is 0, meaning server started and ended
             # but couldn't remove pid, so it truncated it to 0 bytes size
             echo "server is not running"
             exit 1
         fi
 
-        if /bin/ps -p `cat /var/run/kurload.pid` > /dev/null 2>&1 ; then
+        if /bin/ps -p $(cat "${PID_FILE}") > /dev/null 2>&1 ; then
             # process exists and is alive
             echo "server is running"
             exit 0
