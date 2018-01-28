@@ -679,7 +679,7 @@ static void *server_handle_upload
     strcat(url, fname);
     el_oprint(ELI, &g_qlog, "[%s] %s", inet_ntoa(client.sin_addr), fname);
     server_reply(cfd, "upload complete, link to file %s\n", url);
-    server_linger(cfg);
+    server_linger(cfd);
     close(cfd);
 
     pthread_mutex_lock(&lconn);
