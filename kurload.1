@@ -1,0 +1,247 @@
+.TH "KURLOAD" "1" "30 Nov 2017 (v1.0.0)" "bofc.pl"
+.SH NAME
+.PP
+.B kurload
+- share files or program output from command line using the most basic UNIX
+tools
+.SH SYNOPSIS
+.PP
+.B kurload
+[
+.B -h
+|
+.B -v
+|
+.B options
+]
+.SH DESCRIPTION
+.PP
+This server has one job - receive files and return link to uploaded content.
+There are no headers, after client connects every received byte is treated as
+part of file content and is stored on the server.
+Of course, there is a need for at least one control frame - it's not enough
+to just close connection after file has been transfered, because then,
+uploader won't receive link to his uploaded file.
+The only control frame is an ending string -
+.BR kurload\en .
+When this string is received at the end of stream, server returns link to
+uploaded content and closes connection.
+This simplicity is intentional, as thanks to this, files can be uploaded to
+the server using the most simple tools from terminal such as
+.B netcat
+and
+.BR cat .
+Downloading or displaying files are as easy as calling
+.B curl
+on link that server returns.
+Both text an binary files can be uploaded to the server, but because there are
+no control headers, server knows nothing about it and it's up to the user to
+properly download and process received file.
+.SH OPTIONS
+.PP
+.TP
+.B -h
+Prints short help and exits
+.TP
+.B -v
+Prints version number and exits
+.TP
+.BI "-l, --level=<" level >
+Verbosity of logs.
+.I level
+can be on of:
+.EX
+    0   fatal errors, application cannot continue
+    1   major failure, needs immediate attention
+    2   critical errors
+    3   error but recoverable
+    4   warnings
+    5   normal message, but of high importance
+    6   info log, doesn't print that much (default)
+    7   debug, not needed in production
+.EE
+.TP
+.B -c
+When enabled, ANSI colors will be added to program logs depending on log level.
+Usefull for spotting errors and warnings, but might not work with all terminals
+and tools.
+.TP
+.BI "-i, --listen-port=<" port >
+Program will listen on specified
+.I port
+for incoming connections.
+.br
+Default is: 1337
+.TP
+.BI "-s, --max-filesize=<" size >
+Maximum
+.I size
+of file that can be uploaded to server.
+If uploaded size of file is bigger than configured, user will receive error, and
+file will not be stored on the server.
+.br
+Default is: 1048576 bytes (1MiB)
+.TP
+.BI "-D, --daemonize"
+Program will try to run as daemon. If
+.B kurload
+is called as
+.BR root ,
+program will try to drop priviliges and run with
+.I user
+and
+.I group
+priviliges. If
+.I user
+and
+.I group
+is not set, program will try to run with
+.B kurload
+user and group.
+.br
+Default is: off
+.TP
+.BI "-m, --max-connections=<" number >
+Defines how many clients can be connected (active uploads) simultaneously.
+If this number is reached, and new connection is inboud, user will receive
+information about limit reach and connection will be closed.
+.br
+Default is: 10
+.TP
+.BI "-t, --max-timeout=<" seconds >
+If during upload, client doesn't send any single bytes for configured
+.BR seconds ,
+server will close connection and information will be sent back to the client
+informing him about timeout - as it is possible that he forgot to end upload
+with special phrase
+.BR kurload\en .
+.br
+Default is: 60
+.TP
+.BI "-T, --list-type=<" type >
+When
+.I type
+is set to
+.BR -1 ,
+program operates in
+.B blacklist
+mode. If connected clients ip is in the
+.IR list_file ,
+such connection will be droped and information to user about his banishment will
+be sent.
+.br
+When
+.I type
+is set to
+.BR 1 ,
+program oeprates in
+.B whitelist
+mode. Only clients listed in
+.I list_file
+will be able to upload files.
+Everyone else will receive access denied error.
+.br
+When
+.I type
+is set to
+.BR 0 ,
+everyone can upload without restriction.
+.br
+Default is: 0
+.TP
+.BI "-L, --list_file=<" path >
+Path to list of IPs, which will be filtered base on
+.B list-type
+option. One IP per line is allowed.
+.br
+Default is: /etc/kurload-iplist
+.TP
+.BI "-b, --bind-ip=<" ip-list >
+Comma separeted list of IPs. Program will listen only on IPs listed in
+.I ip-list
+field.
+.br
+Default is: 0.0.0.0 (accept connection from any source)
+.TP
+.BI "-d, --domain=<" domain >
+Domain on which server runs.
+This will be used to send user back information where he can download what he
+just sent.
+.br
+Default is: localhost - you definately want to change this.
+.TP
+.BI "-u, --user=<" user >
+.I user
+that should run server. Only works when run as daemon started from root account.
+.br
+Default is: kurload
+.TP
+.BI "-g, --group=<" group >
+.I group
+that should run server. Only works when run as daemon started from root account.
+.br
+Default is: kurload
+.TP
+.BI "-q, --query-log=<" path >
+Place where all queries will be logged. Check
+.B FILES
+section for more information
+.br
+Default is: /var/log/kurload-query.log
+.TP
+.BI "-p, --program-log=<" path >
+Program log path. Check
+.B FILES
+section for more information.
+.br
+Default is: /var/log/kurload.log
+.TP
+.BI "-P, --pid-file=<" path >
+Where to store programs pid.
+Only works if run as daemon.
+.br
+Default is: /var/run/kurload.pid
+.TP
+.BI "-o, --output-dir=<" path >
+Location where all uploaded files will be stored. Check
+.B FILES
+section for more information.
+.br
+Default is: /var/lib/kurload
+.SH FILES
+.PP
+These are default file locations.
+They can be changed via
+.IR options .
+.TP
+.B /etc/kurload-iplist
+Separated by new line list of IPs that are filtered (depending on
+.I list_type
+field).
+One IP per line is allowed
+.TP
+.B /var/run/kurload.pid
+Process id of working daemon.
+This file is created only when program is run with
+.B -d
+option
+.TP
+.B /var/log/kurload-query.log
+Every upload query will be logged here exactly once.
+If query failed, short reason is added and more information about failure can be
+found in program log.
+For successful queries, filename is loged.
+All queries will contain date of upload and source IP.
+.TP
+.B /var/log/kurload.log
+General execution logs are kept here.
+Detailed information about errornous queries will be here.
+.TP
+.B /var/lib/kurload
+Directory where all uploaded files are stored - usually root of http from
+where people can download files.
+User that runs program should have write access to this directory.
+http server should have read access to this directory.
+.SH "BUG REPORTING"
+.PP
+Please report all bugs to "Michał Łyszczek <michal.lyszczek@bofc.pl>"
