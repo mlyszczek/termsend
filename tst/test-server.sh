@@ -309,7 +309,7 @@ mt_run test_send_bin
 mt_run test_send_bin_full
 mt_run test_send_bin_too_big
 mt_run test_send_and_timeout
-mt_run test_totally_random
 mt_run test_threaded
+mt_run test_totally_random
 
 mt_return
