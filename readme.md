@@ -14,28 +14,53 @@ Client
 
 Clients doesn't need any sophisticated tools. To upload to server pipe standard
 output from any application to **netcat**. But because **netcat** doesn't send
-information about file size, you need to append "kurload\n" string at the end
+information about file size, you need to append **kurload\n** string at the end
 of upload as and end-of-file indicator.
 
 ~~~
-$ cat /path/to/file | {cat -; echo 'kurload'} | nc kurwinet.pl 1337
+$ cat /path/to/file | { cat -; echo 'kurload'; } | nc kl.kurwinet.pl 1337
 ~~~
 
 Quite long and irritating to type everytime you want to upload something. It is
 recommended to create alias to work-around this tedious work.
 
 ~~~
-alias kl="{cat -; echo 'kurload'} | nc 127.0.0.1 1337"
+alias kl="{ cat -; echo 'kurload'; } | nc kl.kurwinet.pl 1337"
 ~~~
 
 Now you can upload file as simple as calling
 
 ~~~
-$ ls -l | kl          # uploads detailed list of files in current directory
-$ cat error.log | kl  # uploads file 'error.log'
-$ make | kl           # uploads compilation output
-$ cat binary | kl     # uploads some binary file
+$ ls -l | kl               # uploads detailed list of files in current directory
+$ cat error.log | kl       # uploads file 'error.log'
+$ make | kl                # uploads compilation output
+$ cat binary-file | kl     # uploads some binary file
 ~~~
+
+After transfer is complete, server will print link which you can later use to
+get uploaded content (like send it to someone via IRC). If uploaded content is
+a simple text file, you can read it directly in terminal using **curl**, or if
+output is known to be big, **curl** output can be piped to **less**. Check out
+this simple example.
+
+~~~
+$ make distcheck 2>&1 | kl
+nc: using stream socket
+uploaded       4100 bytes
+uploaded       5351 bytes
+uploaded       8381 bytes
+uploaded      16044 bytes
+uploaded      29463 byte
+upload complete, link to file http://kl.kurwinet.pl/msf62
+$ curl http://kl.kurwinet.pl/msf62 | less
+~~~
+
+In this example, we upload output of **make distcheck** program into server, and
+later we read in in less (for example on another computer).
+
+Server will notify uploader about how much bytes were transfered every second.
+If information is no received for longer than 1 second, that means program did
+not produce any output and server didn't receive any data.
 
 Server
 ------
@@ -77,7 +102,7 @@ sanitizers
 Dependencies
 ============
 
-* embedlog (http://embedlog.kurwinet.pl) (embedlog itself has no dependencies)
+* [embedlog](http://embedlog.kurwinet.pl) (embedlog itself has no dependencies)
 * pthread
 
 Compile and install
