@@ -4,6 +4,13 @@
 #   Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
 ## ==========================================================================
 
+###
+# some systems like solaris has alias on stop, remove those aliases so our
+# init script can work as expected
+#
+
+unalias stop  > /dev/null 2>&1
+unalias start > /dev/null 2>&1
 
 ## ==========================================================================
 #                                                 ____ _  __
