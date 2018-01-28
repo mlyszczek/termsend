@@ -412,6 +412,7 @@ static void *server_handle_upload
         el_oprint(ELI, &g_qlog, "[%s] rejected: signal mask failed",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
+        close(fd);
         return NULL;
     }
 
