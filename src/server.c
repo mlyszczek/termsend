@@ -174,7 +174,7 @@ static void server_linger
      * inform client that writing any more data is not allowed
      */
 
-    shutdown(fd, SHUT_WR);
+    shutdown(fd, SHUT_RDWR);
 
     for (;;)
     {
