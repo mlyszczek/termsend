@@ -39,7 +39,7 @@ fi
 mt_prepare_test()
 {
     mkdir -p ./kurload-test/out
-    ../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m2 -dlocalhost -ukurload \
+    ../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m3 -dlocalhost -ukurload \
         -gkurload -P./kurload-test/kurload.pid \
         -q./kurload-test/kurload-query.log -p./kurload-test/kurload.log \
         -L./kurload-test/blacklist -T-1 -o./kurload-test/out \
@@ -102,7 +102,40 @@ randstr()
 
 randbin()
 {
-    dd if=/dev/urandom bs=1 count=${1}
+    dd if=/dev/urandom bs=1 count=${1} 2>/dev/null
+}
+
+
+## ==========================================================================
+#   verifyes whether data upload to server was successfull. This function is
+#   thread-safe.
+## ==========================================================================
+
+
+multi_thread_check()
+{
+    fname="$(randstr 120)"
+    randstr 128 > "${data}.${fname}"
+    out="$(cat "${data}.${fname}" | kurload | tail -n1)"
+
+    if [ "${out}" = "all upload slots are taken, try again later" ]
+    then
+        return 0
+    elif [[ "${out}" = "upload complete, link to file localhost/"* ]]
+    then
+        file="$(echo "${out}" | rev | cut -d/ -f-1 | rev)"
+        mt_fail "diff ${updir}/${file} ${data}.${fname}"
+        return $?
+    else
+        if [ -z "${out}" ]
+        then
+            return
+        fi
+
+        echo "something weird received: '${out}'"
+        mt_fail false
+        return 0
+    fi
 }
 
 
@@ -133,6 +166,15 @@ test_send_string()
     mt_fail "diff $updir/$file $data"
 }
 
+
+test_threaded()
+{
+    for i in $(seq 1 1 60)
+    do
+        multi_thread_check &
+    done
+    sleep 2
+}
 
 ## ==========================================================================
 ## ==========================================================================
@@ -268,5 +310,6 @@ mt_run test_send_bin_full
 mt_run test_send_bin_too_big
 mt_run test_send_and_timeout
 mt_run test_totally_random
+mt_run test_threaded
 
 mt_return

@@ -721,7 +721,7 @@ static void server_process_connection
         {
             el_oprint(ELI, &g_qlog, "[%s] rejected: connection limit",
                 inet_ntoa(client.sin_addr));
-            server_reply(cfd, "all upload slot are taken, try again later\n");
+            server_reply(cfd, "all upload slots are taken, try again later\n");
             close(cfd);
             continue;
         }
