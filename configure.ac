@@ -7,7 +7,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CHECK_FUNCS(sigaction sigfillset ftruncate usleep fchown stat)
 AC_PROG_CC
 AC_PROG_CC_C89
-AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile www/Makefile])
 AC_CONFIG_LINKS([tst/test-server.sh:tst/test-server.sh])
 AC_CONFIG_LINKS([tst/mtest.sh:tst/mtest.sh])
 

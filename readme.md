@@ -1,3 +1,5 @@
+[kursg-meta]: # (order: 1)
+
 About
 =====
 
@@ -10,65 +12,72 @@ Usage
 Client
 ------
 
-Clients doesn't need any sophisticated tools, to upload to server pipe standard
+Clients doesn't need any sophisticated tools. To upload to server pipe standard
 output from any application to **netcat**. But because **netcat** doesn't send
 information about file size, you need to append "kurload\n" string at the end
 of upload as and end-of-file indicator.
 
 ~~~
-cat /path/to/file | cat - <(echo 'kurload') | nc kurwinet.pl 1337'
+$ cat /path/to/file | {cat -; echo 'kurload'} | nc kurwinet.pl 1337
 ~~~
 
-Quite long and irritating. It is recommended to create alias to work-around this
-tedious work.
+Quite long and irritating to type everytime you want to upload something. It is
+recommended to create alias to work-around this tedious work.
 
 ~~~
-alias kl="cat - <(echo 'kurload') | nc kurwinet.pl 1337"
+alias kl="{cat -; echo 'kurload'} | nc 127.0.0.1 1337"
 ~~~
 
 Now you can upload file as simple as calling
 
 ~~~
-ls -l | kl
+$ ls -l | kl          # uploads detailed list of files in current directory
+$ cat error.log | kl  # uploads file 'error.log'
+$ make | kl           # uploads compilation output
+$ cat binary | kl     # uploads some binary file
 ~~~
-
-Note that process substitution **<()** only works with bash-compatible shell.
 
 Server
 ------
 
-~~~
-$ kurload -h
-kurload - easy file sharing
+Information about server usage and its options can be found in man page
+[kurload](http://kurload.kurwinet.pl/kurload.1.html)(1)
 
-Usage: ./kurload [-h | -v | -d -c -l<level> -f<config>]
+Test results
+============
 
-        -h         prints this help and quits
-        -v         prints version and quits
-        -d         run as daemon
-        -c         if set, output will have nice colors
-        -l<level>  logging level 0-7
-        -f<path>   path to configuration file
+machine tests
+-------------
 
-logging level
-        0          fatal errors, application cannot continue
-        1          major failure, needs immediate attention
-        2          critical errors
-        3          error but recoverable
-        4          warnings
-        5          normal message, but of high importance
-        6          info log, doesn't print that much (default)
-        7          debug, not needed in production
-~~~
+* aarch64-builder-linux-gnu ![test-result-svg][a64lg]
+* armv5te926-builder-linux-gnueabihf ![test-result-svg][armv5]
+* armv6j1136-builder-linux-gnueabihf ![test-result-svg][armv6]
+* armv7a15-builder-linux-gnueabihf ![test-result-svg][armv7a15]
+* armv7a9-builder-linux-gnueabihf ![test-result-svg][armv7a9]
+* i686-builder-freebsd ![test-result-svg][x32fb]
+* i686-builder-linux-gnu ![test-result-svg][x32lg]
+* i686-builder-linux-musl ![test-result-svg][x32lm]
+* i686-builder-linux-uclibc ![test-result-svg][x32lu]
+* i686-builder-netbsd ![test-result-svg][x32nb]
+* i686-builder-openbsd ![test-result-svg][x32ob]
+* mips-builder-linux-gnu ![test-result-svg][m32lg]
+* x86_64-builder-linux-gnu ![test-result-svg][x64lg]
+* x86_64-builder-linux-musl ![test-result-svg][x64lm]
+* x86_64-builder-linux-uclibc ![test-result-svg][x64lu]
+* x86_64-builder-solaris ![test-result-svg][x64ss]
 
-For description of configuration options, refer to example configuration file
-in src/kurload.conf
+sanitizers
+----------
+
+* -fsanitize=address ![test-result-svg][fsan]
+* -fsanitize=leak ![test-result-svg][fsleak]
+* -fsanitize=undefined ![test-result-svg][fsun]
+* -fsanitize=thread ![test-result-svg][fsthread]
 
 Dependencies
 ============
 
-* libconfuse3 (https://github.com/martinh/libconfuse)
-* embedlog1 (https://github.com/mlyszczek/embedlog)
+* embedlog (http://embedlog.kurwinet.pl) (embedlog itself has no dependencies)
 * pthread
 
 Compile and install
@@ -77,14 +86,50 @@ Compile and install
 Program uses autotools so instalation is as easy as
 
 ~~~
-$ autoreconf -i
+$ ./autogen.sh
 $ ./configure
 $ make
 # make install
 ~~~
 
-Tests can be run with
+License
+=======
 
-~~~
-$ make check
-~~~
+Program is licensed under BSD 2-clause license. See LICENSE file for details.
+
+Contact
+=======
+
+Michał Łyszczek <michal.lyszczek@bofc.pl>
+
+See also
+========
+
+* [embedlog](http://embedlog.kurwinet.pl) easy to use but feature-rich logger
+  for **c/c++** applications
+* [mtest](http://mtest.kurwinet.pl) macro unit test framework for **c/c++**
+* [git repository](http://git.kurwinet.pl/kurload) to browse sources online
+* [continous integration](http://ci.kurload.kurwinet.pl) with test results
+
+
+[a64lg]: http://ci.kurload.kurwinet.pl/badges/aarch64-builder-linux-gnu-tests.svg
+[armv5]: http://ci.kurload.kurwinet.pl/badges/armv5te926-builder-linux-gnueabihf-tests.svg
+[armv6]: http://ci.kurload.kurwinet.pl/badges/armv6j1136-builder-linux-gnueabihf-tests.svg
+[armv7a15]: http://ci.kurload.kurwinet.pl/badges/armv7a15-builder-linux-gnueabihf-tests.svg
+[armv7a9]: http://ci.kurload.kurwinet.pl/badges/armv7a9-builder-linux-gnueabihf-tests.svg
+[x32fb]: http://ci.kurload.kurwinet.pl/badges/i686-builder-freebsd-tests.svg
+[x32lg]: http://ci.kurload.kurwinet.pl/badges/i686-builder-linux-gnu-tests.svg
+[x32lm]: http://ci.kurload.kurwinet.pl/badges/i686-builder-linux-musl-tests.svg
+[x32lu]: http://ci.kurload.kurwinet.pl/badges/i686-builder-linux-uclibc-tests.svg
+[x32nb]: http://ci.kurload.kurwinet.pl/badges/i686-builder-netbsd-tests.svg
+[x32ob]: http://ci.kurload.kurwinet.pl/badges/i686-builder-openbsd-tests.svg
+[m32lg]: http://ci.kurload.kurwinet.pl/badges/mips-builder-linux-gnu-tests.svg
+[x64lg]: http://ci.kurload.kurwinet.pl/badges/x86_64-builder-linux-gnu-tests.svg
+[x64lm]: http://ci.kurload.kurwinet.pl/badges/x86_64-builder-linux-musl-tests.svg
+[x64lu]: http://ci.kurload.kurwinet.pl/badges/x86_64-builder-linux-uclibc-tests.svg
+[x64ss]: http://ci.kurload.kurwinet.pl/badges/x86_64-builder-solaris-tests.svg
+
+[fsan]: http://ci.kurload.kurwinet.pl/badges/fsanitize-address.svg
+[fsleak]: http://ci.kurload.kurwinet.pl/badges/fsanitize-leak.svg
+[fsun]: http://ci.kurload.kurwinet.pl/badges/fsanitize-undefined.svg
+[fsthread]: http://ci.kurload.kurwinet.pl/badges/fsanitize-thread.svg
