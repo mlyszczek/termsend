@@ -2,7 +2,6 @@ AC_INIT([kurload], [1.0.0], [michal.lyszczek@bofc.pl])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_HEADERS([kurload.h])
-AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CHECK_FUNCS(sigaction sigfillset ftruncate usleep fchown stat)
 AC_PROG_CC
