@@ -1,3 +1,4 @@
+ACLOCAL_AMFLAGS=-I m4
 SUBDIRS = src tst www
 
 sysconf_DATA = init.d/kurload.conf
