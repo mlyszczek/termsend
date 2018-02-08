@@ -5,7 +5,8 @@ source = bnwlist.c \
 	daemonize.c \
 	main.c \
 	server.c \
-	globals.c
+	globals.c \
+	getopt.c
 
 bin_PROGRAMS = kurload
 kurload_SOURCES = $(source) \

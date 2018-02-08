@@ -9,7 +9,8 @@ test_SOURCES  = main.c \
 	test-group-list.h \
 	bnwlist.c \
 	config.c \
-	globals.c
+	globals.c \
+	getopt.c
 
 test_CFLAGS = -I$(top_srcdir)/src \
 	-I/usr/local/include \
