@@ -5,7 +5,8 @@ source = bnwlist.c \
 	daemonize.c \
 	main.c \
 	server.c \
-	globals.c
+	globals.c \
+	getopt.c
 
 bin_PROGRAMS = kurload
 kurload_SOURCES = $(source) \
@@ -15,7 +16,8 @@ kurload_SOURCES = $(source) \
 	globals.h \
 	server.h \
 	valid.h \
-	version.h
+	version.h \
+	getopt.h
 
 kurload_CFLAGS = -I$(top_srcdir) \
 	$(COVERAGE_CFLAGS)

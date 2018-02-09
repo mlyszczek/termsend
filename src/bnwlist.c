@@ -189,13 +189,21 @@ static int bnw_parse_list
             if (j == 15)
             {
                 el_print(ELF, "error parsing list file in line %d", n + 1);
-                free(ip_list);
-                ip_list = NULL;
-                errno = EFAULT;
-                return -1;
+                goto parse_error;
             }
 
             ip[j] = f[i];
+        }
+
+        /*
+         * some systems - like AIX - thinks that 10.1.1. ip is a valid IP
+         * address. Well, no, it's not, screw AIX.
+         */
+
+        if (ip[j - 1] == '.')
+        {
+            el_print(ELF, "error parsing list file in line %d", n + 1);
+            goto parse_error;
         }
 
         /*
@@ -208,10 +216,7 @@ static int bnw_parse_list
         if ((ip_list[n] = ntohl(inet_addr(ip))) == INADDR_NONE)
         {
             el_print(ELF, "malformed ip (%s) in list on line %d", ip, n + 1);
-            free(ip_list);
-            ip_list = NULL;
-            errno = EFAULT;
-            return -1;
+            goto parse_error;
         }
 
         el_print(ELD, "adding ip to list: %s", ip);
@@ -227,6 +232,12 @@ static int bnw_parse_list
         n, n * sizeof(in_addr_t));
 
     return 0;
+
+parse_error:
+    free(ip_list);
+    ip_list = NULL;
+    errno = EFAULT;
+    return -1;
 }
 
 

@@ -39,13 +39,13 @@
 
 #include "kurload.h"
 #include "config.h"
+#include "getopt.h"
 #include "globals.h"
 #include "valid.h"
 
 #include <ctype.h>
 #include <embedlog.h>
 #include <errno.h>
-#include <getopt.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -202,7 +202,7 @@ static int config_parse_arguments
     int  loptind;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    optind = 0;
+    optind = 1;
     while ((arg = getopt_long(argc, argv, shortopts, longopts, &loptind)) != -1)
     {
         switch (arg)
