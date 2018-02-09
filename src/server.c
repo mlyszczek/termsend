@@ -375,12 +375,13 @@ static void *server_handle_upload
     time_t              last_notif;  /* when last notif was sent */
     time_t              now;         /* current time */
     socklen_t           clen;        /* size of client address */
+    fd_set              readfds;     /* set with client socket for select */
+    struct timeval      cfdtimeo;    /* read timeout of clients socket */
     sigset_t            set;         /* signals to mask in thread */
     int                 cfd;         /* socket associated with client */
     int                 fd;          /* file where data will be stored */
     int                 ncollision;  /* number of file name collisions hit */
     int                 opathlen;    /* length of output directory path */
-    int                 timeout;     /* client inactivity timeout counter */
     char                path[PATH_MAX];  /* full path to the file */
     char                fname[32];   /* random generated file name */
     char                url[1024];   /* generated link to uploaded data */
@@ -499,55 +500,77 @@ static void *server_handle_upload
      * them.
      */
 
-    memset(ends, 0, sizeof(ends));
     written = 0;
-    timeout = 0;
+    FD_ZERO(&readfds);
+    FD_SET(cfd, &readfds);
+    memset(ends, 0, sizeof(ends));
 
     for (;;)
     {
+        int     sact;  /* select activity, just return from select() */
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+        cfdtimeo.tv_sec = g_config.max_timeout;
+        cfdtimeo.tv_usec = 0;
+
         now = time(NULL);
+        sact = select(cfd + 1, &readfds, NULL, NULL, &cfdtimeo);
+
+        if (sact == -1)
+        {
+            /*
+             * select stumbled upon some error,  it's  a  sad  day  for  our
+             * client, we need to interrupt connection
+             */
+
+            el_perror(ELW, "[%3d] select error on client read", cfd);
+            el_oprint(ELI, &g_qlog, "[%s] rejected: select error",
+                inet_ntoa(client.sin_addr));
+            server_reply(cfd, "internal server error, try again later\n");
+            goto error;
+        }
+
+        if (sact == 0)
+        {
+            /*
+             * no activity on cfd for  max_timeout  seconds,  either  client
+             * died and didn't tell us about it (thanks!) or connection  was
+             * abrupted  by  some   higher  forces.   We  assume   this   is
+             * unrecoverable problem and close connection
+             */
+
+            el_print(ELN, "[%3d] client inactive for %d seconds",
+                cfd, g_config.max_timeout);
+            el_oprint(ELI, &g_qlog, "[%s] rejected: inactivity",
+                inet_ntoa(client.sin_addr));
+
+            /*
+             * well, there may be one more case for inactivity from  clients
+             * side.  It  may  be  that  he  forgot  to  add  ending  string
+             * "kurload\n", so we send reply to the client  as  there  is  a
+             * chance he is still alive.
+             */
+
+            server_reply(cfd, "disconnected due to inactivity for %d "
+                "seconds, did you forget to append termination "
+                "string - \"kurload\\n\"?\n", g_config.max_timeout);
+            goto error;
+        }
+
+        /*
+         * and finnaly, we get here, when there is some data in cfd, and we
+         * can safely call read, without fear of locking
+         */
+
         r = read(cfd, buf, sizeof(buf));
 
         if (r == -1)
         {
-            if (errno == EAGAIN)
-            {
-                /*
-                 * we didn't receive ANY data  within  1  second,  might  be
-                 * temporary network problem, or client hunged for a second,
-                 * or it could crash,  or  whatever.   One  time  is  not  a
-                 * problem, but if problem persists for max timeout (max_to)
-                 * in a row, we assume unrecoverable problem  and  we  close
-                 * connection without saving uploaded data
-                 */
-
-                if (++timeout == g_config.max_timeout)
-                {
-                    el_print(ELN, "[%3d] client inactive for %d seconds",
-                        cfd, g_config.max_timeout);
-                    el_oprint(ELI, &g_qlog, "[%s] rejected: inactivity",
-                        inet_ntoa(client.sin_addr));
-
-                    /*
-                     * this situation can also happen when client uploads file,
-                     * but forgot to add ending string "kurload\n", so we
-                     * send reply to the client as there is a chance he is
-                     * still alive.
-                     */
-
-                    server_reply(cfd, "disconnected due to inactivity for %d "
-                        "seconds, did you forget to append termination "
-                        "string - \"kurload\\n\"?\n", g_config.max_timeout);
-                    goto error;
-                }
-
-                continue;
-            }
-
             /*
-             * else, some different error appeard, we don't want to  recover
-             * from it, as it is most probably nore recoverable anyway, just
-             * inform client and close connection
+             * error from read, and we know it cannot be  EAGAIN  as  select
+             * covered that for us, so something wrong must  have  happened.
+             * Inform client and close connection.
              */
 
             el_perror(ELC, "[%3d] couldn't read from client", cfd);
@@ -564,8 +587,8 @@ static void *server_handle_upload
              * data could be uploaded, well, his choice
              */
 
-            el_oprint(ELI, &g_qlog, "[%s] rejected: connection closed by client",
-                inet_ntoa(client.sin_addr));
+            el_oprint(ELI, &g_qlog, "[%s] rejected: connection closed by "
+                "client", inet_ntoa(client.sin_addr));
             goto error;
         }
 
@@ -735,7 +758,6 @@ static void server_process_connection
     int                 flags;   /* flags for cfd socket */
     socklen_t           clen;    /* length of 'client' variable */
     struct sockaddr_in  client;  /* address of remote client */
-    struct timeval      tv;      /* read timeout */
     pthread_t           t;       /* tread info that will handle upload */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -823,23 +845,6 @@ static void server_process_connection
         {
             el_oprint(ELI, &g_qlog, "[%s] rejected: socket config error");
             el_perror(ELF, "[%3d] error setting socket into block mode", cfd);
-            server_reply(cfd, "internal server error, try again later\n");
-            close(cfd);
-            continue;
-        }
-
-        /*
-         * set timeout so read call on cfd can return if no new data has
-         * been received on socket
-         */
-
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
-
-        if (setsockopt(cfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) != 0)
-        {
-            el_oprint(ELI, &g_qlog, "[%s] rejected: socket config error");
-            el_perror(ELC, "[%3d] couldn't set timeout for client socket", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
             continue;
