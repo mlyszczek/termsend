@@ -16,7 +16,8 @@ kurload_SOURCES = $(source) \
 	globals.h \
 	server.h \
 	valid.h \
-	version.h
+	version.h \
+	getopt.h
 
 kurload_CFLAGS = -I$(top_srcdir) \
 	$(COVERAGE_CFLAGS)
