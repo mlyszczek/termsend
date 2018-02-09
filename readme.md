@@ -71,6 +71,22 @@ Information about server usage and its options can be found in man page
 Test results
 ============
 
+operating system tests
+----------------------
+
+* parisc-polarhome-hpux-11.11 ![test-result-svg][prhpux]
+* power4-polarhome-aix-7.1 ![test-result-svg][p4aix]
+* i686-builder-freebsd-11.1 ![test-result-svg][x32fb]
+* i686-builder-netbsd-8.0 ![test-result-svg][x32nb]
+* i686-builder-openbsd-6.2 ![test-result-svg][x32ob]
+* x86_64-builder-solaris-11.3 ![test-result-svg][x64ss]
+* i686-builder-linux-gnu-4.9 ![test-result-svg][x32lg]
+* i686-builder-linux-musl-4.9 ![test-result-svg][x32lm]
+* i686-builder-linux-uclibc-4.9 ![test-result-svg][x32lu]
+* x86_64-builder-linux-gnu-4.9 ![test-result-svg][x64lg]
+* x86_64-builder-linux-musl-4.9 ![test-result-svg][x64lm]
+* x86_64-builder-linux-uclibc-4.9 ![test-result-svg][x64lu]
+
 machine tests
 -------------
 
@@ -79,17 +95,7 @@ machine tests
 * armv6j1136-builder-linux-gnueabihf ![test-result-svg][armv6]
 * armv7a15-builder-linux-gnueabihf ![test-result-svg][armv7a15]
 * armv7a9-builder-linux-gnueabihf ![test-result-svg][armv7a9]
-* i686-builder-freebsd ![test-result-svg][x32fb]
-* i686-builder-linux-gnu ![test-result-svg][x32lg]
-* i686-builder-linux-musl ![test-result-svg][x32lm]
-* i686-builder-linux-uclibc ![test-result-svg][x32lu]
-* i686-builder-netbsd ![test-result-svg][x32nb]
-* i686-builder-openbsd ![test-result-svg][x32ob]
 * mips-builder-linux-gnu ![test-result-svg][m32lg]
-* x86_64-builder-linux-gnu ![test-result-svg][x64lg]
-* x86_64-builder-linux-musl ![test-result-svg][x64lm]
-* x86_64-builder-linux-uclibc ![test-result-svg][x64lu]
-* x86_64-builder-solaris ![test-result-svg][x64ss]
 
 sanitizers
 ----------
@@ -135,7 +141,8 @@ See also
 * [mtest](http://mtest.kurwinet.pl) macro unit test framework for **c/c++**
 * [git repository](http://git.kurwinet.pl/kurload) to browse sources online
 * [continous integration](http://ci.kurload.kurwinet.pl) with test results
-
+* [polarhome](http://www.polarhome.com) nearly free shell accounts for virtually
+  any unix there is.
 
 [a64lg]: http://ci.kurload.kurwinet.pl/badges/aarch64-builder-linux-gnu-tests.svg
 [armv5]: http://ci.kurload.kurwinet.pl/badges/armv5te926-builder-linux-gnueabihf-tests.svg
@@ -153,6 +160,8 @@ See also
 [x64lm]: http://ci.kurload.kurwinet.pl/badges/x86_64-builder-linux-musl-tests.svg
 [x64lu]: http://ci.kurload.kurwinet.pl/badges/x86_64-builder-linux-uclibc-tests.svg
 [x64ss]: http://ci.kurload.kurwinet.pl/badges/x86_64-builder-solaris-tests.svg
+[prhpux]: http://ci.kurload.kurwinet.pl/badges/parisc-polarhome-hpux-tests.svg
+[p4aix]: http://ci.kurload.kurwinet.pl/badges/power4-polarhome-aix-tests.svg
 
 [fsan]: http://ci.kurload.kurwinet.pl/badges/fsanitize-address.svg
 [fsleak]: http://ci.kurload.kurwinet.pl/badges/fsanitize-leak.svg
