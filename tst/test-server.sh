@@ -44,14 +44,14 @@ mt_prepare_test()
         -q./kurload-test/kurload-query.log -p./kurload-test/kurload.log \
         -L./kurload-test/blacklist -T-1 -o./kurload-test/out \
         -b${server}
-    sleep 0.2
+    sleep 1
 }
 
 
 mt_cleanup_test()
 {
     kill -15 `cat ./kurload-test/kurload.pid`
-    sleep 0.2
+    sleep 1
     rm -rf ./kurload-test
 }
 
@@ -169,7 +169,7 @@ test_send_string()
 
 test_threaded()
 {
-    for i in $(seq 1 1 60)
+    for i in $(seq 1 1 16)
     do
         multi_thread_check &
     done
