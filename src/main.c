@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
     el_option(EL_FINFO, 1);
     el_option(EL_COLORS, g_config.colorful_output);
 
-    if (el_option(EL_FNAME, g_config.program_log) != 0)
+    if (el_option(EL_FPATH, g_config.program_log) != 0)
     {
         fprintf(stderr, "WARNING couldn't open program log file %s: %s "
             "logs will be printed to stderr\n",
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
     el_ooption(&g_qlog, EL_TS_TM, EL_TS_TM_REALTIME);
     el_ooption(&g_qlog, EL_PRINT_LEVEL, 0);
 
-    if (el_ooption(&g_qlog, EL_FNAME, g_config.query_log) != 0)
+    if (el_ooption(&g_qlog, EL_FPATH, g_config.query_log) != 0)
     {
         fprintf(stderr, "WARNING couldn't open query log file %s: %s\n",
              g_config.query_log, strerror(errno));
