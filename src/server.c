@@ -398,7 +398,7 @@ static void *server_handle_upload
     last_notif = time(NULL);
     cfd = (intptr_t)arg;
     clen = sizeof(client);
-    getsockname(cfd, (struct sockaddr *)&client, &clen);
+    getpeername(cfd, (struct sockaddr *)&client, &clen);
 
     strcpy(path, g_config.output_dir);
     strcat(path, "/");
