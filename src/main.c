@@ -146,6 +146,7 @@ int main(int argc, char *argv[])
     el_ooption(&g_qlog, EL_TS, EL_TS_LONG);
     el_ooption(&g_qlog, EL_TS_TM, EL_TS_TM_REALTIME);
     el_ooption(&g_qlog, EL_PRINT_LEVEL, 0);
+    el_ooption(&g_qlog, EL_FILE_SYNC_EVERY, 0);
 
     if (el_ooption(&g_qlog, EL_FPATH, g_config.query_log) != 0)
     {
