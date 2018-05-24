@@ -108,7 +108,8 @@ sanitizers
 Dependencies
 ============
 
-* [embedlog](http://embedlog.kurwinet.pl) (embedlog itself has no dependencies)
+* [>=embedlog-0.3.1](http://embedlog.kurwinet.pl) (embedlog itself has no
+  dependencies)
 * pthread
 
 Compile and install
