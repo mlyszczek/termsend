@@ -15,13 +15,14 @@ test_SOURCES  = main.c \
 test_CFLAGS = -I$(top_srcdir)/src \
 	-I/usr/local/include \
 	-I/usr/include \
-	$(COVERAGE_CFLAGS)
+	$(COVERAGE_CFLAGS) \
+	$(PTHREAD_CFLAGS)
 
 test_LDFLAGS = -L/usr/local/lib \
 	-L/usr/lib \
 	$(COVERAGE_LDFLAGS)
 
-test_LDADD = -lembedlog -lpthread
+test_LDADD = -lembedlog $(PTHREAD_LIBS)
 
 TESTS = $(check_PROGRAMS) $(check_SCRIPTS)
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
