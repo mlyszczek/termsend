@@ -27,4 +27,4 @@ test_LDADD = -lembedlog $(PTHREAD_LIBS)
 TESTS = $(check_PROGRAMS) $(check_SCRIPTS)
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 	$(top_srcdir)/tap-driver.sh
-EXTRA_DIST = mtest.sh
+EXTRA_DIST = mtest.sh test-server.sh
