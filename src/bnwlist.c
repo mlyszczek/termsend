@@ -158,7 +158,36 @@ static int bnw_parse_list
 
     for (i = 0, n = 0; i != flen; ++i)
     {
-        n += f[i] == '\n';
+        if (f[i] == '\n')
+        {
+            /*
+             * new line encoutered assuming it's an ip
+             */
+
+            ++n;
+
+            if (i == 0)
+            {
+                /*
+                 * but wait! new line at the very first character?
+                 * empty line that is!
+                 */
+
+                --n;
+                continue;
+            }
+
+            if (f[i - 1] == '\n')
+            {
+                /*
+                 * this character is a newline and previous one was
+                 * new line too? double new lines means this is an
+                 * empty line
+                 */
+
+                --n;
+            }
+        }
     }
 
     if ((ip_list = malloc(n * sizeof(in_addr_t))) == NULL)
@@ -173,7 +202,7 @@ static int bnw_parse_list
      * no we can parse file and convert string IPs into small in_addr_t
      */
 
-    for (i = 0, n = 0; i != flen; ++i, ++n)
+    for (i = 0, n = 0; i != flen; ++i)
     {
         int   j;           /* iterator for loop */
         char  ip[15 + 1];  /* 123.123.123.123 => 3 * 4 + 3 + null */
@@ -193,6 +222,15 @@ static int bnw_parse_list
             }
 
             ip[j] = f[i];
+        }
+
+        if (j == 0)
+        {
+            /*
+             * this is empty line, ignore it and go to next line
+             */
+
+            continue;
         }
 
         /*
@@ -219,6 +257,7 @@ static int bnw_parse_list
             goto parse_error;
         }
 
+        ++n;
         el_print(ELD, "adding ip to list: %s", ip);
     }
 

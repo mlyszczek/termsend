@@ -483,6 +483,31 @@ static void bnw_no_read_access(void)
 
 
 /* ==========================================================================
+   ========================================================================== */
+
+
+static void bnw_empty_lines_in_list(void)
+{
+    add_ip("");
+    add_ip("10.1.1.1");
+    add_ip("");
+    add_ip("10.1.1.2");
+    add_ip("");
+    add_ip("");
+    add_ip("");
+    add_ip("10.1.1.3");
+    add_ip("");
+
+    mt_fok(bnw_init(BNWFILE, 1));
+    mt_fail(bnw_is_allowed(inet_addr("10.1.1.1")) == 1);
+    mt_fail(bnw_is_allowed(inet_addr("10.1.1.2")) == 1);
+    mt_fail(bnw_is_allowed(inet_addr("10.1.1.3")) == 1);
+
+}
+
+
+
+/* ==========================================================================
              __               __
             / /_ ___   _____ / /_   ____ _ _____ ____   __  __ ____
            / __// _ \ / ___// __/  / __ `// ___// __ \ / / / // __ \
@@ -516,5 +541,5 @@ void bnwlist_test_group()
     mt_run(bnw_list_bad_ip_totally_not_an_ip);
     mt_run(bnw_non_existing_list);
     mt_run(bnw_no_read_access);
-
+    mt_run(bnw_empty_lines_in_list);
 }
