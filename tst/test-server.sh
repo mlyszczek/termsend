@@ -89,7 +89,7 @@ get_file()
 
 randstr()
 {
-    cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w $1 | head -n 1
+    cat /dev/urandom | tr -dc 'a-zA-Z0-9' | tr -d '\0' | fold -w $1 | head -n 1
 }
 
 
