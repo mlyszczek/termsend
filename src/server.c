@@ -167,7 +167,7 @@ static void server_linger
 )
 {
     unsigned char  buf[8192];  /* dummy buffer to get data from read */
-    size_t         r;          /* return value from read */
+    ssize_t        r;          /* return value from read */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
