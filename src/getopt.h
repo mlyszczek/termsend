@@ -56,4 +56,4 @@ int getopt_long(int argc, char* const argv[],
 }
 #endif
 
-#endif // INCLUDED_GETOPT_PORT_H
+#endif /* INCLUDED_GETOPT_PORT_H */

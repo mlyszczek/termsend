@@ -226,7 +226,7 @@ static int config_parse_arguments
         case 'L': PARSE_STR(list_file); break;
 
         case 'h':
-            fprintf(stdout,
+            printf(
 "kurload - easy file sharing\n"
 "\n"
 "Usage: %s [-h | -v | options]\n"
@@ -236,14 +236,17 @@ static int config_parse_arguments
 "\t-v, --version                    prints version and quits\n"
 "\t-l, --level=<level>              logging level 0-7\n"
 "\t-c, --colorful-output            enable nice colors for logs\n"
-"\t-i, --listen-port=<port>         port on which program will listen\n"
+"\t-i, --listen-port=<port>         port on which program will listen\n",
+argv[0]);
+            printf(
 "\t-s, --max-filesize=<size>        maximum size of file client can upload\n"
 "\t-D, --daemonize                  run as daemon\n"
 "\t-m, --max-connections=<number>   max number of concurrent connections\n"
 "\t-t, --max-timeout=<seconds>      time before client is presumed dead\n"
 "\t-T, --list-type=<type>           type of the list_file (black or white)\n"
 "\t-L, --list_file=<path>           path with ip list for black/white list\n"
-"\t-b, --bind-ip=<ip-list>          comma separated list of ips to bind to\n"
+"\t-b, --bind-ip=<ip-list>          comma separated list of ips to bind to\n");
+            printf(
 "\t-d, --domain=<domain>            domain on which server works\n"
 "\t-u, --user=<user>                user that should run daemon\n"
 "\t-g, --group=<group>              group that should run daemon\n"
@@ -251,7 +254,8 @@ static int config_parse_arguments
 "\t-p, --program-log=<path>         where to store program logs\n"
 "\t-P, --pid-file=<path>            where to store daemon pid file\n"
 "\t-o, --output-dir=<path>          where to store uploaded files\n"
-"\n"
+"\n");
+            printf(
 "logging levels:\n"
 "\t0         fatal errors, application cannot continue\n"
 "\t1         major failure, needs immediate attention\n"
@@ -261,12 +265,12 @@ static int config_parse_arguments
 "\t5         normal message, but of high importance\n"
 "\t6         info log, doesn't print that much (default)\n"
 "\t7         debug, not needed in production\n"
-"\n"
+"\n");
+            printf(
 "list types:\n"
 "\t-1        blacklist mode, ips from list can NOT upload\n"
 "\t 0        disable list (everyone can upload\n"
-"\t 1        whitelist mode, only ips from list can upload\n"
-,argv[0]);
+"\t 1        whitelist mode, only ips from list can upload\n");
 
             exit(1);
 
