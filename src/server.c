@@ -389,7 +389,6 @@ static void *server_handle_upload
     static int          flen = 5;    /* length of the filename to generate */
     unsigned char       buf[8192];   /* temp buffer we read uploaded data to */
     size_t              written;     /* total written bytes to file */
-    size_t              notify;      /* when to notify client about transfer */
     ssize_t             w;           /* return from write function */
     ssize_t             r;           /* return from read function */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -592,7 +591,7 @@ static void *server_handle_upload
             goto error;
         }
 
-        if (written + r > g_config.max_size + 8)
+        if (written + r > (size_t)g_config.max_size + 8)
         {
             /*
              * we received, in total, more bytes  then  we  can  accept,  we
@@ -1115,7 +1114,8 @@ void server_loop_forever(void)
 
 void server_destroy(void)
 {
-    int  i;  /* simple iterator for loop */
+    int              i;    /* simple iterator for loop */
+    struct timespec  req;  /* time to sleep in nanosleep() */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     /*
@@ -1131,6 +1131,9 @@ void server_destroy(void)
     pthread_mutex_destroy(&lconn);
     pthread_mutex_destroy(&lopen);
     free(sfds);
+
+    req.tv_sec = 0;
+    req.tv_nsec = 100000000l; /* 100[ms] */
 
     /*
      * when all cleaning is done, we wait for all  ongoing  transmisions  to
@@ -1172,6 +1175,6 @@ void server_destroy(void)
             return;
         }
 
-        usleep(100 * 1000);  /* 100[ms] */
+        nanosleep(&req, NULL);
     }
 }
