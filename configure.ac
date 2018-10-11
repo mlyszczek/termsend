@@ -5,7 +5,7 @@ AC_CONFIG_HEADERS([kurload.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CHECK_FUNCS(sigaction sigfillset ftruncate usleep fchown stat)
 AC_PROG_CC
-AC_PROG_CC_C89
+AC_CANONICAL_HOST
 AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile www/Makefile])
 AC_CONFIG_LINKS([tst/test-server.sh:tst/test-server.sh])
 AC_CONFIG_LINKS([tst/mtest.sh:tst/mtest.sh])
@@ -18,6 +18,24 @@ AC_TDD_GCOV
 AC_SUBST(COVERAGE_CFLAGS)
 AC_SUBST(COVERAGE_CXXFLAGS)
 AC_SUBST(COVERAGE_LDFLAGS)
+
+
+###
+# solaris is weird, if _XOPEN_SOURCE is set to 500, you CANNOT compile
+# code with anything than c89, yes c99 compiler will error out, so
+# for solaris system we force -std=c89 flag
+#
+# TODO: determin flag name for c89 standard for other non-gnu compatible
+# compilers, for now this must be enough
+#
+
+
+case ${host_os} in
+    solaris*)
+        CFLAGS="-std=c89 ${CFLAGS}"
+        ;;
+esac
+
 
 ###
 # --enable-analyzer
