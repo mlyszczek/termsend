@@ -127,6 +127,7 @@ int main(int argc, char *argv[])
     el_option(EL_TS_TM, EL_TS_TM_REALTIME);
     el_option(EL_FINFO, 1);
     el_option(EL_COLORS, g_config.colorful_output);
+    el_option(EL_FILE_SYNC_EVERY, 0);
 
     if (el_option(EL_FPATH, g_config.program_log) != 0)
     {
