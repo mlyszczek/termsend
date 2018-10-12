@@ -124,7 +124,8 @@ static void config_short_opts(void)
         "-P/pid",
         "-o", "/output",
         "-b0.0.0.0,1.3.3.7",
-        "-L/iplist"
+        "-L/iplist",
+        "-U"
     };
     int argc = sizeof(argv) / sizeof(const char *);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -132,6 +133,7 @@ static void config_short_opts(void)
     config_init(argc, argv);
 
     config.log_level = 4;
+    config.timed_upload = 1;
     config.list_type = -1;
     config.colorful_output = 1;
     config.daemonize = 1;
@@ -177,7 +179,8 @@ static void config_long_opts(void)
         "--program-log=/program",
         "--pid-file=/pid",
         "--output-dir=/output",
-        "--bind-ip=0.0.0.0,1.3.3.7"
+        "--bind-ip=0.0.0.0,1.3.3.7",
+        "--timed-upload"
     };
     int argc = sizeof(argv) / sizeof(const char *);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -185,6 +188,7 @@ static void config_long_opts(void)
     config_init(argc, argv);
 
     config.log_level = 4;
+    config.timed_upload = 1;
     config.list_type = -1;
     config.colorful_output = 1;
     config.daemonize = 1;

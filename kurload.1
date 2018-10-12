@@ -118,6 +118,28 @@ with special phrase
 .br
 Default is: 60
 .TP
+.B -U, --timed-upload
+Normally kurload will wait for "kurload\\n" string and if no data is sent within
+.B MAX_TIMEOUT
+seconds connection will be closed with error and data will not be saved.
+If you pass this argument and timeout occurs data will be saved and user will
+receive link to his uploaded data.
+Program will still (and immediately, for what it's worth) react to "kurload\\n"
+string as normal.
+If you set this, don't forget to set
+.B MAX_TIMEOUT
+to some sane value (3 seconds is quite good choice) because user will HAVE TO
+wait this ammount of seconds after transfer is completed to receive link.
+.br
+Setting this option will make upoading easier as there will be no need for
+additional pipes and instruction to append "kurload\\n". But the tradeoff is
+that timeout should be small, so you cannot pipe output from slow programs
+to nc and user will have to wait
+.B MAX_TIMEOUT
+after all data has been sent before link will be sent back.
+Also, when connection breaks or lags out, server will store incomplete file
+on server but noone will ever get link to that file.
+.TP
 .BI "-T, --list-type=<" type >
 When
 .I type

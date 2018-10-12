@@ -37,6 +37,7 @@ unalias start > /dev/null 2>&1
 
 LOG_LEVEL=${LOG_LEVEL:="6"}
 COLORFUL_OUTPUT=${COLORFUL_OUTPUT:="0"}
+TIMED_UPLOAD=${TIMED_UPLOAD:="0"}
 LISTEN_PORT=${LISTEN_PORT:="1337"}
 MAX_SIZE=${MAX_SIZE:="1048576"}
 MAX_TIMEOUT=${MAX_TIMEOUT:="60"}
@@ -54,6 +55,7 @@ BIND_IP=${BIND_IP:="0.0.0.0"}
 
 command=/usr/local/bin/kurload
 colors=
+timed_upload=
 
 
 ## ==========================================================================
@@ -138,10 +140,14 @@ start() {
         colors="-c"
     fi
 
+    if [ "${TIMED_UPLOAD}" -eq "1" ] ; then
+        timed_upload="-U"
+    fi
+
     ${command} -l${LOG_LEVEL} ${colors} -i${LISTEN_PORT} -s${MAX_SIZE} \
         -t${MAX_TIMEOUT} -m${MAX_CONNECTIONS} -d"${DOMAIN}" -q"${QUERY_LOG}" \
         -p"${PROGRAM_LOG}" -o"${OUTPUT_DIR}" -T"${LIST_TYPE}" -L"${LIST_FILE}" \
-        -b${BIND_IP} -D -P"${PID_FILE}" -u${USER} -g${GROUP}
+        -b${BIND_IP} -D -P"${PID_FILE}" -u${USER} -g${GROUP} ${timed_upload}
 
     if [ "$?" -ne "0" ] ; then
         echo "error"

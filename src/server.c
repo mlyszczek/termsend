@@ -532,6 +532,18 @@ static void *server_handle_upload
 
         if (sact == 0)
         {
+            if (g_config.timed_upload)
+            {
+                /*
+                 * time upload was enabled, in that case we don't treat
+                 * timeout as error but we assume user has no more data
+                 * to send and we should store it and send him the link
+                 * to data he just uploaded.
+                 */
+
+                goto upload_finished_with_timeout;
+            }
+
             /*
              * no activity on cfd for  max_timeout  seconds,  either  client
              * died and didn't tell us about it (thanks!) or connection  was
@@ -700,6 +712,14 @@ static void *server_handle_upload
         goto error;
     }
 
+    /*
+     * we will jump to this only when timed upload is enabled and connection
+     * has timed out.  In that case we don't need (we cannot!) truncate  dta
+     * by 8 bytes of "kurload\n" string, because such string  was  not  (and
+     * could not have been) sent to us.
+     */
+
+upload_finished_with_timeout:
     close(fd);
 
     /*

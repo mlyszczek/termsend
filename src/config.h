@@ -23,6 +23,7 @@ enum list_type
 struct config
 {
     enum el_level   log_level;
+    int             timed_upload;
     long            list_type;
     long            colorful_output;
     long            listen_port;

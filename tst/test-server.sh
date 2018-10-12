@@ -36,16 +36,33 @@ fi
 ## ==========================================================================
 
 
-mt_prepare_test()
+start_kurload()
 {
+    args="${1}" # additional arguments like "-U" for timed uploads
+
     mkdir -p ./kurload-test/out
     ../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m3 -dlocalhost -ukurload \
         -gkurload -P./kurload-test/kurload.pid \
         -q./kurload-test/kurload-query.log -p./kurload-test/kurload.log \
         -L./kurload-test/blacklist -T-1 -o./kurload-test/out \
-        -b${server}
+        -b${server} ${args}
     sleep 1
+
 }
+
+
+## ==========================================================================
+## ==========================================================================
+
+
+mt_prepare_test()
+{
+    start_kurload
+}
+
+
+## ==========================================================================
+## ==========================================================================
 
 
 mt_cleanup_test()
@@ -167,6 +184,10 @@ test_send_string()
 }
 
 
+## ==========================================================================
+## ==========================================================================
+
+
 test_threaded()
 {
     for i in $(seq 1 1 16)
@@ -252,6 +273,62 @@ test_send_and_timeout()
 ## ==========================================================================
 
 
+test_timed_upload()
+{
+    ###
+    # start kurload with -U (timed upload) flag set
+    #
+
+    start_kurload "-U"
+    randbin 128 > ${data}
+    file="$(cat ${data} | ${nc} ${server} 61337 2> /dev/null | get_file)"
+    mt_fail "diff ${updir}/${file} ${data}"
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
+test_timed_upload_full()
+{
+    start_kurload "-U"
+    randbin 1024 > ${data}
+    file="$(cat ${data} | ${nc} ${server} 61337 2> /dev/null | get_file)"
+    mt_fail "diff ${updir}/${file} ${data}"
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
+test_timed_upload_too_big()
+{
+    start_kurload "-U"
+    randbin 1337 > ${data}
+    out="$(cat ${data} | ${nc} ${server} 61337 2> /dev/null | tail -n1)"
+    mt_fail "[ \"$out\" == \"file too big, max length is 1024 bytes\" ]"
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
+test_timed_upload_with_kurload()
+{
+    start_kurload "-U"
+    randbin 128 > $data
+    file=`cat $data | kurload | get_file`
+    mt_fail "diff $updir/$file $data"
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
 test_totally_random()
 {
     for i in `seq 1 1 128`
@@ -311,5 +388,25 @@ mt_run test_send_bin_too_big
 mt_run test_send_and_timeout
 mt_run test_threaded
 mt_run test_totally_random
+
+###
+# these tests have custom preparation code so remove default preparation
+# function and define an empty one
+#
+
+unset mt_prepare_test
+mt_prepare_test()
+{
+    nop=1
+}
+
+###
+# now run tests without preparation function called
+#
+
+mt_run test_timed_upload
+mt_run test_timed_upload_full
+mt_run test_timed_upload_too_big
+mt_run test_timed_upload_with_kurload
 
 mt_return
