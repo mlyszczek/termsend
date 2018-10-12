@@ -252,7 +252,8 @@ argv[0]);
 "\t-d, --domain=<domain>            domain on which server works\n"
 "\t-u, --user=<user>                user that should run daemon\n"
 "\t-U, --timed-upload               treat timeout as if upload was completed\n"
-"\t-g, --group=<group>              group that should run daemon\n"
+"\t-g, --group=<group>              group that should run daemon\n");
+            printf(
 "\t-q, --query-log=<path>           where to store query logs\n"
 "\t-p, --program-log=<path>         where to store program logs\n"
 "\t-P, --pid-file=<path>            where to store daemon pid file\n"
