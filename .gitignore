@@ -15,6 +15,7 @@ config.sub
 configure
 depcomp
 install-sh
+kurload-*
 kurload-*.tar.gz
 kurload.h
 kurload.h.in

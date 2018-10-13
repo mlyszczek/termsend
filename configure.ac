@@ -9,6 +9,7 @@ AC_CANONICAL_HOST
 AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile www/Makefile])
 AC_CONFIG_LINKS([tst/test-server.sh:tst/test-server.sh])
 AC_CONFIG_LINKS([tst/mtest.sh:tst/mtest.sh])
+AC_CHECK_HEADERS([linux/limits.h])
 
 LDFLAGS="$LDFLAGS -L/usr/local/lib -L/usr/lib"
 CFLAGS="$CFLAGS -I/usr/local/include -I/usr/include"

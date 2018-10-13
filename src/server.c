@@ -32,6 +32,11 @@
    ========================================================================== */
 
 
+/* needed by pthread_sigmax()
+ */
+
+#define _POSIX_C_SOURCE 199506L
+
 #include <arpa/inet.h>
 #include <embedlog.h>
 #include <errno.h>
@@ -272,10 +277,10 @@ static int server_create_socket
     }
 
     /* as TCP is all about reliability, after server crashes (or is
-     * restarted), kernel still keep our server tuple in TIME_WAIT
+     * restarted), kernel still keeps our server tuple in TIME_WAIT
      * state, to make sure all connections are closed properly
      * disallowing us to bind to that address again. We don't need
-     * such behaviour, thus we allos SO_REUSEADDR
+     * such behaviour, thus we allow SO_REUSEADDR
      */
 
     flags = 1;

@@ -7,10 +7,14 @@
 #ifndef APP_CONFIG_H
 #define APP_CONFIG_H 1
 
+#include "kurload.h"
 
 #include <embedlog.h>
 #include <limits.h>
 
+#if HAVE_LINUX_LIMITS_H
+#   include <linux/limits.h>
+#endif
 
 enum list_type
 {
