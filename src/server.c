@@ -2,31 +2,27 @@
     Licensed under BSD 2clause license See LICENSE file for more information
     Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
    ==========================================================================
-
-    -------------------------------------------------------------
-   / This is server. Server serves services. Here we create      \
-   | server socket, accept connections, check if ip is banned or |
-   | not, and process upload of the data as well as storing it   |
-   \ into file later                                             /
-    -------------------------------------------------------------
-     \                           .       .
-      \                         / `.   .' "
-       \                .---.  <    > <    >  .---.
-        \               |    \  \ - ~ ~ - /  /    |
-            _____          ..-~             ~-..-~
-           |     |   \~~~\.'                    `./~~~/
-          ---------   \__/                        \__/
-         .'  O    \     /               /       \  "
-        (_____,    `._.'               |         }  \/~~~/
-         `----.          /       }     |        /    \__/
-               `-.      |       /      |       /      `. ,~~|
-                   ~-.__|      /_ - ~ ^|      /- _      `..-'
-                        |     /        |     /     ~-.     `-. _  _  _
-                        |_____|        |_____|         ~ - . _ _ _ _ _>
-   ========================================================================== */
-
-
-/* ==========================================================================
+         -------------------------------------------------------------
+        / This is server. Server serves services. Here we create      \
+        | server socket, accept connections, check if ip is banned or |
+        | not, and process upload of the data as well as storing it   |
+        \ into file later                                             /
+         -------------------------------------------------------------
+           \                      .       .
+            \                    / `.   .' "
+             \           .---.  <    > <    >  .---.
+              \          |    \  \ - ~ ~ - /  /    |
+             _____          ..-~             ~-..-~
+            |     |   \~~~\.'                    `./~~~/
+           ---------   \__/                        \__/
+          .'  O    \     /               /       \  "
+         (_____,    `._.'               |         }  \/~~~/
+          `----.          /       }     |        /    \__/
+                `-.      |       /      |       /      `. ,~~|
+                    ~-.__|      /_ - ~ ^|      /- _      `..-'
+                         |     /        |     /     ~-.     `-. _  _  _
+                         |_____|        |_____|         ~ - . _ _ _ _ _>
+   ==========================================================================
           _               __            __         ____ _  __
          (_)____   _____ / /__  __ ____/ /___     / __/(_)/ /___   _____
         / // __ \ / ___// // / / // __  // _ \   / /_ / // // _ \ / ___/
@@ -63,12 +59,6 @@
 
 
 /* ==========================================================================
-                                   _                __
-                     ____   _____ (_)_   __ ____ _ / /_ ___
-                    / __ \ / ___// /| | / // __ `// __// _ \
-                   / /_/ // /   / / | |/ // /_/ // /_ /  __/
-                  / .___//_/   /_/  |___/ \__,_/ \__/ \___/
-                 /_/
                                    _         __     __
               _   __ ____ _ _____ (_)____ _ / /_   / /___   _____
              | | / // __ `// ___// // __ `// __ \ / // _ \ / ___/
@@ -128,8 +118,8 @@ static int server_bind_num(void)
 
 /* ==========================================================================
     Function generates random string of length l that is stored in buffer s.
-    Caller is responsible for making s big enoug to hold l  +  1  number  of
-    bytes.  Returned string contains only numbers and lower-case characters.
+    Caller is responsible for making s big enoug to hold l + 1 number of
+    bytes. Returned string contains only numbers and lower-case characters.
     String will be null terminated.
    ========================================================================== */
 
@@ -171,8 +161,7 @@ static void server_linger
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    /*
-     * inform client that writing any more data is not allowed
+    /* inform client that writing any more data is not allowed
      */
 
     shutdown(fd, SHUT_RDWR);
@@ -183,10 +172,9 @@ static void server_linger
 
         if (r < 0)
         {
-            /*
-             * some error occured, It doesn't why, we stop lingering anyway.
-             * Worst thing  can  do  is  that  client  won't  receive  error
-             * message.  We can live with that
+            /* some error occured, It doesn't why, we stop
+             * lingering anyway.  Worst thing can do is that client
+             * won't receive error message. We can live with that
              */
 
             el_perror(ELW, "read error");
@@ -195,24 +183,23 @@ static void server_linger
 
         if (r == 0)
         {
-            /*
-             * Client received our FIN, and sends back his FIN.  Now we  can
-             * be fairly sure, client received all our messages.
+            /* Client received our FIN, and sends back his FIN. Now
+             * we can be fairly sure, client received all our
+             * messages.
              */
 
             return;
         }
 
-        /*
-         * we ignore any data received from the client - time for talking is
-         * done.
+        /* we ignore any data received from the client - time for
+         * talking is done.
          */
     }
 }
 
 
 /* ==========================================================================
-    formats message pointer by fmt and sends it  all  to  client  associated
+    formats message pointer by fmt and sends it all to client associated
     with fd. In case of any error from write function, we just log situation
     but sending is interrupted and client won't receive whole message (if he
     receives anything at all)
@@ -237,9 +224,8 @@ static void server_reply
     mlen = vsprintf(msg, fmt, ap);
     va_end(ap);
 
-    /*
-     * send reply in loop until all bytes are commited to the kernel for
-     * sending
+    /* send reply in loop until all bytes are commited to the
+     * kernel for sending
      */
 
     written = 0;
@@ -263,7 +249,7 @@ static void server_reply
 
 
 /* ==========================================================================
-    this function creates server socket that  is  fully  configured  and  is
+    this function creates server socket that is fully configured and is
     ready to accept connections
    ========================================================================== */
 
@@ -285,12 +271,11 @@ static int server_create_socket
         return -1;
     }
 
-    /*
-     * as TCP  is  all  about  reliability,  after  server  crashes  (or  is
-     * restarted), kernel still keep our server tuple in TIME_WAIT state, to
-     * make sure all connections are closed properly disallowing us to  bind
-     * to that address again.  We don't need such behaviour, thus  we  allos
-     * SO_REUSEADDR
+    /* as TCP is all about reliability, after server crashes (or is
+     * restarted), kernel still keep our server tuple in TIME_WAIT
+     * state, to make sure all connections are closed properly
+     * disallowing us to bind to that address again. We don't need
+     * such behaviour, thus we allos SO_REUSEADDR
      */
 
     flags = 1;
@@ -301,8 +286,7 @@ static int server_create_socket
         return -1;
     }
 
-    /*
-     * fill server address parameters for listening
+    /* fill server address parameters for listening
      */
 
     memset(&srv, 0, sizeof(srv));
@@ -310,9 +294,8 @@ static int server_create_socket
     srv.sin_port = htons(g_config.listen_port);
     srv.sin_addr.s_addr = ip;
 
-    /*
-     * bind socket to srv address, so it only accept connections  from  this
-     * ip/interface
+    /* bind socket to srv address, so it only accept connections
+     * from this ip/interface
      */
 
     if (bind(fd, (struct sockaddr *)&srv, sizeof(srv)) != 0)
@@ -322,9 +305,9 @@ static int server_create_socket
         return -1;
     }
 
-    /*
-     * mark socket to accept incoming  connections.   Backlog  is  set  high
-     * enough so that  no  client  can  receive  connection  refused  error.
+    /* mark socket to accept incoming connections. Backlog is set
+     * high enough so that no client can receive connection refused
+     * error.
      */
 
     if (listen(fd, 256) != 0)
@@ -334,9 +317,9 @@ static int server_create_socket
         return -1;
     }
 
-    /*
-     * set server socket  to  work  in  non  blocking  manner,  all  clients
-     * connecting  to  that  socket  will  also  inherit  non  block  nature
+    /* set server socket to work in non blocking manner, all
+     * clients connecting to that socket will also inherit non
+     * block nature
      */
 
     if ((flags = fcntl(fd, F_GETFL)) == -1)
@@ -403,10 +386,10 @@ static void *server_handle_upload
     strcat(path, "/");
     opathlen = strlen(path);
 
-    /*
-     * we don't want threads that handle client connection to receive signals,
-     * and thus interrupt system calls like write or read. Only main thread
-     * can handle signals, so we mask all signals here
+    /* we don't want threads that handle client connection to
+     * receive signals, and thus interrupt system calls like write
+     * or read. Only main thread can handle signals, so we mask all
+     * signals here
      */
 
     sigfillset(&set);
@@ -421,18 +404,18 @@ static void *server_handle_upload
         return NULL;
     }
 
-    /*
-     * generate unique file name for content that client will be sending  we
-     * start from file length = 5, and will increase this value  if  we  hit
-     * file collision 3 times in a row.   flen  is  static,  because  if  we
-     * hit file collision once, there is big enough chance we  will  hit  it
-     * again, so to not waste cpu power for checking it  every  single  time
-     * client  connects,   we  keep  the  state  in  running  serwer.   When
-     * server gets restarted, flen will be reseted back  to  default  value,
-     * and increment will again begin from low value.  To  avoid  situation,
-     * where 2 threads modify  flen  (leading  to  incrementing  flen  by  2
-     * instead of 1), only one thread can open file at a time.   Opening  is
-     * fast, so it's not a big deal
+    /* generate unique file name for content that client will be
+     * sending we start from file length = 5, and will increase
+     * this value if we hit file collision 3 times in a row. flen
+     * is static, because if we hit file collision once, there is
+     * big enough chance we will hit it again, so to not waste cpu
+     * power for checking it every single time client connects, we
+     * keep the state in running serwer. When server gets
+     * restarted, flen will be reseted back to default value, and
+     * increment will again begin from low value. To avoid
+     * situation, where 2 threads modify flen (leading to
+     * incrementing flen by 2 instead of 1), only one thread can
+     * open file at a time. Opening is fast, so it's not a big deal
      */
 
     pthread_mutex_lock(&lopen);
@@ -444,8 +427,7 @@ static void *server_handle_upload
 
         if ((fd = open(path, O_CREAT | O_EXCL | O_APPEND | O_RDWR, 0640)) >= 0)
         {
-            /*
-             * file opened with success, break out of the loop
+            /* file opened with success, break out of the loop
              */
 
             break;
@@ -453,11 +435,10 @@ static void *server_handle_upload
 
         if (errno == EEXIST)
         {
-            /*
-             * we hit file name collision, increment collision  countr,  and
-             * if that counter is bigger than 3, we increment file length by
-             * one, because it looks like there are  a  lot  of  files  with
-             * current file length
+            /* we hit file name collision, increment collision
+             * countr, and if that counter is bigger than 3, we
+             * increment file length by one, because it looks like
+             * there are a lot of files with current file length
              */
 
             if (++ncollision == 3)
@@ -469,8 +450,8 @@ static void *server_handle_upload
             continue;
         }
 
-        /*
-         * unexpected error occured, log situation and close connection
+        /* unexpected error occured, log situation and close
+         * connection
          */
 
         pthread_mutex_unlock(&lopen);
@@ -486,17 +467,17 @@ static void *server_handle_upload
     }
     pthread_mutex_unlock(&lopen);
 
-    /*
-     * file is opened, we can now start to retrieve data from client.  Since
-     * purpose of this file server is that user can upload data  using  only
-     * simple tools like netcat, we don't have information about file  size.
-     * On top of that, we want to send link to upload file, once  upload  is
-     * completed, so netcat cannot close connection on upload  complete,  to
-     * inform us about upload completed, so we expect an  ending  string  at
-     * the end of transfer that will inform us that transfer  is  completed.
-     * That ending string is "kurload\n".  Yes, this may lead  to  prepature
-     * end  of  transfer,   but  chances  are  so  slim,  we   can   neglect
-     * them.
+    /* file is opened, we can now start to retrieve data from
+     * client. Since purpose of this file server is that user can
+     * upload data using only simple tools like netcat, we don't
+     * have information about file size.  On top of that, we want
+     * to send link to upload file, once upload is completed, so
+     * netcat cannot close connection on upload complete, to inform
+     * us about upload completed, so we expect an ending string at
+     * the end of transfer that will inform us that transfer is
+     * completed.  That ending string is "kurload\n". Yes, this may
+     * lead to prepature end of transfer, but chances are so slim,
+     * we can neglect them.
      */
 
     written = 0;
@@ -518,9 +499,8 @@ static void *server_handle_upload
 
         if (sact == -1)
         {
-            /*
-             * select stumbled upon some error,  it's  a  sad  day  for  our
-             * client, we need to interrupt connection
+            /* select stumbled upon some error, it's a sad day for
+             * our client, we need to interrupt connection
              */
 
             el_perror(ELW, "[%3d] select error on client read", cfd);
@@ -534,21 +514,20 @@ static void *server_handle_upload
         {
             if (g_config.timed_upload)
             {
-                /*
-                 * time upload was enabled, in that case we don't treat
-                 * timeout as error but we assume user has no more data
-                 * to send and we should store it and send him the link
-                 * to data he just uploaded.
+                /* time upload was enabled, in that case we don't
+                 * treat timeout as error but we assume user has no
+                 * more data to send and we should store it and
+                 * send him the link to data he just uploaded.
                  */
 
                 goto upload_finished_with_timeout;
             }
 
-            /*
-             * no activity on cfd for  max_timeout  seconds,  either  client
-             * died and didn't tell us about it (thanks!) or connection  was
-             * abrupted  by  some   higher  forces.   We  assume   this   is
-             * unrecoverable problem and close connection
+            /* no activity on cfd for max_timeout seconds, either
+             * client died and didn't tell us about it (thanks!) or
+             * connection was abrupted by some higher forces. We
+             * assume this is unrecoverable problem and close
+             * connection
              */
 
             el_print(ELN, "[%3d] client inactive for %d seconds",
@@ -556,11 +535,10 @@ static void *server_handle_upload
             el_oprint(ELI, &g_qlog, "[%s] rejected: inactivity",
                 inet_ntoa(client.sin_addr));
 
-            /*
-             * well, there may be one more case for inactivity from  clients
-             * side.  It  may  be  that  he  forgot  to  add  ending  string
-             * "kurload\n", so we send reply to the client  as  there  is  a
-             * chance he is still alive.
+            /* well, there may be one more case for inactivity from
+             * clients side. It may be that he forgot to add ending
+             * string "kurload\n", so we send reply to the client
+             * as there is a chance he is still alive.
              */
 
             server_reply(cfd, "disconnected due to inactivity for %d "
@@ -569,19 +547,18 @@ static void *server_handle_upload
             goto error;
         }
 
-        /*
-         * and finnaly, we get here, when there is some data in cfd, and we
-         * can safely call read, without fear of locking
+        /* and finnaly, we get here, when there is some data in
+         * cfd, and we can safely call read, without fear of
+         * locking
          */
 
         r = read(cfd, buf, sizeof(buf));
 
         if (r == -1)
         {
-            /*
-             * error from read, and we know it cannot be  EAGAIN  as  select
-             * covered that for us, so something wrong must  have  happened.
-             * Inform client and close connection.
+            /* error from read, and we know it cannot be EAGAIN as
+             * select covered that for us, so something wrong must
+             * have happened.  Inform client and close connection.
              */
 
             el_perror(ELC, "[%3d] couldn't read from client", cfd);
@@ -593,9 +570,8 @@ static void *server_handle_upload
 
         if (r == 0)
         {
-            /*
-             * Return code 0 means, that client closed connection before all
-             * data could be uploaded, well, his choice
+            /* Return code 0 means, that client closed connection
+             * before all data could be uploaded, well, his choice
              */
 
             el_oprint(ELI, &g_qlog, "[%s] rejected: connection closed by "
@@ -605,11 +581,11 @@ static void *server_handle_upload
 
         if (written + r > (size_t)g_config.max_size + 8)
         {
-            /*
-             * we received, in total, more bytes  then  we  can  accept,  we
-             * remove such file and return error to the client.  That +8  is
-             * for ending string "kurload\n" as we will delete  that  anyway
-             * and file will not get more than g_config.max_size size.
+            /* we received, in total, more bytes then we can
+             * accept, we remove such file and return error to the
+             * client. That +8 is for ending string "kurload\n" as
+             * we will delete that anyway and file will not get
+             * more than g_config.max_size size.
              */
 
             el_oprint(ELI, &g_qlog, "[%s] rejected: file too big",
@@ -619,10 +595,9 @@ static void *server_handle_upload
             goto error;
         }
 
-        /*
-         * received some data, simply store them into  file,  right  now  we
-         * don't care if ending string "kurload\n" ends up  in  a  file,  we
-         * will take care of it later.
+        /* received some data, simply store them into file, right
+         * now we don't care if ending string "kurload\n" ends up
+         * in a file, we will take care of it later.
          */
 
         if ((w = write(fd, buf, r)) != r)
@@ -634,36 +609,33 @@ static void *server_handle_upload
             goto error;
         }
 
-        /*
-         * write was successful, now let's check if  data  written  to  file
-         * contains ending string "kurload\n".  For  that  we  read  8  last
-         * characters from data stored in file.
+        /* write was successful, now let's check if data written to
+         * file contains ending string "kurload\n". For that we
+         * read 8 last characters from data stored in file.
          */
 
         if ((written += w) < 8)
         {
-            /*
-             * we didn't receive enough bytes to check for ending string, so
-             * we don't check for ending string, simple.
+            /* we didn't receive enough bytes to check for ending
+             * string, so we don't check for ending string, simple.
              */
 
             continue;
         }
 
-        /*
-         * we seek 8 bytes back, as its length of "kurload\n" and read last
-         * 8 bytes to check for end string existance. We don't need to seek
-         * back to end of file, as reading will move the pointer by itself.
+        /* we seek 8 bytes back, as its length of "kurload\n" and
+         * read last 8 bytes to check for end string existance. We
+         * don't need to seek back to end of file, as reading will
+         * move the pointer by itself.
          */
 
         lseek(fd, -8, SEEK_CUR);
 
         if (read(fd, ends, 8) != 8)
         {
-            /*
-             * totally unexpected, but still we expect it, like a good swat
-             * team. We don't know how to recover from this error, so let's
-             * call it a day for this client
+            /* totally unexpected, but still we expect it, like a
+             * good swat team. We don't know how to recover from
+             * this error, so let's call it a day for this client
              */
 
             el_perror(ELC, "[%3d] couldn't read end string", cfd);
@@ -675,10 +647,10 @@ static void *server_handle_upload
 
         if (strcmp(ends, "kurload\n") != 0)
         {
-            /*
-             * ending string has not yet been received, we continue  getting
-             * data from client, and we send information to the client about
-             * transfer status. We sent status about progres once per second
+            /* ending string has not yet been received, we continue
+             * getting data from client, and we send information to
+             * the client about transfer status. We sent status
+             * about progres once per second
              */
 
             if (last_notif != now)
@@ -690,17 +662,16 @@ static void *server_handle_upload
             continue;
         }
 
-        /*
-         * full file received without errors, we even got ending string,  we
-         * can now break out of loop to perform finishing touch  on  upload.
+        /* full file received without errors, we even got ending
+         * string, we can now break out of loop to perform
+         * finishing touch on upload.
          */
 
         break;
     }
 
-    /*
-     * to finish, we need to truncate file, to cut off  ending  string  from
-     * file and close it.
+    /* to finish, we need to truncate file, to cut off ending
+     * string from file and close it.
      */
 
     if (ftruncate(fd, written - 8) != 0)
@@ -712,19 +683,18 @@ static void *server_handle_upload
         goto error;
     }
 
-    /*
-     * we will jump to this only when timed upload is enabled and connection
-     * has timed out.  In that case we don't need (we cannot!) truncate  dta
-     * by 8 bytes of "kurload\n" string, because such string  was  not  (and
-     * could not have been) sent to us.
+    /* we will jump to this only when timed upload is enabled and
+     * connection has timed out. In that case we don't need (we
+     * cannot!) truncate dta by 8 bytes of "kurload\n" string,
+     * because such string was not (and could not have been) sent
+     * to us.
      */
 
 upload_finished_with_timeout:
     close(fd);
 
-    /*
-     * after upload is finished, we send  the  client,  link  where  he  can
-     * download his newly uploaded file
+    /* after upload is finished, we send the client, link where he
+     * can download his newly uploaded file
      */
 
     strcpy(url, g_config.domain);
@@ -742,9 +712,8 @@ upload_finished_with_timeout:
     return NULL;
 
 error:
-    /*
-     * this handles any error during file reception, we remove unfinished
-     * upload and close client's connection
+    /* this handles any error during file reception, we remove
+     * unfinished upload and close client's connection
      */
 
     server_linger(cfd);
@@ -761,9 +730,9 @@ error:
 
 
 /* ==========================================================================
-    in this function we accept connection from the backlog queue,  check  if
-    client is allowed to upload and if server has free upload slots.  If all
-    checks pass, function starts thread that will handle upload on its  own.
+    in this function we accept connection from the backlog queue, check if
+    client is allowed to upload and if server has free upload slots. If all
+    checks pass, function starts thread that will handle upload on its own.
    ========================================================================== */
 
 
@@ -781,8 +750,7 @@ static void server_process_connection
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    /*
-     * process all awaiting connections in sfd socket
+    /* process all awaiting connections in sfd socket
      */
 
     clen = sizeof(client);
@@ -793,10 +761,9 @@ static void server_process_connection
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
-                /*
-                 * connection queue in server socket is empty, that means
-                 * we processed all queued clients, we can leave now, our
-                 * job is done here
+                /* connection queue in server socket is empty, that
+                 * means we processed all queued clients, we can
+                 * leave now, our job is done here
                  */
 
                 return;
@@ -810,10 +777,10 @@ static void server_process_connection
         el_print(ELD, "incoming connection from %s socket id %d",
             inet_ntoa(client.sin_addr), cfd);
 
-        /*
-         * after accepting connection, we have client's ip, now we check
-         * if this ip can upload (it can be banned, or not listen in the
-         * whitelist, depending on server configuration
+        /* after accepting connection, we have client's ip, now we
+         * check if this ip can upload (it can be banned, or not
+         * listen in the whitelist, depending on server
+         * configuration
          */
 
         if (bnw_is_allowed(ntohl(client.sin_addr.s_addr)) == 0)
@@ -825,9 +792,9 @@ static void server_process_connection
             continue;
         }
 
-        /*
-         * user is allowed to upload, be we still need to check if there
-         * is upload slot available (connection limit is not reached)
+        /* user is allowed to upload, be we still need to check if
+         * there is upload slot available (connection limit is not
+         * reached)
          */
 
         pthread_mutex_lock(&lconn);
@@ -843,12 +810,10 @@ static void server_process_connection
             continue;
         }
 
-
-        /*
-         * on some systems (like BSDs) socket after accept will inherit
-         * flags from accept server socket. In our case we may inherit
-         * O_NONBLOCK property which is not what we want. We turn that
-         * flag explicitly
+        /* on some systems (like BSDs) socket after accept will
+         * inherit flags from accept server socket. In our case we
+         * may inherit O_NONBLOCK property which is not what we
+         * want. We turn that flag explicitly
          */
 
         if ((flags = fcntl(cfd, F_GETFL)) == -1)
@@ -869,9 +834,9 @@ static void server_process_connection
             continue;
         }
 
-        /*
-         * client is connected, allowed and connection limit has not been
-         * reached, we start thread that will take actions from here.
+        /* client is connected, allowed and connection limit has
+         * not been reached, we start thread that will take actions
+         * from here.
          */
 
         if (pthread_create(&t, NULL, server_handle_upload,
@@ -888,11 +853,10 @@ static void server_process_connection
         ++cconn;
         pthread_mutex_unlock(&lconn);
 
-        /*
-         * we don't need anything from running thread and  we  surely  don't
-         * want to babysit it, so we detach and forget  about  it.   Running
-         * thread will deal with errors on its own  and  will  terminate  in
-         * case of any error
+        /* we don't need anything from running thread and we surely
+         * don't want to babysit it, so we detach and forget about
+         * it. Running thread will deal with errors on its own and
+         * will terminate in case of any error
          */
 
         pthread_detach(t);
@@ -917,10 +881,10 @@ static void server_process_connection
 
 
 /* ==========================================================================
-    this  creates  server  (or  servers  if  we  will  listen  of   multiple
-    interfaces) to handle connections from the clients.  It initializes  all
+    this creates server (or servers if we will listen of multiple
+    interfaces) to handle connections from the clients. It initializes all
     memory, structures to valid state. If function returns 0, you're all set
-    and you can call loop_forever(), else server is  in  invalid  state  and
+    and you can call loop_forever(), else server is in invalid state and
     should not run
    ========================================================================== */
 
@@ -937,9 +901,8 @@ int server_init(void)
 
     nsfds = server_bind_num();
 
-    /*
-     * allocate memory for all server  sockets,  one  interface  equals  one
-     * server socket.
+    /* allocate memory for all server sockets, one interface equals
+     * one server socket.
      */
 
     if ((sfds = malloc(nsfds * sizeof(*sfds))) == NULL)
@@ -948,8 +911,7 @@ int server_init(void)
         return -1;
     }
 
-    /*
-     * initialize mutexes
+    /* initialize mutexes
      */
 
     if (pthread_mutex_init(&lconn, NULL) != 0)
@@ -967,9 +929,8 @@ int server_init(void)
         return -1;
     }
 
-    /*
-     * invalidate all allocated server sockets, so closing  such  socket  in
-     * case of an error won't crash the app.
+    /* invalidate all allocated server sockets, so closing such
+     * socket in case of an error won't crash the app.
      */
 
     for (i = 0; i != nsfds; ++i)
@@ -977,9 +938,8 @@ int server_init(void)
         sfds[i] = -1;
     }
 
-    /*
-     *  Now  we  create  one  server  socket   for   each   interface   user
-     *  specified in configuration file.
+    /* Now we create one server socket for each interface user
+     * specified in configuration file.
      */
 
     strcpy(bip, g_config.bind_ip);
@@ -1001,10 +961,10 @@ int server_init(void)
         ip = strtok(NULL, ",");
     }
 
-    /*
-     * seed random number generator for  generating  unique  file  name  for
-     * uploaded files.  We don't need any cryptographic security, so  simple
-     * random  seeded  with  current  time  is  more  than  enough  for  us.
+    /* seed random number generator for generating unique file name
+     * for uploaded files. We don't need any cryptographic
+     * security, so simple random seeded with current time is more
+     * than enough for us.
      */
 
     srand(time(NULL));
@@ -1030,29 +990,27 @@ void server_loop_forever(void)
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    /*
-     * we  may  have  multiple  server  sockets,  so  we  cannot  accept  in
-     * blocking fassion.  Since  number  of  server  sockets  will  be  very
-     * small, we  can  use  not-so-fast-but-highly-portable  select.   Let's
-     * prepare our fdset
+    /* we may have multiple server sockets, so we cannot accept in
+     * blocking fassion. Since number of server sockets will be
+     * very small, we can use not-so-fast-but-highly-portable
+     * select. Let's prepare our fdset
      */
 
     FD_ZERO(&readfds);
 
     for (i = 0, maxfd = 0; i != nsfds; ++i)
     {
-        /*
-         * we validate all sockets in init function, so we are sure sfds  is
-         * valid and contains valid  file  descriptors  unless  user  called
-         * this function  without  init  or  when  init  failed  and  return
-         * code wasn't checked, then he deserves nice segfault  in  da  face
+        /* we validate all sockets in init function, so we are sure
+         * sfds is valid and contains valid file descriptors unless
+         * user called this function without init or when init
+         * failed and return code wasn't checked, then he deserves
+         * nice segfault in da face
          */
 
         FD_SET(sfds[i], &readfds);
 
-        /*
-         * we need to find which socket is the  highest  one,  select  needs
-         *   this   information   to   process   fds    without    segfaults
+        /* we need to find which socket is the highest one, select
+         * needs this information to process fds without segfaults
          */
 
         maxfd = sfds[i] > maxfd ? sfds[i] : maxfd;
@@ -1067,30 +1025,30 @@ void server_loop_forever(void)
 
         if (g_shutdown)
         {
-            /*
-             * shutdown flag was set, program is going to end, we check and
-             * return here, right before blocking select() as this has the
-             * least chance of locking in select() after SIGTERM
+            /* shutdown flag was set, program is going to end, we
+             * check and return here, right before blocking
+             * select() as this has the least chance of locking in
+             * select() after SIGTERM
              */
 
             return;
         }
 
-        /*
-         * now  we  wait  for  activity,  for  server  sockets  (like  ours)
-         * activity means we have an incoming connection.  We pass NULL  for
-         * timeout, because we want to wait indefinitely,  and  we  are  not
-         * interested in  writefds  (we  don't  write  to  any  socket)  nor
-         * exceptfds as exceptions don't occur on server sockets.
+        /* now we wait for activity, for server sockets (like ours)
+         * activity means we have an incoming connection. We pass
+         * NULL for timeout, because we want to wait indefinitely,
+         * and we are not interested in writefds (we don't write to
+         * any socket) nor exceptfds as exceptions don't occur on
+         * server sockets.
          */
 
         sact = select(maxfd + 1, &readfds, NULL, NULL, NULL);
 
         if (sact == -1)
         {
-            /*
-             * an error occured in select, it is most likely EINTR from the
-             * SIGTERM signal, in any case, we return so program can finish
+            /* an error occured in select, it is most likely EINTR
+             * from the SIGTERM signal, in any case, we return so
+             * program can finish
              */
 
             if (errno == EINTR)
@@ -1105,26 +1063,25 @@ void server_loop_forever(void)
             return;
         }
 
-        /*
-         * if we get here, that means activity  is  on  any  server  socket,
-         * since we wait indefinietly, select cannot return 0.  Now we check
-         * which socket got activity and we accept connection to process it.
+        /* if we get here, that means activity is on any server
+         * socket, since we wait indefinietly, select cannot return
+         * 0. Now we check which socket got activity and we accept
+         * connection to process it.
          */
 
         for (i = 0; i != nsfds; ++i)
         {
             if (FD_ISSET(sfds[i], &readfds) == 0)
             {
-                /*
-                 * nope, that socket has nothing intereseted going on inside
+                /* nope, that socket has nothing intereseted going
+                 * on inside
                  */
 
                 continue;
             }
 
-            /*
-             * well, this socket has something to say, pass it to processing
-             * function to determin what to do with it
+            /* well, this socket has something to say, pass it to
+             * processing function to determin what to do with it
              */
 
             server_process_connection(sfds[i]);
@@ -1138,9 +1095,8 @@ void server_destroy(void)
     struct timespec  req;  /* time to sleep in nanosleep() */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    /*
-     * close all server sockets, so any new connection is automatically droped
-     * by the system
+    /* close all server sockets, so any new connection is
+     * automatically droped by the system
      */
 
     for (i = 0; i != nsfds; ++i)
@@ -1155,9 +1111,8 @@ void server_destroy(void)
     req.tv_sec = 0;
     req.tv_nsec = 100000000l; /* 100[ms] */
 
-    /*
-     * when all cleaning is done, we wait for all  ongoing  transmisions  to
-     * finish
+    /* when all cleaning is done, we wait for all ongoing
+     * transmisions to finish
      */
 
     el_print(ELN, "waiting for all connections to finish");
@@ -1173,9 +1128,8 @@ void server_destroy(void)
 
         if (nconn == 0)
         {
-            /*
-             * all connections has been closed, we can proceed with cleaning
-             * up operations
+            /* all connections has been closed, we can proceed with
+             * cleaning up operations
              */
 
             return;
@@ -1183,10 +1137,9 @@ void server_destroy(void)
 
         if (g_stfu)
         {
-            /*
-             * someone is nervous, finishing without waiting for  connection
-             * to finish - this might cause file  in  output_dir  to  be  in
-             * invalid state
+            /* someone is nervous, finishing without waiting for
+             * connection to finish - this might cause file in
+             * output_dir to be in invalid state
              */
 
             el_print(ELW, "exiting without waiting for connection to finish "

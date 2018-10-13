@@ -2,17 +2,16 @@
     Licensed under BSD 2clause license See LICENSE file for more information
     Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
    ==========================================================================
-
-   ------------------------------------------------------------
-  / This module is responsible for loading black or white list \
-  | from file, parse it and convert to sorted array of         |
-  | in_addr_t. It also allows to check if given IP address is  |
-  \ allowed, depening on mode, to upload or not                /
-   ------------------------------------------------------------
-    \                                ,+*^^*+___+++_
-     \                         ,*^^^^              )
-      \                     _+*                     ^**+_
-       \                  +^       _ _++*+_+++_,         )
+         ------------------------------------------------------------
+        / This module is responsible for loading black or white list \
+        | from file, parse it and convert to sorted array of         |
+        | in_addr_t. It also allows to check if given IP address is  |
+        \ allowed, depening on mode, to upload or not                /
+         ------------------------------------------------------------
+              \                      ,+*^^*+___+++_
+               \               ,*^^^^              )
+                \           _+*                     ^**+_
+                 \        +^       _ _++*+_+++_,         )
               _+^^*+_    (     ,+*^ ^          \+_        )
              {       )  (    ,(    ,_+--+--,      ^)      ^\
             { (@)    } f   ,(  ,+-^ __*_*_  ^^\_   ^\       )
@@ -30,10 +29,7 @@
                      ___) >____) >___   ^\_\_\_\_\_\_\)
                     ^^^//\\_^^//\\_^       ^(\_\_\_\)
                       ^^^ ^^ ^^^ ^
-   ========================================================================== */
-
-
-/* ==========================================================================
+   ==========================================================================
           _               __            __         ____ _  __
          (_)____   _____ / /__  __ ____/ /___     / __/(_)/ /___   _____
         / // __ \ / ___// // / / // __  // _ \   / /_ / // // _ \ / ___/
@@ -59,12 +55,6 @@
 
 
 /* ==========================================================================
-                                   _                __
-                     ____   _____ (_)_   __ ____ _ / /_ ___
-                    / __ \ / ___// /| | / // __ `// __// _ \
-                   / /_/ // /   / / | |/ // /_/ // /_ /  __/
-                  / .___//_/   /_/  |___/ \__,_/ \__/ \___/
-                 /_/
                                    _         __     __
               _   __ ____ _ _____ (_)____ _ / /_   / /___   _____
              | | / // __ `// ___// // __ `// __ \ / // _ \ / ___/
@@ -80,18 +70,12 @@ static int         mode;     /* operation mode, 0 - none, -1 black, 1 white */
 
 
 /* ==========================================================================
-                                   _                __
-                     ____   _____ (_)_   __ ____ _ / /_ ___
-                    / __ \ / ___// /| | / // __ `// __// _ \
-                   / /_/ // /   / / | |/ // /_/ // /_ /  __/
-                  / .___//_/   /_/  |___/ \__,_/ \__/ \___/
-                 /_/
-               ____                     __   _
-              / __/__  __ ____   _____ / /_ (_)____   ____   _____
-             / /_ / / / // __ \ / ___// __// // __ \ / __ \ / ___/
-            / __// /_/ // / / // /__ / /_ / // /_/ // / / /(__  )
-           /_/   \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/
-
+                           _           ____
+             ____   _____ (_)_   __   / __/__  __ ____   _____ _____
+            / __ \ / ___// /| | / /  / /_ / / / // __ \ / ___// ___/
+           / /_/ // /   / / | |/ /  / __// /_/ // / / // /__ (__  )
+          / .___//_/   /_/  |___/  /_/   \__,_//_/ /_/ \___//____/
+         /_/
    ========================================================================== */
 
 
@@ -129,10 +113,10 @@ static int bnw_ip_comp
 
 
 /* ==========================================================================
-    function parses file with  list  and  converts  IPs  there  from  string
-    representation ("127.0.0.1") to in_addr_t type (uint32_t).   Parsed  IPs
-    are stored in heap allocated memory 'ip_list'.  If sytax error is  found
-    in list file, nothing is allocated and -1 is returned.
+   function parses file with list and converts IPs there from string
+   representation ("127.0.0.1") to in_addr_t type (uint32_t). Parsed IPs are
+   stored in heap allocated memory 'ip_list'. If sytax error is found in
+   list file, nothing is allocated and -1 is returned.
 
     errno
             ENOMEM      not enough memory to store all ips
@@ -152,24 +136,22 @@ static int bnw_parse_list
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    /*
-     * first count number of entries so we can allocate enough memory
+    /* first count number of entries so we can allocate enough
+     * memory
      */
 
     for (i = 0, n = 0; i != flen; ++i)
     {
         if (f[i] == '\n')
         {
-            /*
-             * new line encoutered assuming it's an ip
+            /* new line encoutered assuming it's an ip
              */
 
             ++n;
 
             if (i == 0)
             {
-                /*
-                 * but wait! new line at the very first character?
+                /* but wait! new line at the very first character?
                  * empty line that is!
                  */
 
@@ -179,8 +161,7 @@ static int bnw_parse_list
 
             if (f[i - 1] == '\n')
             {
-                /*
-                 * this character is a newline and previous one was
+                /* this character is a newline and previous one was
                  * new line too? double new lines means this is an
                  * empty line
                  */
@@ -198,8 +179,8 @@ static int bnw_parse_list
         return -1;
     }
 
-    /*
-     * no we can parse file and convert string IPs into small in_addr_t
+    /* no we can parse file and convert string IPs into small
+     * in_addr_t
      */
 
     for (i = 0, n = 0; i != flen; ++i)
@@ -209,8 +190,7 @@ static int bnw_parse_list
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-        /*
-         * copy next address into ip buffer
+        /* copy next address into ip buffer
          */
 
         for (j = 0; f[i] != '\n'; ++j, ++i)
@@ -226,16 +206,14 @@ static int bnw_parse_list
 
         if (j == 0)
         {
-            /*
-             * this is empty line, ignore it and go to next line
+            /* this is empty line, ignore it and go to next line
              */
 
             continue;
         }
 
-        /*
-         * some systems - like AIX - thinks that 10.1.1. ip is a valid IP
-         * address. Well, no, it's not, screw AIX.
+        /* some systems - like AIX - thinks that 10.1.1. ip is a
+         * valid IP address. Well, no, it's not, screw AIX.
          */
 
         if (ip[j - 1] == '.')
@@ -244,9 +222,8 @@ static int bnw_parse_list
             goto parse_error;
         }
 
-        /*
-         * null terminate ip, and convert string to in_addr_t. '\n' in f will be
-         * skiped inside for loop
+        /* null terminate ip, and convert string to in_addr_t. '\n'
+         * in f will be skiped inside for loop
          */
 
         ip[j] = '\0';
@@ -261,8 +238,7 @@ static int bnw_parse_list
         el_print(ELD, "adding ip to list: %s", ip);
     }
 
-    /*
-     * sort IPs for faster search
+    /* sort IPs for faster search
      */
 
     num_ip = n;
@@ -396,8 +372,7 @@ int bnw_is_allowed
 
     if (mode == 0)
     {
-        /*
-         * filtering is off, ip is always allowed
+        /* filtering is off, ip is always allowed
          */
 
         return 1;
@@ -420,16 +395,15 @@ int bnw_is_allowed
         {
             if (mode == 1)
             {
-                /*
-                 * ip was found in white list mode, ip is allowed
+                /* ip was found in white list mode, ip is allowed
                  */
 
                 return 1;
             }
             else
             {
-                /*
-                 * ip was found in black list mode, ip is not allowed
+                /* ip was found in black list mode, ip is not
+                 * allowed
                  */
 
                 return 0;
@@ -448,16 +422,14 @@ int bnw_is_allowed
 
     if (mode == 1)
     {
-        /*
-         * ip was not found in white list, do not allow
+        /* ip was not found in white list, do not allow
          */
 
         return 0;
     }
     else
     {
-        /*
-         * ip was not found in black list, allow ip
+        /* ip was not found in black list, allow ip
          */
 
         return 1;

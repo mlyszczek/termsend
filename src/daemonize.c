@@ -2,34 +2,30 @@
     Licensed under BSD 2clause license See LICENSE file for more information
     Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
    ==========================================================================
-
-    -----------------------------------------------------
-   / simple daemonizing functions, it handles pid file,  \
-   \ dropping priviliges and (who would suspect) forking /
-    -----------------------------------------------------
-              \         ,        ,
-               \       /(        )`
-                \      \ \___   / |
-                       /- _  `-/  '
-                      (/\/ \ \   /\
-                      / /   | `    \
-                      O O   ) /    |
-                      `-^--'`<     '
-                     (_.)  _  )   /
-                      `.___/`    /
-                        `-----' /
-           <----.     __ / __   \
-           <----|====O)))==) \) /====
-           <----'    `--' `.__,' \
-                        |        |
-                         \       /
-                   ______( (_  / \______
-                 ,'  ,-----'   |        \
-                 `--{__________)        \/
-   ========================================================================== */
-
-
-/* ==========================================================================
+         -----------------------------------------------------
+        / simple daemonizing functions, it handles pid file,  \
+        \ dropping priviliges and (who would suspect) forking /
+         -----------------------------------------------------
+                   \         ,        ,
+                    \       /(        )`
+                     \      \ \___   / |
+                            /- _  `-/  '
+                           (/\/ \ \   /\
+                           / /   | `    \
+                           O O   ) /    |
+                           `-^--'`<     '
+                          (_.)  _  )   /
+                           `.___/`    /
+                             `-----' /
+                <----.     __ / __   \
+                <----|====O)))==) \) /====
+                <----'    `--' `.__,' \
+                             |        |
+                              \       /
+                        ______( (_  / \______
+                      ,'  ,-----'   |        \
+                      `--{__________)        \/
+   ==========================================================================
          ____              __                        __               __
         / __/___   ____ _ / /_ __  __ _____ ___     / /_ ___   _____ / /_
        / /_ / _ \ / __ `// __// / / // ___// _ \   / __// _ \ / ___// __/
@@ -39,8 +35,7 @@
    ========================================================================== */
 
 
-/*
- * this definition is needed for ftruncate() and fchown() functions
+/* this definition is needed for ftruncate() and fchown() functions
  */
 
 #define _XOPEN_SOURCE 500
@@ -85,24 +80,24 @@
 
 
 /* ==========================================================================
-    daemonize process, this should be called  as  early  as  possible  in  a
+    daemonize process, this should be called as early as possible in a
     program. Function does 3 thins:
 
-      - create  pid  file and store  there  pid  of  the  forked  child,  we
-        make sure file doesn't exist before we open it  (indicating  another
-        daemon may run in the system)
+    - create pid file and store there pid of the forked child, we
+      make sure file doesn't exist before we open it (indicating another
+      daemon may run in the system)
 
-      - if usr and grp is provided  and process is run with root priviliges,
-        function will try to drop priviliges to provided usr and grp
+    - if usr and grp is provided and process is run with root priviliges,
+      function will try to drop priviliges to provided usr and grp
 
-      - fork, if fork is successful, parent dies and child returns from this
-        function and continues execution
+    - fork, if fork is successful, parent dies and child returns from this
+      function and continues execution
 
-    Function doesn't screw around,  if  any  problem  is  found,  apropriate
-    message is printed to stderr and  function  kills  the  process  without
-    playing with resource cleanup (OS will do that).  It should  be  run  as
-    soon as possible, so there shouldn't be any state needed  cleaning  when
-    daemonizing fails, but if there is, just replace all  exit  with  return
+    Function doesn't screw around, if any problem is found, apropriate
+    message is printed to stderr and function kills the process without
+    playing with resource cleanup (OS will do that). It should be run as
+    soon as possible, so there shouldn't be any state needed cleaning when
+    daemonizing fails, but if there is, just replace all exit with return
     and change type from void to int.
    ========================================================================== */
 
@@ -121,10 +116,10 @@ void daemonize
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    /*
-     * open file but make sure it doesn't already exists, if it does, it may
-     * indicate that another process is running - we don't want to get in  a
-     * way of  already  run  process,  as  it  may  lead  to  lose  of  data
+    /* open file but make sure it doesn't already exists, if it
+     * does, it may indicate that another process is running - we
+     * don't want to get in a way of already run process, as it may
+     * lead to lose of data
      */
 
     if ((fd = open(pid_file, O_WRONLY | O_CREAT, 0644)) < 0)
@@ -134,18 +129,16 @@ void daemonize
         exit(2);
     }
 
-    /*
-     * if file exists but is empty, we accept it and belive  another  daemon
-     * is not running. Empty pid file can exist when daemon starts with root
-     * permissions (and creates pid file) but when daemon  dies,  as  normal
-     * user it may not be able to delete file, in  such  case  it  truncates
-     * file to be 0 bytes in size
+    /* if file exists but is empty, we accept it and belive another
+     * daemon is not running. Empty pid file can exist when daemon
+     * starts with root permissions (and creates pid file) but when
+     * daemon dies, as normal user it may not be able to delete
+     * file, in such case it truncates file to be 0 bytes in size
      */
 
     if (lseek(fd, 0, SEEK_END) > 0)
     {
-        /*
-         * file exists AND is NOT empty, we assume pid is in there
+        /* file exists AND is NOT empty, we assume pid is in there
          */
 
         fprintf(stderr, "pid file %s already exists, check "
@@ -155,9 +148,8 @@ void daemonize
         exit(1);
     }
 
-    /*
-     * if we are root and usr and grp is set, we will be droping priviliges,
-     * for the security sake.
+    /* if we are root and usr and grp is set, we will be droping
+     * priviliges, for the security sake.
      */
 
     if (usr && grp && getuid() == 0)
@@ -172,10 +164,9 @@ void daemonize
             goto drop_privilige_failed;
         }
 
-        /*
-         * since we are droping priviliges, we change ownership of  the  pid
-         * file, so child  proces  (while  not  being  root  anymore)  could
-         * remove  it  when  going down
+        /* since we are droping priviliges, we change ownership of
+         * the pid file, so child proces (while not being root
+         * anymore) could remove it when going down
          */
 
         if (fchown(fd, uid->pw_uid, gid->gr_gid) != 0)
@@ -185,10 +176,9 @@ void daemonize
             goto drop_privilige_failed;
         }
 
-        /*
-         * finally, drop priviliges. We need to set gid first, because if we
-         * drop uid first, we won't be able to drop to gid (we are not  root
-         * anymore)
+        /* finally, drop priviliges. We need to set gid first,
+         * because if we drop uid first, we won't be able to drop
+         * to gid (we are not root anymore)
          */
 
         if (setgid(gid->gr_gid) != 0)
@@ -214,13 +204,13 @@ void daemonize
     }
 
 drop_privilige_finished:
-    /*
-     * now that we know we can start daemon, let's fork - that means we make
-     * our very own child, a sibling process with its own address space, own
-     * file descriptors, own everything.  Parent process and  child  process
-     * share almost nothing, but child inherits all  parent's  memory,  file
-     * descriptors and some more stuff (look at man fork(2)), and then  they
-     * just drift apart just after conceive
+    /* now that we know we can start daemon, let's fork - that
+     * means we make our very own child, a sibling process with its
+     * own address space, own file descriptors, own everything.
+     * Parent process and child process share almost nothing, but
+     * child inherits all parent's memory, file descriptors and
+     * some more stuff (look at man fork(2)), and then they just
+     * drift apart just after conceive
      */
 
     pid = fork();
@@ -239,12 +229,11 @@ drop_privilige_finished:
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-        /*
-         * only parent will get here, and all it does is to sacrifice itself
-         * so the child may live and carry on, what he couldn't.  But before
-         * he does that, parent stores its child PID into  file,  so  others
-         * can find him and kill him if  he  missbehaves  or  is  no  longer
-         * needed
+        /* only parent will get here, and all it does is to
+         * sacrifice itself so the child may live and carry on,
+         * what he couldn't. But before he does that, parent stores
+         * its child PID into file, so others can find him and kill
+         * him if he missbehaves or is no longer needed
          */
 
         sprintf(pids, "%d", pid);
@@ -260,9 +249,9 @@ drop_privilige_finished:
         exit(0);
     }
 
-    /*
-     * ok, cool, now that we got rid of parent, the fun can start. We return
-     * from the function to our daemon code, since everything is already done.
+    /* ok, cool, now that we got rid of parent, the fun can start.
+     * We return from the function to our daemon code, since
+     * everything is already done.
      *
      *   - pid file created - [check]
      *   - droped priviliges - [check]
@@ -283,18 +272,16 @@ void daemonize_cleanup
 {
     if (unlink(pid_file) == 0)
     {
-        /*
-         * pid file deleted, nothing else to be done
+        /* pid file deleted, nothing else to be done
          */
 
         return;
     }
 
-    /*
-     * pid file couldn't be deleted,  we  don't  have  access  to  write  to
-     * directory where pid file exists, but we still should be able to write
-     * to pid file itself, so empty the file to indicate daemon doesn't  run
-     * anymore
+    /* pid file couldn't be deleted, we don't have access to write
+     * to directory where pid file exists, but we still should be
+     * able to write to pid file itself, so empty the file to
+     * indicate daemon doesn't run anymore
      */
 
     if (truncate(pid_file, 0) != 0)

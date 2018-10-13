@@ -2,22 +2,18 @@
     Licensed under BSD 2clause license. See LICENSE file for more information
     Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
    ==========================================================================
-
-   ------------------------------------------------------------
-  / This is entry point of server, here things are initialized \
-  \ and main loop is started                                   /
-   ------------------------------------------------------------
-    \
-     \ \_\_    _/_/
-      \    \__/
-           (oo)\_______
-           (__)\       )\/\
-               ||----w |
-               ||     ||
-   ========================================================================== */
-
-
-/* ==========================================================================
+         ------------------------------------------------------------
+        / This is entry point of server, here things are initialized \
+        \ and main loop is started                                   /
+         ------------------------------------------------------------
+          \
+           \ \_\_    _/_/
+            \    \__/
+                 (oo)\_______
+                 (__)\       )\/\
+                     ||----w |
+                     ||     ||
+   ==========================================================================
       _               __            __           __   ____ _  __
      (_)____   _____ / /__  __ ____/ /___   ____/ /  / __/(_)/ /___   _____
     / // __ \ / ___// // / / // __  // _ \ / __  /  / /_ / // // _ \ / ___/
@@ -56,8 +52,8 @@
 
 
 /* ==========================================================================
-    handles SIGINT and SIGTERM signals,  it  basicly  sets  global  variable
-    g_shutdown to 1, to inform all module to exit.  Also accept() from  main
+    handles SIGINT and SIGTERM signals, it basicly sets global variable
+    g_shutdown to 1, to inform all module to exit. Also accept() from main
     loop will receive EINTR so it doesn't stuck
    ========================================================================== */
 
@@ -68,8 +64,7 @@ static void sigint_handler(int signo)
 
     if (g_shutdown)
     {
-        /*
-         * someone hit ctrl-c second time, impatient fella
+        /* someone hit ctrl-c second time, impatient fella
          */
 
         el_print(ELI, "second SIGINT, ok... got it, will deal with it!");
@@ -116,8 +111,7 @@ int main(int argc, char *argv[])
         daemonize(g_config.pid_file, g_config.user, g_config.group);
     }
 
-    /*
-     * configure logger for diagnostic logs
+    /* configure logger for diagnostic logs
      */
 
     el_init();
@@ -137,8 +131,7 @@ int main(int argc, char *argv[])
         el_option(EL_OUT, EL_OUT_STDERR);
     }
 
-    /*
-     * configure logger to log queries
+    /* configure logger to log queries
      */
 
     el_oinit(&g_qlog);

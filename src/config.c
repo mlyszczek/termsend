@@ -2,17 +2,16 @@
     Licensed under BSD 2clause license See LICENSE file for more information
     Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
    ==========================================================================
-
-   -------------------------------------------------------------
-  / This is configuration module, here we parse configuration   \
-  | passed by the user. Configuration can be accessed by global |
-  | g_config variable that is not modified outside this module. |
-  \ Never.                                                      /
-   -------------------------------------------------------------
-    \                                  ___-------___
-     \                             _-~~             ~~-_
-      \                         _-~                    /~-_
-       \     /^\__/^\         /~  \                   /    \
+         -------------------------------------------------------------
+        / This is configuration module, here we parse configuration   \
+        | passed by the user. Configuration can be accessed by global |
+        | g_config variable that is not modified outside this module. |
+        \ Never.                                                      /
+         -------------------------------------------------------------
+            \                          ___-------___
+             \                     _-~~             ~~-_
+              \                 _-~                    /~-_
+             /^\__/^\         /~  \                   /    \
            /|  O|| O|        /      \_______________/        \
           | |___||__|      /       /                \          \
           |          \    /      /                    \          \
@@ -24,10 +23,7 @@
                  ~-----||====/~     |==================|       |/~~~~~
                   (_(__/  ./     /                    \_\      \.
                          (_(___/                         \_____)_)
-   ========================================================================== */
-
-
-/* ==========================================================================
+   ==========================================================================
           _               __            __         ____ _  __
          (_)____   _____ / /__  __ ____/ /___     / __/(_)/ /___   _____
         / // __ \ / ___// // / / // __  // _ \   / /_ / // // _ \ / ___/
@@ -69,14 +65,12 @@
 
    ========================================================================== */
 
-/*
- * list of short options for getopt_long
+/* list of short options for getopt_long
  */
 
 static const char  *shortopts = ":hvcDl:i:s:m:t:T:b:d:u:Ug:q:p:P:o:L:";
 
-/*
- * array of long options for getopt_long
+/* array of long options for getopt_long
  */
 
 struct option       longopts[] =
@@ -122,7 +116,7 @@ struct option       longopts[] =
 
 
 /* ==========================================================================
-    parses arguments passed from command line and  overwrites  whatever  has
+    parses arguments passed from command line and overwrites whatever has
     been set in configuration file
    ========================================================================== */
 
@@ -133,15 +127,13 @@ static int config_parse_arguments
     char  *argv[]       /* argument list */
 )
 {
-    /*
-     * macros to parse arguments in switch(opt) block
+    /* macros to parse arguments in switch(opt) block
      */
 
 
-    /*
-     * check if optarg is between MINV and MAXV  values  and  if  so,  store
-     * converted optarg in to config.OPTNAME field.  If error occurs,  force
-     * function to return with -1 error
+    /* check if optarg is between MINV and MAXV values and if so,
+     * store converted optarg in to config.OPTNAME field. If error
+     * occurs, force function to return with -1 error
      */
 
 
@@ -155,8 +147,7 @@ static int config_parse_arguments
                                                                                \
         if (*endptr != '\0')                                                   \
         {                                                                      \
-            /*                                                                 \
-             * error occured                                                   \
+            /* error occured                                                   \
              */                                                                \
                                                                                \
             fprintf(stderr, "wrong value '%s' for option '%s\n",               \
@@ -166,8 +157,7 @@ static int config_parse_arguments
                                                                                \
         if (val < (long)MINV || (long)MAXV < val)                              \
         {                                                                      \
-            /*                                                                 \
-             * number is outside of defined domain                             \
+            /* number is outside of defined domain                             \
              */                                                                \
                                                                                \
             fprintf(stderr, "value for '%s' should be between %ld and %ld\n",  \
@@ -179,10 +169,10 @@ static int config_parse_arguments
     }
 
 
-    /*
-     * check if string length of optarg is less or equal than
-     * sizeof(config.OPTNAME) and if so store optarg in config.OPTNAME.
-     * If error occurs, force  function  to return with -1 error.
+    /* check if string length of optarg is less or equal than
+     * sizeof(config.OPTNAME) and if so store optarg in
+     * config.OPTNAME.  If error occurs, force  function  to return
+     * with -1 error.
      */
 
 
@@ -334,14 +324,12 @@ int config_init
     char  *argv[]  /* argument list */
 )
 {
-    /*
-     * disable error printing from getopt library
+    /* disable error printing from getopt library
      */
 
     opterr = 0;
 
-    /*
-     * set g_config object to well-known default state
+    /* set g_config object to well-known default state
      */
 
     memset(&g_config, 0, sizeof(g_config));
@@ -364,8 +352,8 @@ int config_init
     strcpy(g_config.output_dir, "/var/lib/kurload");
     strcpy(g_config.list_file, "/etc/kurload-iplist");
 
-    /*
-     * parse options from command line argument overwriting default ones
+    /* parse options from command line argument overwriting
+     * default ones
      */
 
     return config_parse_arguments(argc, argv);
@@ -379,8 +367,7 @@ int config_init
 
 void config_print(void)
 {
-    /*
-     * macros for easy field printing
+    /* macros for easy field printing
      */
 
 #define CONFIG_PRINT(field, type) \
