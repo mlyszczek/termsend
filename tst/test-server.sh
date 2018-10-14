@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-
 updir="./kurload-test/out"
 data="./kurload-test/data"
+pidfile="./kurload-test/kurload.pid"
 
 . ./mtest.sh
 os="$(uname)"
@@ -16,8 +16,10 @@ fi
 if [ "${os}" = "SunOS" ]
 then
     nc="nc -F"
+    tailn="tail -n2"
 else
     nc="nc"
+    tailn="tail -n1"
 fi
 
 ## ==========================================================================
@@ -42,12 +44,10 @@ start_kurload()
 
     mkdir -p ./kurload-test/out
     ../src/kurload -D -l7 -c -i61337 -s1024 -t3 -m3 -dlocalhost -ukurload \
-        -gkurload -P./kurload-test/kurload.pid \
+        -gkurload -P"${pidfile}" \
         -q./kurload-test/kurload-query.log -p./kurload-test/kurload.log \
         -L./kurload-test/blacklist -T-1 -o./kurload-test/out \
         -b${server} ${args}
-    sleep 1
-
 }
 
 
@@ -67,25 +67,37 @@ mt_prepare_test()
 
 mt_cleanup_test()
 {
-    kill -15 `cat ./kurload-test/kurload.pid`
-    sleep 1
+    pid="$(cat "${pidfile}")"
+    kill -15 "${pid}"
+
+    tries=0
+    echo "killing kurload" >> /tmp/kurload
+    while true
+    do
+        if ! kill -s 0 "${pid}" 2>/dev/null
+        then
+            # kurload died
+            echo "it died" >> /tmp/kurload
+
+            break
+        fi
+
+        tries=$(( tries + 1))
+
+        if [ ${tries} -eq 5 ]
+        then
+        echo "could kill 5 times" >> /tmp/kurload
+            break
+        fi
+        sleep 1
+    done
+
     rm -rf ./kurload-test
 }
 
 
 ## ==========================================================================
-#   Appends "kurload\n" to standard output and sends message to kurload
-## ==========================================================================
-
-
-kurload()
-{
-    { cat -; echo 'kurload'; } | ${nc} ${server} 61337 2>/dev/null
-}
-
-
-## ==========================================================================
-#   Parses output from kurload serveri to get generated file name where data
+#   Parses output from kurload server to get generated file name where data
 #   was stored in
 ## ==========================================================================
 
@@ -93,6 +105,66 @@ kurload()
 get_file()
 {
     tail -n1 | rev | cut -d/ -f-1 | rev
+}
+
+
+## ==========================================================================
+#   sends content of file from path $1, to kurload server and returns
+#   response from the server. Tries for up to 5 seconds
+## ==========================================================================
+
+
+kurload()
+{
+    file="${1}"
+    append_kurload="${2}"
+
+    if [ -z "${append_kurload}" ]
+    then
+        append_kurload=1
+    fi
+
+    echo "sending file $1 append $2" >> /tmp/kurload
+    tries=0
+    while true
+    do
+        printf "" > "${file}.ncerr"
+
+        if [ ${append_kurload} -eq 1 ]
+        then
+            out="$(cat "${file}" | { cat -; echo 'kurload'; } | \
+                ${nc} -v ${server} 61337 2>"${file}.ncerr")"
+        else
+            out="$(cat "${file}" | ${nc} -v ${server} 61337 \
+                2>"${file}.ncerr")"
+        fi
+
+        if grep -i "open" "${file}.ncerr" || grep -i "succe" "${file}.ncerr"
+        then
+            # nc was successfull
+            echo "nc allright" >> /tmp/kurload
+            echo $out >> /tmp/kurload
+
+            echo "${out}"
+            return 0
+        fi
+
+        if [ ${tries} -eq 5 ]
+        then
+            # 5 seconds passed, server did not start, something
+            # is wrong, abort, abort
+
+            echo "nc fucked 5 times" >> /tmp/kurload
+            return 1
+        fi
+
+        # nc failed, probably connection refused, let's try again
+
+        echo "nc fucked" >> /tmp/kurload
+        cat ${file}.ncerr >> /tmp/kurload
+        tries=$(( tries + 1 ))
+        sleep 1
+    done
 }
 
 
@@ -133,7 +205,7 @@ multi_thread_check()
 {
     fname="$(randstr 120)"
     randstr 128 > "${data}.${fname}"
-    out="$(cat "${data}.${fname}" | kurload | tail -n1)"
+    out="$(kurload "${data}.${fname}" | tail -n1)"
 
     if [ "${out}" = "all upload slots are taken, try again later" ]
     then
@@ -178,9 +250,9 @@ test_is_running()
 
 test_send_string()
 {
-    randstr 128 > $data
-    file=`cat $data | kurload | get_file`
-    mt_fail "diff $updir/$file $data"
+    randstr 128 > ${data}
+    file="$(kurload "${data}" | get_file)"
+    mt_fail "diff ${updir}/${file} ${data}"
 }
 
 
@@ -203,9 +275,9 @@ test_threaded()
 
 test_send_string_full()
 {
-    randstr 1023 > $data
-    file=`cat $data | kurload | get_file`
-    mt_fail "diff $updir/$file $data"
+    randstr 1023 > ${data}
+    file="$(kurload "${data}" | get_file)"
+    mt_fail "diff ${updir}/${file} ${data}"
 }
 
 
@@ -215,9 +287,9 @@ test_send_string_full()
 
 test_send_string_too_big()
 {
-    randstr 1337 > $data
-    out=`cat $data | kurload | tail -n1`
-    mt_fail "[ \"$out\" == \"file too big, max length is 1024 bytes\" ]"
+    randstr 1337 > ${data}
+    out="$(kurload "${data}" | tail -n1)"
+    mt_fail "[ \"${out}\" == \"file too big, max length is 1024 bytes\" ]"
 }
 
 
@@ -227,9 +299,9 @@ test_send_string_too_big()
 
 test_send_bin()
 {
-    randbin 128 > $data
-    file=`cat $data | kurload | get_file`
-    mt_fail "diff $updir/$file $data"
+    randbin 128 > ${data}
+    file="$(kurload "${data}" | get_file)"
+    mt_fail "diff ${updir}/${file} ${data}"
 }
 
 
@@ -239,9 +311,9 @@ test_send_bin()
 
 test_send_bin_full()
 {
-    randbin 1024 > $data
-    file=`cat $data | kurload | get_file`
-    mt_fail "diff $updir/$file $data"
+    randbin 1024 > ${data}
+    file="$(kurload ${data} | get_file)"
+    mt_fail "diff ${updir}/${file} ${data}"
 }
 
 
@@ -251,9 +323,9 @@ test_send_bin_full()
 
 test_send_bin_too_big()
 {
-    randbin 1337 > $data
-    out=`cat $data | kurload | tail -n1`
-    mt_fail "[ \"$out\" == \"file too big, max length is 1024 bytes\" ]"
+    randbin 1337 > "${data}"
+    out="$(kurload "${data}" | tail -n1)"
+    mt_fail "[ \"${out}\" == \"file too big, max length is 1024 bytes\" ]"
 }
 
 
@@ -263,9 +335,9 @@ test_send_bin_too_big()
 
 test_send_and_timeout()
 {
-    randbin 128 > $data
-    out=`cat $data | ${nc} ${server} 61337 2> /dev/null | tail -n1`
-    mt_fail "[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
+    randbin 128 > "${data}"
+    out="$(kurload "${data}" 0 | ${tailn} | tr "\n" ".")"
+    mt_fail "[[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string\"* ]]"
 }
 
 
@@ -280,8 +352,8 @@ test_timed_upload()
     #
 
     start_kurload "-U"
-    randbin 128 > ${data}
-    file="$(cat ${data} | ${nc} ${server} 61337 2> /dev/null | get_file)"
+    randbin 128 > "${data}"
+    file="$(kurload "${data}" 0 | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
 }
 
@@ -294,7 +366,7 @@ test_timed_upload_full()
 {
     start_kurload "-U"
     randbin 1024 > ${data}
-    file="$(cat ${data} | ${nc} ${server} 61337 2> /dev/null | get_file)"
+    file="$(kurload "${data}" 0 | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
 }
 
@@ -307,7 +379,7 @@ test_timed_upload_too_big()
 {
     start_kurload "-U"
     randbin 1337 > ${data}
-    out="$(cat ${data} | ${nc} ${server} 61337 2> /dev/null | tail -n1)"
+    out="$(kurload "${data}" 0 | tail -n1)"
     mt_fail "[ \"$out\" == \"file too big, max length is 1024 bytes\" ]"
 }
 
@@ -319,8 +391,8 @@ test_timed_upload_too_big()
 test_timed_upload_with_kurload()
 {
     start_kurload "-U"
-    randbin 128 > $data
-    file=`cat $data | kurload | get_file`
+    randbin 128 > "${data}"
+    file="$(kurload "${data}" | get_file)"
     mt_fail "diff $updir/$file $data"
 }
 
@@ -345,21 +417,21 @@ test_totally_random()
             fi
 
             randbin $numbytes > $data
-            out=`cat $data | ${nc} ${server} 61337 2> /dev/null | tail -n1`
+            out="$(kurload ${data} 0 | ${tailn} | tr "\n" ".")"
 
-            mt_fail "[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
+            mt_fail "[[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string\"* ]]"
         else
             randbin $numbytes > $data
 
             if [ $numbytes -gt 1024 ]
             then
-                out=`cat $data | kurload | tail -n1`
+                out="$(kurload "${data}" | tail -n1)"
                 if [ ! -z "$out" ]
                 then
                     mt_fail "[ \"$out\" == \"file too big, max length is 1024 bytes\" ]"
                 fi
             else
-                file=`cat $data | kurload | get_file`
+                file="$(kurload "${data}" | get_file)"
                 mt_fail "diff $updir/$file $data"
             fi
         fi

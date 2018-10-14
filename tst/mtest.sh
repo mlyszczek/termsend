@@ -122,13 +122,12 @@ mt_run_named()
 
 mt_fail()
 {
-    ((mt_total_checks++))
+    mt_total_checks=$(( mt_total_checks + 1 ))
     if ! eval $1
     then
         echo "# assert $mt_current_test, '$1'"
         mt_test_status=1
-        ((mt_checks_failed++))
-        exit 1
+        mt_checks_failed=$(( mt_checks_failed + 1 ))
     fi
 }
 
