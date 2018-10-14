@@ -40,6 +40,15 @@
 
 #define _XOPEN_SOURCE 500
 
+/* undefine this for solaris or you will be forced to use -std=c89,
+ * because solaris will crash just for the sake of crashing. Solaris
+ * doesn't allow using c99 compiler when _XOPEN_SOURCE is 500, it
+ * just doesn't
+ */
+
+#if sun || __sun
+#   undef _XOPEN_SOURCE
+#endif
 
 /* ==========================================================================
           _               __            __         ____ _  __

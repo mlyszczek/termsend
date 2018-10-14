@@ -9,7 +9,7 @@ AC_CANONICAL_HOST
 AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile www/Makefile])
 AC_CONFIG_LINKS([tst/test-server.sh:tst/test-server.sh])
 AC_CONFIG_LINKS([tst/mtest.sh:tst/mtest.sh])
-AC_CHECK_HEADERS([linux/limits.h])
+AC_CHECK_HEADERS([linux/limits.h sys/select.h])
 
 LDFLAGS="$LDFLAGS -L/usr/local/lib -L/usr/lib"
 CFLAGS="$CFLAGS -I/usr/local/include -I/usr/include"
@@ -22,18 +22,15 @@ AC_SUBST(COVERAGE_LDFLAGS)
 
 
 ###
-# solaris is weird, if _XOPEN_SOURCE is set to 500, you CANNOT compile
-# code with anything than c89, yes c99 compiler will error out, so
-# for solaris system we force -std=c89 flag
+# solaris has some serious design problem, since we enabled POSIX
+# >=200112, solaris will not let use c89 compiler even though we
+# are c89 compatible (with some header extension) So force c99 on
+# solaris sytem.
 #
-# TODO: determin flag name for c89 standard for other non-gnu compatible
-# compilers, for now this must be enough
-#
-
 
 case ${host_os} in
     solaris*)
-        CFLAGS="-std=c89 ${CFLAGS}"
+        CFLAGS="-std=c99 ${CFLAGS}"
         ;;
 esac
 

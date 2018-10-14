@@ -39,6 +39,8 @@
    ========================================================================== */
 
 
+#include "feature.h"
+
 #include <arpa/inet.h>
 #include <embedlog.h>
 #include <errno.h>

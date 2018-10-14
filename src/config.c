@@ -33,7 +33,8 @@
    ========================================================================== */
 
 
-#include "kurload.h"
+#include "feature.h"
+
 #include "config.h"
 #include "getopt.h"
 #include "globals.h"

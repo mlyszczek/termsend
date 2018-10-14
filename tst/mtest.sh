@@ -128,6 +128,7 @@ mt_fail()
         echo "# assert $mt_current_test, '$1'"
         mt_test_status=1
         ((mt_checks_failed++))
+        exit 1
     fi
 }
 

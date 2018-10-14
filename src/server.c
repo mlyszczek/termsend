@@ -32,10 +32,7 @@
    ========================================================================== */
 
 
-/* needed by pthread_sigmax()
- */
-
-#define _POSIX_C_SOURCE 199506L
+#include "feature.h"
 
 #include <arpa/inet.h>
 #include <embedlog.h>
@@ -57,6 +54,13 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+
+#if HAVE_SYS_SELECT_H
+    /* hpux doesn't have select.h file, maybe there are other
+     * systems like this (?)
+     */
+#   include <sys/select.h>
+#endif
 
 #include "bnwlist.h"
 #include "config.h"
@@ -178,9 +182,10 @@ static void server_linger
 
         if (r < 0)
         {
-            /* some error occured, It doesn't why, we stop
-             * lingering anyway.  Worst thing can do is that client
-             * won't receive error message. We can live with that
+            /* some error occured, It doesn't matter why, we stop
+             * lingering anyway.  Worst thing that can happen is
+             * that client won't receive error message. We can live
+             * with that
              */
 
             el_perror(ELW, "read error");
@@ -189,7 +194,7 @@ static void server_linger
 
         if (r == 0)
         {
-            /* Client received our FIN, and sends back his FIN. Now
+            /* Client received our FIN, and sent back his FIN. Now
              * we can be fairly sure, client received all our
              * messages.
              */
@@ -198,7 +203,7 @@ static void server_linger
         }
 
         /* we ignore any data received from the client - time for
-         * talking is done.
+         * talking is over.
          */
     }
 }

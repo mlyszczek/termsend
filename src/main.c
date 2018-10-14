@@ -22,10 +22,8 @@
 
    ========================================================================== */
 
-/* needed by sigaction
- */
 
-#define _POSIX_C_SOURCE 1
+#include "feature.h"
 
 #include <errno.h>
 #include <string.h>

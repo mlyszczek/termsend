@@ -41,7 +41,7 @@ start_kurload()
     args="${1}" # additional arguments like "-U" for timed uploads
 
     mkdir -p ./kurload-test/out
-    ../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m3 -dlocalhost -ukurload \
+    ../src/kurload -D -l7 -c -i61337 -s1024 -t3 -m3 -dlocalhost -ukurload \
         -gkurload -P./kurload-test/kurload.pid \
         -q./kurload-test/kurload-query.log -p./kurload-test/kurload.log \
         -L./kurload-test/blacklist -T-1 -o./kurload-test/out \
@@ -80,7 +80,7 @@ mt_cleanup_test()
 
 kurload()
 {
-    cat - <(echo 'kurload') | ${nc} ${server} 61337 2>/dev/null
+    { cat -; echo 'kurload'; } | ${nc} ${server} 61337 2>/dev/null
 }
 
 
@@ -265,7 +265,7 @@ test_send_and_timeout()
 {
     randbin 128 > $data
     out=`cat $data | ${nc} ${server} 61337 2> /dev/null | tail -n1`
-    mt_fail "[ \"$out\" == \"disconnected due to inactivity for 1 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
+    mt_fail "[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
 }
 
 
@@ -347,7 +347,7 @@ test_totally_random()
             randbin $numbytes > $data
             out=`cat $data | ${nc} ${server} 61337 2> /dev/null | tail -n1`
 
-            mt_fail "[ \"$out\" == \"disconnected due to inactivity for 1 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
+            mt_fail "[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string - \"kurload\\n\"?\" ]"
         else
             randbin $numbytes > $data
 
