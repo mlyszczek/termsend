@@ -982,9 +982,10 @@ error:
 
 void server_loop_forever(void)
 {
-    fd_set  readfds;  /* set containing all server sockets to monitor */
-    int     maxfd;    /* maximum fd value monitored in readfds */
-    int     i;        /* simple iterator for loop */
+    fd_set  readfds;     /* set containing all server sockets to monitor */
+    time_t  prev_flush;  /* time when flush was last called */
+    int     maxfd;       /* maximum fd value monitored in readfds */
+    int     i;           /* simple iterator for loop */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -1014,12 +1015,25 @@ void server_loop_forever(void)
         maxfd = sfds[i] > maxfd ? sfds[i] : maxfd;
     }
 
+    prev_flush = 0;
     for (;;)
     {
         int     sact;     /* select activity, just select return value */
         int     i;        /* a simple interator for loop */
+        time_t  now;      /* current time from time() */
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+
+        now = time(NULL);
+        if ((now - prev_flush) >= 60)
+        {
+            /* flush logs everytime something happens, but not
+             * more frequent than once per minute
+             */
+
+            el_flush();
+            prev_flush = now;
+        }
 
         if (g_shutdown)
         {
