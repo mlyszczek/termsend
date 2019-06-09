@@ -9,9 +9,9 @@
 #include "config.h"
 #include <embedlog.h>
 
-extern struct config      g_config;
-extern int                g_shutdown;
-extern int                g_stfu;
-extern struct el_options  g_qlog;
+extern struct config  g_config;
+extern int            g_shutdown;
+extern int            g_stfu;
+extern struct el      g_qlog;
 
 #endif

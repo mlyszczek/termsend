@@ -108,7 +108,7 @@ sanitizers
 Dependencies
 ============
 
-* [>=embedlog-0.3.1](http://embedlog.kurwinet.pl) (embedlog itself has no
+* [>=embedlog-0.5.0](http://embedlog.kurwinet.pl) (embedlog itself has no
   dependencies)
 * pthread
 
