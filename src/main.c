@@ -122,6 +122,8 @@ int main(int argc, char *argv[])
     el_option(EL_OUT, EL_OUT_FILE);
     el_option(EL_TS, EL_TS_LONG);
     el_option(EL_TS_TM, EL_TS_TM_REALTIME);
+    el_option(EL_TS_FRACT, EL_TS_FRACT_MS);
+    el_option(EL_FUNCINFO, 1);
     el_option(EL_FINFO, 1);
     el_option(EL_COLORS, g_config.colorful_output);
     el_option(EL_FSYNC_EVERY, 0);
