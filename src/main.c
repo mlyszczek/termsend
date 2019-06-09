@@ -117,6 +117,7 @@ int main(int argc, char *argv[])
      */
 
     el_init();
+    el_option(EL_THREAD_SAFE, 1);
     el_option(EL_LEVEL, g_config.log_level);
     el_option(EL_OUT, EL_OUT_FILE);
     el_option(EL_TS, EL_TS_LONG);
@@ -137,6 +138,7 @@ int main(int argc, char *argv[])
      */
 
     el_oinit(&g_qlog);
+    el_ooption(&g_qlog, EL_THREAD_SAFE, 1);
     el_ooption(&g_qlog, EL_LEVEL, EL_INFO);
     el_ooption(&g_qlog, EL_OUT, EL_OUT_FILE);
     el_ooption(&g_qlog, EL_TS, EL_TS_LONG);
