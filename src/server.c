@@ -78,6 +78,10 @@
    ========================================================================== */
 
 
+/* default object when printing with el_o* functions */
+
+#define EL_OPTIONS_OBJECT &g_qlog
+
 static int             *sfds;   /* sfds sockets for all interfaces */
 static int              nsfds;  /* number of sfds allocated */
 static int              cconn;  /* curently connected clients */
@@ -400,7 +404,7 @@ static void *server_handle_upload
     if (pthread_sigmask(SIG_SETMASK, &set, NULL) != 0)
     {
         el_perror(ELA, "couldn't mask signals");
-        el_oprint(ELI, &g_qlog, "[%s] rejected: signal mask failed",
+        el_oprint(OELI, "[%s] rejected: signal mask failed",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
         close(cfd);
@@ -458,7 +462,7 @@ static void *server_handle_upload
 
         pthread_mutex_unlock(&lopen);
         el_perror(ELA, "[%3d] couldn't open file %s", cfd, path);
-        el_oprint(ELI, &g_qlog, "[%s] rejected: file open error",
+        el_oprint(OELI, "[%s] rejected: file open error",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
         close(cfd);
@@ -506,7 +510,7 @@ static void *server_handle_upload
              */
 
             el_perror(ELW, "[%3d] select error on client read", cfd);
-            el_oprint(ELI, &g_qlog, "[%s] rejected: select error",
+            el_oprint(OELI, "[%s] rejected: select error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
             goto error;
@@ -534,7 +538,7 @@ static void *server_handle_upload
 
             el_print(ELN, "[%3d] client inactive for %d seconds",
                 cfd, g_config.max_timeout);
-            el_oprint(ELI, &g_qlog, "[%s] rejected: inactivity",
+            el_oprint(OELI, "[%s] rejected: inactivity",
                 inet_ntoa(client.sin_addr));
 
             /* well, there may be one more case for inactivity from
@@ -564,7 +568,7 @@ static void *server_handle_upload
              */
 
             el_perror(ELC, "[%3d] couldn't read from client", cfd);
-            el_oprint(ELI, &g_qlog, "[%s] rejected: read error",
+            el_oprint(OELI, "[%s] rejected: read error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
             goto error;
@@ -576,7 +580,7 @@ static void *server_handle_upload
              * before all data could be uploaded, well, his choice
              */
 
-            el_oprint(ELI, &g_qlog, "[%s] rejected: connection closed by "
+            el_oprint(OELI, "[%s] rejected: connection closed by "
                 "client", inet_ntoa(client.sin_addr));
             goto error;
         }
@@ -590,7 +594,7 @@ static void *server_handle_upload
              * more than g_config.max_size size.
              */
 
-            el_oprint(ELI, &g_qlog, "[%s] rejected: file too big",
+            el_oprint(OELI, "[%s] rejected: file too big",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "file too big, max length is %ld bytes\n",
                 g_config.max_size);
@@ -605,7 +609,7 @@ static void *server_handle_upload
         if ((w = write(fd, buf, r)) != r)
         {
             el_perror(ELC, "[%3d] couldn't write to file", cfd);
-            el_oprint(ELI, &g_qlog, "[%s] rejected: write to file failed",
+            el_oprint(OELI, "[%s] rejected: write to file failed",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
             goto error;
@@ -641,7 +645,7 @@ static void *server_handle_upload
              */
 
             el_perror(ELC, "[%3d] couldn't read end string", cfd);
-            el_oprint(ELI, &g_qlog, "[%s] rejected: end string read error",
+            el_oprint(OELI, "[%s] rejected: end string read error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
             goto error;
@@ -679,7 +683,7 @@ static void *server_handle_upload
     if (ftruncate(fd, written - 8) != 0)
     {
         el_perror(ELC, "[%3d] couldn't truncate file from ending string", cfd);
-        el_oprint(ELI, &g_qlog, "[%s] rejected: truncate failed",
+        el_oprint(OELI, "[%s] rejected: truncate failed",
             inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
         goto error;
@@ -702,7 +706,7 @@ upload_finished_with_timeout:
     strcpy(url, g_config.domain);
     strcat(url, "/");
     strcat(url, fname);
-    el_oprint(ELI, &g_qlog, "[%s] %s", inet_ntoa(client.sin_addr), fname);
+    el_oprint(OELI, "[%s] %s", inet_ntoa(client.sin_addr), fname);
     server_reply(cfd, "upload complete, link to file %s\n", url);
     server_linger(cfd);
     close(cfd);
@@ -771,7 +775,7 @@ static void server_process_connection
             }
 
             el_perror(ELC, "couldn't accept connection");
-            el_oprint(ELI, &g_qlog, "[NULL] rejected: accept error");
+            el_oprint(OELI, "[NULL] rejected: accept error");
             continue;
         }
 
@@ -786,7 +790,7 @@ static void server_process_connection
 
         if (bnw_is_allowed(ntohl(client.sin_addr.s_addr)) == 0)
         {
-            el_oprint(ELI, &g_qlog, "[%s] rejected: not allowed",
+            el_oprint(OELI, "[%s] rejected: not allowed",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "you are not allowed to upload to this server\n");
             close(cfd);
@@ -804,7 +808,7 @@ static void server_process_connection
 
         if (nconn >= g_config.max_connections)
         {
-            el_oprint(ELI, &g_qlog, "[%s] rejected: connection limit",
+            el_oprint(OELI, "[%s] rejected: connection limit",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "all upload slots are taken, try again later\n");
             close(cfd);
@@ -819,7 +823,7 @@ static void server_process_connection
 
         if ((flags = fcntl(cfd, F_GETFL)) == -1)
         {
-            el_oprint(ELI, &g_qlog, "[%s] rejected: socket config error");
+            el_oprint(OELI, "[%s] rejected: socket config error");
             el_perror(ELF, "[%3d] error reading socket flags", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
@@ -828,7 +832,7 @@ static void server_process_connection
 
         if (fcntl(cfd, F_SETFL, flags & ~O_NONBLOCK) == -1)
         {
-            el_oprint(ELI, &g_qlog, "[%s] rejected: socket config error");
+            el_oprint(OELI, "[%s] rejected: socket config error");
             el_perror(ELF, "[%3d] error setting socket into block mode", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
@@ -843,7 +847,7 @@ static void server_process_connection
         if (pthread_create(&t, NULL, server_handle_upload,
                 (void *)(intptr_t)cfd) != 0)
         {
-            el_oprint(ELI, &g_qlog, "[%s] rejected: pthread_create error");
+            el_oprint(OELI, "[%s] rejected: pthread_create error");
             el_perror(ELC, "[%3d] couldn't start processing thread", cfd);
             server_reply(cfd, "internal server error, try again later\n");
             close(cfd);
