@@ -69,11 +69,11 @@
 
 
 /* ==========================================================================
-                                   _         __     __
-              _   __ ____ _ _____ (_)____ _ / /_   / /___   _____
-             | | / // __ `// ___// // __ `// __ \ / // _ \ / ___/
-             | |/ // /_/ // /   / // /_/ // /_/ // //  __/(__  )
-             |___/ \__,_//_/   /_/ \__,_//_.___//_/ \___//____/
+          __             __                     __   _
+     ____/ /___   _____ / /____ _ _____ ____ _ / /_ (_)____   ____   _____
+    / __  // _ \ / ___// // __ `// ___// __ `// __// // __ \ / __ \ / ___/
+   / /_/ //  __// /__ / // /_/ // /   / /_/ // /_ / // /_/ // / / /(__  )
+   \__,_/ \___/ \___//_/ \__,_//_/    \__,_/ \__//_/ \____//_/ /_//____/
 
    ========================================================================== */
 
@@ -86,18 +86,12 @@ static pthread_mutex_t  lopen;  /* mutex for opening file */
 
 
 /* ==========================================================================
-                                   _                __
-                     ____   _____ (_)_   __ ____ _ / /_ ___
-                    / __ \ / ___// /| | / // __ `// __// _ \
-                   / /_/ // /   / / | |/ // /_/ // /_ /  __/
-                  / .___//_/   /_/  |___/ \__,_/ \__/ \___/
-                 /_/
-               ____                     __   _
-              / __/__  __ ____   _____ / /_ (_)____   ____   _____
-             / /_ / / / // __ \ / ___// __// // __ \ / __ \ / ___/
-            / __// /_/ // / / // /__ / /_ / // /_/ // / / /(__  )
-           /_/   \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/
-
+                  _                __           ____
+    ____   _____ (_)_   __ ____ _ / /_ ___     / __/__  __ ____   _____ _____
+   / __ \ / ___// /| | / // __ `// __// _ \   / /_ / / / // __ \ / ___// ___/
+  / /_/ // /   / / | |/ // /_/ // /_ /  __/  / __// /_/ // / / // /__ (__  )
+ / .___//_/   /_/  |___/ \__,_/ \__/ \___/  /_/   \__,_//_/ /_/ \___//____/
+/_/
    ========================================================================== */
 
 
@@ -109,7 +103,7 @@ static pthread_mutex_t  lopen;  /* mutex for opening file */
 
 static int server_bind_num(void)
 {
-    int         n;     /* number of ip to bind to */
+    int          n;    /* number of ip to bind to */
     const char  *ips;  /* comma separated list of ips to bind to */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -171,8 +165,7 @@ static void server_linger
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    /* inform client that writing any more data is not allowed
-     */
+    /* inform client that writing any more data is not allowed */
 
     shutdown(fd, SHUT_RDWR);
 
@@ -297,8 +290,7 @@ static int server_create_socket
         return -1;
     }
 
-    /* fill server address parameters for listening
-     */
+    /* fill server address parameters for listening */
 
     memset(&srv, 0, sizeof(srv));
     srv.sin_family = AF_INET;
@@ -438,8 +430,7 @@ static void *server_handle_upload
 
         if ((fd = open(path, O_CREAT | O_EXCL | O_APPEND | O_RDWR, 0640)) >= 0)
         {
-            /* file opened with success, break out of the loop
-             */
+            /* file opened with success, break out of the loop */
 
             break;
         }
@@ -761,8 +752,7 @@ static void server_process_connection
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    /* process all awaiting connections in sfd socket
-     */
+    /* process all awaiting connections in sfd socket */
 
     clen = sizeof(client);
 
@@ -785,7 +775,7 @@ static void server_process_connection
             continue;
         }
 
-        el_print(ELD, "incoming connection from %s socket id %d",
+        el_print(ELI, "incoming connection from %s socket id %d",
             inet_ntoa(client.sin_addr), cfd);
 
         /* after accepting connection, we have client's ip, now we
@@ -876,18 +866,12 @@ static void server_process_connection
 
 
 /* ==========================================================================
-                                        __     __ _
-                         ____   __  __ / /_   / /(_)_____
-                        / __ \ / / / // __ \ / // // ___/
-                       / /_/ // /_/ // /_/ // // // /__
-                      / .___/ \__,_//_.___//_//_/ \___/
-                     /_/
-               ____                     __   _
-              / __/__  __ ____   _____ / /_ (_)____   ____   _____
-             / /_ / / / // __ \ / ___// __// // __ \ / __ \ / ___/
-            / __// /_/ // / / // /__ / /_ / // /_/ // / / /(__  )
-           /_/   \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/
-
+                       __     __ _          ____
+        ____   __  __ / /_   / /(_)_____   / __/__  __ ____   _____ _____
+       / __ \ / / / // __ \ / // // ___/  / /_ / / / // __ \ / ___// ___/
+      / /_/ // /_/ // /_/ // // // /__   / __// /_/ // / / // /__ (__  )
+     / .___/ \__,_//_.___//_//_/ \___/  /_/   \__,_//_/ /_/ \___//____/
+    /_/
    ========================================================================== */
 
 
@@ -922,8 +906,7 @@ int server_init(void)
         return -1;
     }
 
-    /* initialize mutexes
-     */
+    /* initialize mutexes */
 
     if (pthread_mutex_init(&lconn, NULL) != 0)
     {

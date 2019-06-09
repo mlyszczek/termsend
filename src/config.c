@@ -52,27 +52,19 @@
 
 
 /* ==========================================================================
-                                   _                __
-                     ____   _____ (_)_   __ ____ _ / /_ ___
-                    / __ \ / ___// /| | / // __ `// __// _ \
-                   / /_/ // /   / / | |/ // /_/ // /_ /  __/
-                  / .___//_/   /_/  |___/ \__,_/ \__/ \___/
-                 /_/
-                                   _         __     __
-              _   __ ____ _ _____ (_)____ _ / /_   / /___   _____
-             | | / // __ `// ___// // __ `// __ \ / // _ \ / ___/
-             | |/ // /_/ // /   / // /_/ // /_/ // //  __/(__  )
-             |___/ \__,_//_/   /_/ \__,_//_.___//_/ \___//____/
+          __             __                     __   _
+     ____/ /___   _____ / /____ _ _____ ____ _ / /_ (_)____   ____   _____
+    / __  // _ \ / ___// // __ `// ___// __ `// __// // __ \ / __ \ / ___/
+   / /_/ //  __// /__ / // /_/ // /   / /_/ // /_ / // /_/ // / / /(__  )
+   \__,_/ \___/ \___//_/ \__,_//_/    \__,_/ \__//_/ \____//_/ /_//____/
 
    ========================================================================== */
 
-/* list of short options for getopt_long
- */
+/* list of short options for getopt_long */
 
 static const char  *shortopts = ":hvcDl:i:s:m:t:T:b:d:u:Ug:q:p:P:o:L:";
 
-/* array of long options for getopt_long
- */
+/* array of long options for getopt_long */
 
 struct option       longopts[] =
 {
@@ -128,9 +120,7 @@ static int config_parse_arguments
     char  *argv[]       /* argument list */
 )
 {
-    /* macros to parse arguments in switch(opt) block
-     */
-
+    /* macros to parse arguments in switch(opt) block */
 
     /* check if optarg is between MINV and MAXV values and if so,
      * store converted optarg in to config.OPTNAME field. If error
@@ -148,8 +138,7 @@ static int config_parse_arguments
                                                                                \
         if (*endptr != '\0')                                                   \
         {                                                                      \
-            /* error occured                                                   \
-             */                                                                \
+            /* error occured */                                                \
                                                                                \
             fprintf(stderr, "wrong value '%s' for option '%s\n",               \
                 optarg, #OPTNAME);                                             \
@@ -158,8 +147,7 @@ static int config_parse_arguments
                                                                                \
         if (val < (long)MINV || (long)MAXV < val)                              \
         {                                                                      \
-            /* number is outside of defined domain                             \
-             */                                                                \
+            /* number is outside of defined domain */                          \
                                                                                \
             fprintf(stderr, "value for '%s' should be between %ld and %ld\n",  \
                 #OPTNAME, (long)MINV, (long)MAXV);                             \
@@ -299,18 +287,12 @@ argv[0]);
 
 
 /* ==========================================================================
-                                        __     __ _
-                         ____   __  __ / /_   / /(_)_____
-                        / __ \ / / / // __ \ / // // ___/
-                       / /_/ // /_/ // /_/ // // // /__
-                      / .___/ \__,_//_.___//_//_/ \___/
-                     /_/
-               ____                     __   _
-              / __/__  __ ____   _____ / /_ (_)____   ____   _____
-             / /_ / / / // __ \ / ___// __// // __ \ / __ \ / ___/
-            / __// /_/ // / / // /__ / /_ / // /_/ // / / /(__  )
-           /_/   \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/
-
+                       __     __ _          ____
+        ____   __  __ / /_   / /(_)_____   / __/__  __ ____   _____ _____
+       / __ \ / / / // __ \ / // // ___/  / /_ / / / // __ \ / ___// ___/
+      / /_/ // /_/ // /_/ // // // /__   / __// /_/ // / / // /__ (__  )
+     / .___/ \__,_//_.___//_//_/ \___/  /_/   \__,_//_/ /_/ \___//____/
+    /_/
    ========================================================================== */
 
 
@@ -325,13 +307,11 @@ int config_init
     char  *argv[]  /* argument list */
 )
 {
-    /* disable error printing from getopt library
-     */
+    /* disable error printing from getopt library */
 
     opterr = 0;
 
-    /* set g_config object to well-known default state
-     */
+    /* set g_config object to well-known default state */
 
     memset(&g_config, 0, sizeof(g_config));
 
@@ -368,8 +348,7 @@ int config_init
 
 void config_print(void)
 {
-    /* macros for easy field printing
-     */
+    /* macro for easy field printing */
 
 #define CONFIG_PRINT(field, type) \
     el_print(ELI, "%s%s "type, #field, padder + strlen(#field), g_config.field)

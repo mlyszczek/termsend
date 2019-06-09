@@ -57,11 +57,11 @@
 
 
 /* ==========================================================================
-                                   _         __     __
-              _   __ ____ _ _____ (_)____ _ / /_   / /___   _____
-             | | / // __ `// ___// // __ `// __ \ / // _ \ / ___/
-             | |/ // /_/ // /   / // /_/ // /_/ // //  __/(__  )
-             |___/ \__,_//_/   /_/ \__,_//_.___//_/ \___//____/
+          __             __                     __   _
+     ____/ /___   _____ / /____ _ _____ ____ _ / /_ (_)____   ____   _____
+    / __  // _ \ / ___// // __ `// ___// __ `// __// // __ \ / __ \ / ___/
+   / /_/ //  __// /__ / // /_/ // /   / /_/ // /_ / // /_/ // / / /(__  )
+   \__,_/ \___/ \___//_/ \__,_//_/    \__,_/ \__//_/ \____//_/ /_//____/
 
    ========================================================================== */
 
@@ -146,8 +146,7 @@ static int bnw_parse_list
     {
         if (f[i] == '\n')
         {
-            /* new line encoutered assuming it's an ip
-             */
+            /* new line encoutered assuming it's an ip */
 
             ++n;
 
@@ -192,8 +191,7 @@ static int bnw_parse_list
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-        /* copy next address into ip buffer
-         */
+        /* copy next address into ip buffer */
 
         for (j = 0; f[i] != '\n'; ++j, ++i)
         {
@@ -208,8 +206,7 @@ static int bnw_parse_list
 
         if (j == 0)
         {
-            /* this is empty line, ignore it and go to next line
-             */
+            /* this is empty line, ignore it and go to next line */
 
             continue;
         }
@@ -240,8 +237,7 @@ static int bnw_parse_list
         el_print(ELD, "adding ip to list: %s", ip);
     }
 
-    /* sort IPs for faster search
-     */
+    /* sort IPs for faster search */
 
     num_ip = n;
     qsort(ip_list, n, sizeof(in_addr_t), bnw_ip_comp);
@@ -259,18 +255,12 @@ parse_error:
 
 
 /* ==========================================================================
-                                        __     __ _
-                         ____   __  __ / /_   / /(_)_____
-                        / __ \ / / / // __ \ / // // ___/
-                       / /_/ // /_/ // /_/ // // // /__
-                      / .___/ \__,_//_.___//_//_/ \___/
-                     /_/
-               ____                     __   _
-              / __/__  __ ____   _____ / /_ (_)____   ____   _____
-             / /_ / / / // __ \ / ___// __// // __ \ / __ \ / ___/
-            / __// /_/ // / / // /__ / /_ / // /_/ // / / /(__  )
-           /_/   \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/
-
+                       __     __ _          ____
+        ____   __  __ / /_   / /(_)_____   / __/__  __ ____   _____ _____
+       / __ \ / / / // __ \ / // // ___/  / /_ / / / // __ \ / ___// ___/
+      / /_/ // /_/ // /_/ // // // /__   / __// /_/ // / / // /__ (__  )
+     / .___/ \__,_//_.___//_//_/ \___/  /_/   \__,_//_/ /_/ \___//____/
+    /_/
    ========================================================================== */
 
 
@@ -374,8 +364,7 @@ int bnw_is_allowed
 
     if (mode == 0)
     {
-        /* filtering is off, ip is always allowed
-         */
+        /* filtering is off, ip is always allowed */
 
         return 1;
     }
@@ -397,8 +386,7 @@ int bnw_is_allowed
         {
             if (mode == 1)
             {
-                /* ip was found in white list mode, ip is allowed
-                 */
+                /* ip was found in white list mode, ip is allowed */
 
                 return 1;
             }
@@ -424,15 +412,13 @@ int bnw_is_allowed
 
     if (mode == 1)
     {
-        /* ip was not found in white list, do not allow
-         */
+        /* ip was not found in white list, do not allow */
 
         return 0;
     }
     else
     {
-        /* ip was not found in black list, allow ip
-         */
+        /* ip was not found in black list, allow ip */
 
         return 1;
     }
