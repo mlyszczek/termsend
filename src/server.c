@@ -989,32 +989,6 @@ void server_loop_forever(void)
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    /* we may have multiple server sockets, so we cannot accept in
-     * blocking fassion. Since number of server sockets will be
-     * very small, we can use not-so-fast-but-highly-portable
-     * select. Let's prepare our fdset
-     */
-
-    FD_ZERO(&readfds);
-
-    for (i = 0, maxfd = 0; i != nsfds; ++i)
-    {
-        /* we validate all sockets in init function, so we are sure
-         * sfds is valid and contains valid file descriptors unless
-         * user called this function without init or when init
-         * failed and return code wasn't checked, then he deserves
-         * nice segfault in da face
-         */
-
-        FD_SET(sfds[i], &readfds);
-
-        /* we need to find which socket is the highest one, select
-         * needs this information to process fds without segfaults
-         */
-
-        maxfd = sfds[i] > maxfd ? sfds[i] : maxfd;
-    }
-
     prev_flush = 0;
     for (;;)
     {
@@ -1033,6 +1007,35 @@ void server_loop_forever(void)
 
             el_flush();
             prev_flush = now;
+        }
+
+        /* we may have multiple server sockets, so we cannot accept
+         * in blocking fassion. Since number of server sockets will
+         * be very small, we can use not so fast but highly
+         * portable select. Let's prepare our fdset. This must be
+         * done in the loop each time, select() is about to be
+         * called, since select() modified fs_sets.
+         */
+
+        FD_ZERO(&readfds);
+
+        for (i = 0, maxfd = 0; i != nsfds; ++i)
+        {
+            /* we validate all sockets in init function, so we are
+             * sure sfds is valid and contains valid file
+             * descriptors unless user called this function without
+             * init or when init failed and return code wasn't
+             * checked, then he deserves nice segfault in da face
+             */
+
+            FD_SET(sfds[i], &readfds);
+
+            /* we need to find which socket is the highest one,
+             * select needs this information to process fds without
+             * segfaults
+             */
+
+            maxfd = sfds[i] > maxfd ? sfds[i] : maxfd;
         }
 
         if (g_shutdown)
