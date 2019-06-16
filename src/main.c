@@ -134,9 +134,16 @@ int main(int argc, char *argv[])
 
     if (el_ooption(&g_qlog, EL_FPATH, g_config.query_log) != 0)
     {
-        fprintf(stderr, "WARNING couldn't open query log file %s: %s\n",
-             g_config.query_log, strerror(errno));
-        el_ooption(&g_qlog, EL_OUT, EL_OUT_NONE);
+        fprintf(stderr, "WARNING couldn't open query log file %s: %s "
+            "query logs will be printed to stdout\n",
+            g_config.query_log, strerror(errno));
+        el_ooption(&g_qlog, EL_OUT, EL_OUT_STDOUT);
+
+        /* turn off stdout buffering, forcing query logs to appear
+         * immediately
+         */
+
+        setvbuf(stdout, NULL, _IONBF, 0);
     }
 
     memset(&sa, 0, sizeof(sa));
