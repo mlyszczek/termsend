@@ -62,12 +62,10 @@ static void sigint_handler(int signo)
     {
         /* someone hit ctrl-c second time, impatient fella */
 
-        el_print(ELI, "second SIGINT, ok... got it, will deal with it!");
         g_stfu = 1;
         return;
     }
 
-    el_print(ELI, "received SIGINT, exiting");
     g_shutdown = 1;
 }
 
