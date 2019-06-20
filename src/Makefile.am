@@ -6,7 +6,8 @@ source = bnwlist.c \
 	main.c \
 	server.c \
 	globals.c \
-	getopt.c
+	getopt.c \
+	ssl/openssl.c
 
 bin_PROGRAMS = kurload
 kurload_SOURCES = $(source) \

@@ -66,6 +66,7 @@
 #include "config.h"
 #include "globals.h"
 #include "server.h"
+#include "ssl/ssl.h"
 
 
 /* ==========================================================================
@@ -82,7 +83,18 @@
 
 #define EL_OPTIONS_OBJECT &g_qlog
 
-static int             *sfds;   /* sfds sockets for all interfaces */
+/* struct holding info about fd and whether is it ssl socket
+ * or not
+ */
+
+struct fdinfo
+{
+    int  fd;      /* systems file descriptor of socket */
+    int  ssl;     /* is this ssl connection? */
+    int  ssl_fd;  /* if ssl is enabled, holds ssl fd for ssl_* functions */
+};
+
+static struct fdinfo   *sfds;   /* sfds sockets for all interfaces */
 static int              nsfds;  /* number of sfds allocated */
 static int              cconn;  /* curently connected clients */
 static pthread_mutex_t  lconn;  /* mutex lock for operation on cconn */
@@ -161,7 +173,7 @@ static void server_generate_fname
 
 static void server_linger
 (
-    int            fd          /* connected clients file descriptor */
+    struct fdinfo *fdi         /* connected clients file descriptor */
 )
 {
     unsigned char  buf[8192];  /* dummy buffer to get data from read */
@@ -171,11 +183,17 @@ static void server_linger
 
     /* inform client that writing any more data is not allowed */
 
-    shutdown(fd, SHUT_RDWR);
+    if (fdi->ssl)
+    {
+        ssl_shutdown(fdi->ssl_fd, SHUT_RDWR);
+    }
+
+    shutdown(fdi->fd, SHUT_RDWR);
 
     for (;;)
     {
-        r = read(fd, buf, sizeof(buf));
+        r = fdi->ssl ? ssl_read(fdi->ssl_fd, buf, sizeof(buf)) :
+            read(fdi->fd, buf, sizeof(buf));
 
         if (r < 0)
         {
@@ -216,15 +234,15 @@ static void server_linger
 
 static void server_reply
 (
-    int          fd,         /* client to send message to */
-    const char  *fmt,        /* message format (see printf(3)) */
-                 ...         /* variadic arguments for fmt */
+    struct fdinfo *fdi,        /* client to send message to */
+    const char    *fmt,        /* message format (see printf(3)) */
+                   ...         /* variadic arguments for fmt */
 )
 {
-    size_t       written;    /* number of bytes written by write so far */
-    size_t       mlen;       /* final size of the message to send */
-    char         msg[1024];  /* message to send to the client */
-    va_list      ap;         /* variadic argument list from '...' */
+    size_t         written;    /* number of bytes written by write so far */
+    size_t         mlen;       /* final size of the message to send */
+    char           msg[1024];  /* message to send to the client */
+    va_list        ap;         /* variadic argument list from '...' */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -243,11 +261,12 @@ static void server_reply
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-        w = write(fd, msg + written, mlen - written);
+        w = fdi->ssl ? ssl_write(fdi->ssl_fd, msg + written, mlen - written) :
+            write(fdi->fd, msg + written, mlen - written);
 
         if (w == -1)
         {
-            el_perror(ELE, "[%3d] error writing reply to the client", fd);
+            el_perror(ELE, "[%3d] error writing reply to the client", fdi->fd);
             return;
         }
 
@@ -264,7 +283,8 @@ static void server_reply
 
 static int server_create_socket
 (
-    in_addr_t           ip      /* local ip to bind server to */
+    in_addr_t           ip,     /* local ip to bind server to */
+    unsigned            port    /* port to bind server to */
 )
 {
     int                 fd;     /* new server file descriptor */
@@ -298,7 +318,7 @@ static int server_create_socket
 
     memset(&srv, 0, sizeof(srv));
     srv.sin_family = AF_INET;
-    srv.sin_port = htons(g_config.listen_port);
+    srv.sin_port = htons(port);
     srv.sin_addr.s_addr = ip;
 
     /* bind socket to srv address, so it only accept connections
@@ -352,7 +372,8 @@ static int server_create_socket
     a threaded function, it is fired up everytime client connects and passes
     checks for maximum connection, black and white list etc. Function handle
     upload from the client and storing it in the file, it also takes care of
-    network problems and end string detection.
+    network problems and end string detection. Here, if socket is ssl or tls
+    enabled, cfd->ssl_fd is after successfull ssl handshake.
    ========================================================================== */
 
 
@@ -368,7 +389,7 @@ static void *server_handle_upload
     fd_set              readfds;     /* set with client socket for select */
     struct timeval      cfdtimeo;    /* read timeout of clients socket */
     sigset_t            set;         /* signals to mask in thread */
-    int                 cfd;         /* socket associated with client */
+    struct fdinfo      *cfd;         /* socket associated with client */
     int                 fd;          /* file where data will be stored */
     int                 ncollision;  /* number of file name collisions hit */
     int                 opathlen;    /* length of output directory path */
@@ -385,9 +406,9 @@ static void *server_handle_upload
 
 
     last_notif = time(NULL);
-    cfd = (intptr_t)arg;
+    cfd = arg;
     clen = sizeof(client);
-    getpeername(cfd, (struct sockaddr *)&client, &clen);
+    getpeername(cfd->fd, (struct sockaddr *)&client, &clen);
 
     strcpy(path, g_config.output_dir);
     strcat(path, "/");
@@ -407,7 +428,9 @@ static void *server_handle_upload
         el_oprint(OELI, "[%s] rejected: signal mask failed",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
-        close(cfd);
+        if (cfd->ssl) ssl_close(cfd->ssl_fd);
+        close(cfd->fd);
+        free(cfd);
         return NULL;
     }
 
@@ -442,7 +465,7 @@ static void *server_handle_upload
         if (errno == EEXIST)
         {
             /* we hit file name collision, increment collision
-             * countr, and if that counter is bigger than 3, we
+             * counter, and if that counter is bigger than 3, we
              * increment file length by one, because it looks like
              * there are a lot of files with current file length
              */
@@ -461,11 +484,13 @@ static void *server_handle_upload
          */
 
         pthread_mutex_unlock(&lopen);
-        el_perror(ELA, "[%3d] couldn't open file %s", cfd, path);
+        el_perror(ELA, "[%3d] couldn't open file %s", cfd->fd, path);
         el_oprint(OELI, "[%s] rejected: file open error",
                 inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
-        close(cfd);
+        if (cfd->ssl) ssl_close(cfd->ssl_fd);
+        close(cfd->fd);
+        free(cfd);
         pthread_mutex_lock(&lconn);
         --cconn;
         pthread_mutex_unlock(&lconn);
@@ -488,7 +513,7 @@ static void *server_handle_upload
 
     written = 0;
     FD_ZERO(&readfds);
-    FD_SET(cfd, &readfds);
+    FD_SET(cfd->fd, &readfds);
     memset(ends, 0, sizeof(ends));
 
     for (;;)
@@ -501,7 +526,7 @@ static void *server_handle_upload
         cfdtimeo.tv_usec = 0;
 
         now = time(NULL);
-        sact = select(cfd + 1, &readfds, NULL, NULL, &cfdtimeo);
+        sact = select(cfd->fd + 1, &readfds, NULL, NULL, &cfdtimeo);
 
         if (sact == -1)
         {
@@ -558,7 +583,8 @@ static void *server_handle_upload
          * locking
          */
 
-        r = read(cfd, buf, sizeof(buf));
+        r = cfd->ssl ? ssl_read(cfd->ssl_fd, buf, sizeof(buf)) :
+            read(cfd->fd, buf, sizeof(buf));
 
         if (r == -1)
         {
@@ -576,12 +602,34 @@ static void *server_handle_upload
 
         if (r == 0)
         {
+            if (g_config.timed_upload)
+            {
+                /* time upload was enabled, in that case we don't
+                 * treat premature connection close as error but we
+                 * assume user has no more data to send and we
+                 * should store it and send him the link to data he
+                 * just uploaded.
+                 */
+
+                goto upload_finished_with_timeout;
+            }
+
             /* Return code 0 means, that client closed connection
              * before all data could be uploaded, well, his choice
              */
 
             el_oprint(OELI, "[%s] rejected: connection closed by "
                 "client", inet_ntoa(client.sin_addr));
+
+            /* it is also possible that client performed shutdown()
+             * letting us know he has no more data to send. And
+             * since we got here that means we didn't receive ending
+             * "kurload\n" string.
+             */
+
+            server_reply(cfd, "FIN received but not ending "
+                    "\"kurload\\n\" string is present - discarding\n");
+
             goto error;
         }
 
@@ -709,7 +757,9 @@ upload_finished_with_timeout:
     el_oprint(OELI, "[%s] %s", inet_ntoa(client.sin_addr), fname);
     server_reply(cfd, "upload complete, link to file %s\n", url);
     server_linger(cfd);
-    close(cfd);
+    if (cfd->ssl) ssl_close(cfd->ssl_fd);
+    close(cfd->fd);
+    free(cfd);
 
     pthread_mutex_lock(&lconn);
     --cconn;
@@ -723,8 +773,10 @@ error:
      */
 
     server_linger(cfd);
-    close(cfd);
+    if (cfd->ssl) ssl_close(cfd->ssl_fd);
+    close(cfd->fd);
     close(fd);
+    free(cfd);
     unlink(path);
 
     pthread_mutex_lock(&lconn);
@@ -744,11 +796,11 @@ error:
 
 static void server_process_connection
 (
-    int                 sfd      /* server socket we accept connection from */
+    struct fdinfo      *sfd      /* server socket we accept connection from */
 )
 {
     int                 nconn;   /* current number of active connection */
-    int                 cfd;     /* socket associated with connected client */
+    struct fdinfo      *cfd;     /* socket associated with connected client */
     int                 flags;   /* flags for cfd socket */
     socklen_t           clen;    /* length of 'client' variable */
     struct sockaddr_in  client;  /* address of remote client */
@@ -762,8 +814,16 @@ static void server_process_connection
 
     for (;;)
     {
-        if ((cfd = accept(sfd, (struct sockaddr *)&client, &clen)) < 0)
+        /* allocate fdinfo, which will be passed to thread */
+
+        cfd = malloc(sizeof(*cfd));
+
+        /* wait for incoming connection */
+
+        if ((cfd->fd = accept(sfd->fd, (struct sockaddr *)&client, &clen)) < 0)
         {
+            free(cfd);
+
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
                 /* connection queue in server socket is empty, that
@@ -779,8 +839,32 @@ static void server_process_connection
             continue;
         }
 
-        el_print(ELI, "incoming connection from %s socket id %d",
-            inet_ntoa(client.sin_addr), cfd);
+        el_print(ELI, "incoming %sssl connection from %s socket id %d",
+            sfd->ssl ? "" : "non-", inet_ntoa(client.sin_addr), cfd->fd);
+
+        /* copy ssl-type to client */
+
+        cfd->ssl = sfd->ssl;
+
+        /* perform ssl handshake */
+
+        if (cfd->ssl)
+        {
+            cfd->ssl_fd = ssl_accept(cfd->fd);
+            if (cfd->ssl_fd == -1)
+            {
+                el_oprint(OELI, "[%s] rejected: ssl_accept() error",
+                        inet_ntoa(client.sin_addr));
+
+                /* ssl negotation failed, reply in clear text */
+
+                cfd->ssl = 0;
+                server_reply(cfd, "ssl negotation failed\n");
+                close(cfd->fd);
+                free(cfd);
+                continue;
+            }
+        }
 
         /* after accepting connection, we have client's ip, now we
          * check if this ip can upload (it can be banned, or not
@@ -793,7 +877,9 @@ static void server_process_connection
             el_oprint(OELI, "[%s] rejected: not allowed",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "you are not allowed to upload to this server\n");
-            close(cfd);
+            if (cfd->ssl) ssl_close(cfd->ssl_fd);
+            close(cfd->fd);
+            free(cfd);
             continue;
         }
 
@@ -811,7 +897,9 @@ static void server_process_connection
             el_oprint(OELI, "[%s] rejected: connection limit",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "all upload slots are taken, try again later\n");
-            close(cfd);
+            if (cfd->ssl) ssl_close(cfd->ssl_fd);
+            close(cfd->fd);
+            free(cfd);
             continue;
         }
 
@@ -821,21 +909,28 @@ static void server_process_connection
          * want. We turn that flag explicitly
          */
 
-        if ((flags = fcntl(cfd, F_GETFL)) == -1)
+        if ((flags = fcntl(cfd->fd, F_GETFL)) == -1)
         {
-            el_oprint(OELI, "[%s] rejected: socket config error");
-            el_perror(ELF, "[%3d] error reading socket flags", cfd);
+            el_oprint(OELI, "[%s] rejected: socket config error",
+                    inet_ntoa(client.sin_addr));
+            el_perror(ELF, "[%3d] error reading socket flags", cfd->fd);
             server_reply(cfd, "internal server error, try again later\n");
-            close(cfd);
+            if (cfd->ssl) ssl_close(cfd->ssl_fd);
+            close(cfd->fd);
+            free(cfd);
             continue;
         }
 
-        if (fcntl(cfd, F_SETFL, flags & ~O_NONBLOCK) == -1)
+        if (fcntl(cfd->fd, F_SETFL, flags & ~O_NONBLOCK) == -1)
         {
-            el_oprint(OELI, "[%s] rejected: socket config error");
-            el_perror(ELF, "[%3d] error setting socket into block mode", cfd);
+            el_oprint(OELI, "[%s] rejected: socket config error",
+                    inet_ntoa(client.sin_addr));
+            el_perror(ELF, "[%3d] error setting socket into block mode",
+                    cfd->fd);
             server_reply(cfd, "internal server error, try again later\n");
-            close(cfd);
+            if (cfd->ssl) ssl_close(cfd->ssl_fd);
+            close(cfd->fd);
+            free(cfd);
             continue;
         }
 
@@ -844,13 +939,15 @@ static void server_process_connection
          * from here.
          */
 
-        if (pthread_create(&t, NULL, server_handle_upload,
-                (void *)(intptr_t)cfd) != 0)
+        if (pthread_create(&t, NULL, server_handle_upload, cfd) != 0)
         {
-            el_oprint(OELI, "[%s] rejected: pthread_create error");
-            el_perror(ELC, "[%3d] couldn't start processing thread", cfd);
+            el_oprint(OELI, "[%s] rejected: pthread_create error",
+                    inet_ntoa(client.sin_addr));
+            el_perror(ELC, "[%3d] couldn't start processing thread", cfd->fd);
             server_reply(cfd, "internal server error, try again later\n");
-            close(cfd);
+            if (cfd->ssl) ssl_close(cfd->ssl_fd);
+            close(cfd->fd);
+            free(cfd);
             continue;
         }
 
@@ -861,7 +958,8 @@ static void server_process_connection
         /* we don't need anything from running thread and we surely
          * don't want to babysit it, so we detach and forget about
          * it. Running thread will deal with errors on its own and
-         * will terminate in case of any error
+         * will terminate in case of any error. That thread is also
+         * responsible for freeing cfd.
          */
 
         pthread_detach(t);
@@ -891,14 +989,42 @@ static void server_process_connection
 int server_init(void)
 {
     int          i;                              /* simple interator */
+    unsigned     ports[2];                       /* array of listening ports */
+    int          ssl[2];                         /* array of ssl ports */
+    int          nports;                         /* number of listen ports */
+    int          p;                              /* current port index */
     char         bip[sizeof(g_config.bind_ip)];  /* copy of g_config.bind_ip */
+    int          nips;                           /* number of ips to listen on*/
     const char  *ip;                             /* tokenized ip from bip */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
     el_print(ELN, "creating server");
 
-    nsfds = server_bind_num();
+    /* calculate how many listen ports do we have */
+
+    nports = 0;
+
+    if (g_config.listen_port > 0)
+    {
+        ssl[nports] = 0;
+        ports[nports++] = g_config.listen_port;
+    }
+
+    if (g_config.ssl_listen_port > 0)
+    {
+        ssl[nports] = 1;
+        ports[nports++] = g_config.ssl_listen_port;
+    }
+
+    /* number of server sockets to open, this is number of
+     * ips we are going to listen on times number of ports
+     * we will be listening on. So each ip will listen on
+     * each port
+     */
+
+    nips = server_bind_num();
+    nsfds = nports * nips;
 
     /* allocate memory for all server sockets, one interface equals
      * one server socket.
@@ -933,30 +1059,43 @@ int server_init(void)
 
     for (i = 0; i != nsfds; ++i)
     {
-        sfds[i] = -1;
+        sfds[i].fd = -1;
     }
 
-    /* Now we create one server socket for each interface user
+    /* Now we create one server socket for each interface:port user
      * specified in configuration file.
      */
 
-    strcpy(bip, g_config.bind_ip);
-    ip = strtok(bip, ",");
-
-    for (i = 0; i != nsfds; ++i)
+    for (p = 0; p != nports; ++p)
     {
-        in_addr_t    netip;  /* ip of the interface to listen on */
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        strcpy(bip, g_config.bind_ip);
+        ip = strtok(bip, ",");
 
-        netip = inet_addr(ip);
-
-        if ((sfds[i] = server_create_socket(netip)) < 0)
+        for (i = p * nips; i != p * nips + nips; ++i)
         {
-            el_print(ELF, "couldn't create socket for bind ip %s", ip);
-            goto error;
-        }
+            in_addr_t    netip;  /* ip of the interface to listen on */
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-        ip = strtok(NULL, ",");
+            netip = inet_addr(ip);
+
+            el_print(ELN, "creating server %s:%d", ip, ports[p]);
+            if ((sfds[i].fd = server_create_socket(netip, ports[p])) < 0)
+            {
+                el_print(ELF, "couldn't create socket for %s:%d",
+                        ip, ports[p]);
+                goto error;
+            }
+
+            sfds[i].ssl = 0;
+            if (ssl[p] == 1)
+            {
+                /* this is ssl port */
+
+                sfds[i].ssl = 1;
+            }
+
+            ip = strtok(NULL, ",");
+        }
     }
 
     /* seed random number generator for generating unique file name
@@ -966,6 +1105,13 @@ int server_init(void)
      */
 
     srand(time(NULL));
+
+    if (g_config.ssl_listen_port)
+    {
+        /* ssl port enabled, initialize ssl */
+
+        ssl_init();
+    }
 
     return 0;
 
@@ -1028,14 +1174,14 @@ void server_loop_forever(void)
              * checked, then he deserves nice segfault in da face
              */
 
-            FD_SET(sfds[i], &readfds);
+            FD_SET(sfds[i].fd, &readfds);
 
             /* we need to find which socket is the highest one,
              * select needs this information to process fds without
              * segfaults
              */
 
-            maxfd = sfds[i] > maxfd ? sfds[i] : maxfd;
+            maxfd = sfds[i].fd > maxfd ? sfds[i].fd : maxfd;
         }
 
         if (g_shutdown)
@@ -1086,7 +1232,7 @@ void server_loop_forever(void)
 
         for (i = 0; i != nsfds; ++i)
         {
-            if (FD_ISSET(sfds[i], &readfds) == 0)
+            if (FD_ISSET(sfds[i].fd, &readfds) == 0)
             {
                 /* nope, that socket has nothing intereseted going
                  * on inside
@@ -1099,7 +1245,7 @@ void server_loop_forever(void)
              * processing function to determin what to do with it
              */
 
-            server_process_connection(sfds[i]);
+            server_process_connection(&sfds[i]);
         }
     }
 }
@@ -1116,7 +1262,7 @@ void server_destroy(void)
 
     for (i = 0; i != nsfds; ++i)
     {
-        close(sfds[i]);
+        close(sfds[i].fd);
     }
 
     pthread_mutex_destroy(&lconn);
@@ -1164,5 +1310,12 @@ void server_destroy(void)
         }
 
         nanosleep(&req, NULL);
+    }
+
+    if (g_config.ssl_listen_port)
+    {
+        /* ssl port enabled, cleanup ssl */
+
+        ssl_cleanup();
     }
 }

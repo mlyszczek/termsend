@@ -70,8 +70,53 @@ and tools.
 Program will listen on specified
 .I port
 for incoming connections.
+This port will be used for handling unencrypted connections.
 .br
 Default is: 1337
+.TP
+.BI "-I, --ssl-listen-port=<" port >
+Program will listen on specified
+.I port
+for incoming connections.
+This port will be used for handling encrypted connections.
+For this to work, you will also need to set
+.BR --key-file \ and\  --cert-file .
+.TP
+.BI "-k, --key-file=<" path >
+When
+.B --ssl-listen-port
+is set, you need to set path to a key file in
+.B PEM
+format.
+.TP
+.BI "-C, --cert-file=<" path >
+When
+.B --ssl-listen-port
+is set, you need to set path to a certificate file in
+.B PEM
+format.
+Both key and self-signed certificate can be generated via
+.br
+ 
+.br
+.nf
+    openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem
+.fi
+.br
+ 
+.br
+But keep in mind users will receive error about unknown CA for certificate
+and may have hard time using your service if they don't add your certificate
+to trusted or explicitly ignore unknown cert.
+Consider 3rd party certificate issuer like letsencrypt.
+.TP
+.BI "-f, --pem-pass-file=<" path >
+If your key is encrypted with password, you can pass path to a file, which
+contains password for the key.
+File should contain only password, file should end with new line character,
+which will be trimmed.
+If your password ends with a new line character, file should have 2 new line
+characters at the end of file.
 .TP
 .BI "-s, --max-filesize=<" size >
 Maximum

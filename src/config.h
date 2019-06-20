@@ -31,6 +31,7 @@ struct config
     long            list_type;
     long            colorful_output;
     long            listen_port;
+    long            ssl_listen_port;
     long            max_size;
     long            daemonize;
     long            max_connections;
@@ -44,6 +45,9 @@ struct config
     char            pid_file[PATH_MAX + 1];
     char            output_dir[PATH_MAX + 1];
     char            list_file[PATH_MAX + 1];
+    char            key_file[PATH_MAX + 1];
+    char            cert_file[PATH_MAX + 1];
+    char            pem_pass_file[PATH_MAX + 1];
 };
 
 

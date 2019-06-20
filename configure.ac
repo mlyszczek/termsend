@@ -49,6 +49,8 @@ AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([gethostent], [nsl])
 AC_SEARCH_LIBS([el_init], [embedlog])
 
+AC_SEARCH_LIBS([SSL_library_init], [ssl])
+AC_SEARCH_LIBS([EVP_cleanup], [crypto])
 
 AX_PTHREAD
 LIBS="$PTHREAD_LIBS $LIBS"

@@ -62,7 +62,7 @@
 
 /* list of short options for getopt_long */
 
-static const char  *shortopts = ":hvcDl:i:s:m:t:T:b:d:u:Ug:q:p:P:o:L:";
+static const char  *shortopts = ":hvcDl:i:I:s:m:t:T:b:d:u:Ug:q:p:P:o:L:k:C:f:";
 
 /* array of long options for getopt_long */
 
@@ -73,6 +73,7 @@ struct option       longopts[] =
     {"level",           required_argument, NULL, 'l'},
     {"colorful-output", no_argument,       NULL, 'c'},
     {"listen-port",     required_argument, NULL, 'i'},
+    {"ssl-listen-port", required_argument, NULL, 'I'},
     {"max-filesize",    required_argument, NULL, 's'},
     {"daemonize",       no_argument,       NULL, 'D'},
     {"max-connections", required_argument, NULL, 'm'},
@@ -88,6 +89,9 @@ struct option       longopts[] =
     {"pid-file",        required_argument, NULL, 'P'},
     {"output-dir",      required_argument, NULL, 'o'},
     {"list-file",       required_argument, NULL, 'L'},
+    {"key-file",        required_argument, NULL, 'k'},
+    {"cert-file",       required_argument, NULL, 'C'},
+    {"pem-pass-file",   required_argument, NULL, 'f'},
     {NULL, 0, NULL, 0}
 };
 
@@ -192,6 +196,7 @@ static int config_parse_arguments
         case 'U': g_config.timed_upload = 1; break;
         case 'l': PARSE_INT(log_level, 0, 7); break;
         case 'i': PARSE_INT(listen_port, 0, UINT16_MAX); break;
+        case 'I': PARSE_INT(ssl_listen_port, 0, UINT16_MAX); break;
         case 's': PARSE_INT(max_size, 0, LONG_MAX); break;
         case 'm': PARSE_INT(max_connections, 0, LONG_MAX); break;
         case 't': PARSE_INT(max_timeout, 1, LONG_MAX); break;
@@ -205,6 +210,9 @@ static int config_parse_arguments
         case 'P': PARSE_STR(pid_file); break;
         case 'o': PARSE_STR(output_dir); break;
         case 'L': PARSE_STR(list_file); break;
+        case 'k': PARSE_STR(key_file); break;
+        case 'C': PARSE_STR(cert_file); break;
+        case 'f': PARSE_STR(pem_pass_file); break;
 
         case 'h':
             printf(
@@ -217,7 +225,11 @@ static int config_parse_arguments
 "\t-v, --version                    prints version and quits\n"
 "\t-l, --level=<level>              logging level 0-7\n"
 "\t-c, --colorful-output            enable nice colors for logs\n"
-"\t-i, --listen-port=<port>         port on which program will listen\n",
+"\t-i, --listen-port=<port>         port on which program will listen\n"
+"\t-I, --listen-ssl-port=<port>     ssl port on which program will listen\n"
+"\t-k, --key-file=<path>            path to ssl key file\n"
+"\t-C, --cert-file=<path>           path to ssl cert file\n"
+"\t-f, --pem-pass-file=<path>       path where password for key is stored\n",
 argv[0]);
             printf(
 "\t-s, --max-filesize=<size>        maximum size of file client can upload\n"
@@ -319,10 +331,12 @@ int config_init
     g_config.list_type = 0;
     g_config.colorful_output = 0;
     g_config.listen_port = 1337;
+    g_config.ssl_listen_port = 0;
     g_config.max_size = 1024 * 1024; /* 1MiB */
     g_config.daemonize = 0;
     g_config.max_connections = 10;
     g_config.max_timeout = 60;
+    g_config.pem_pass_file[0] = '\0';
     strcpy(g_config.domain, "localhost");
     strcpy(g_config.bind_ip, "0.0.0.0");
     strcpy(g_config.user, "kurload");
@@ -332,6 +346,8 @@ int config_init
     strcpy(g_config.pid_file, "/var/run/kurload.pid");
     strcpy(g_config.output_dir, "/var/lib/kurload");
     strcpy(g_config.list_file, "/etc/kurload-iplist");
+    strcpy(g_config.key_file, "/etc/kurload/kurload.key");
+    strcpy(g_config.cert_file, "/etc/kurload/kurload.cert");
 
     /* parse options from command line argument overwriting
      * default ones
@@ -362,6 +378,7 @@ void config_print(void)
     CONFIG_PRINT(log_level, "%d");
     CONFIG_PRINT(colorful_output, "%ld");
     CONFIG_PRINT(listen_port, "%ld");
+    CONFIG_PRINT(ssl_listen_port, "%ld");
     CONFIG_PRINT(max_size, "%ld");
     CONFIG_PRINT(domain, "%s");
     CONFIG_PRINT(daemonize, "%ld");
@@ -377,6 +394,9 @@ void config_print(void)
     CONFIG_PRINT(output_dir, "%s");
     CONFIG_PRINT(pid_file, "%s");
     CONFIG_PRINT(bind_ip, "%s");
+    CONFIG_PRINT(key_file, "%s");
+    CONFIG_PRINT(cert_file, "%s");
+    CONFIG_PRINT(pem_pass_file, "%s");
 
 #undef CONFIG_PRINT
 }
