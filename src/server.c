@@ -534,7 +534,7 @@ static void *server_handle_upload
              * our client, we need to interrupt connection
              */
 
-            el_perror(ELW, "[%3d] select error on client read", cfd);
+            el_perror(ELW, "[%3d] select error on client read", cfd->fd);
             el_oprint(OELI, "[%s] rejected: select error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
@@ -562,7 +562,7 @@ static void *server_handle_upload
              */
 
             el_print(ELN, "[%3d] client inactive for %d seconds",
-                cfd, g_config.max_timeout);
+                cfd->fd, g_config.max_timeout);
             el_oprint(OELI, "[%s] rejected: inactivity",
                 inet_ntoa(client.sin_addr));
 
@@ -593,7 +593,7 @@ static void *server_handle_upload
              * have happened.  Inform client and close connection.
              */
 
-            el_perror(ELC, "[%3d] couldn't read from client", cfd);
+            el_perror(ELC, "[%3d] couldn't read from client", cfd->fd);
             el_oprint(OELI, "[%s] rejected: read error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
@@ -656,7 +656,7 @@ static void *server_handle_upload
 
         if ((w = write(fd, buf, r)) != r)
         {
-            el_perror(ELC, "[%3d] couldn't write to file", cfd);
+            el_perror(ELC, "[%3d] couldn't write to file", cfd->fd);
             el_oprint(OELI, "[%s] rejected: write to file failed",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
@@ -692,7 +692,7 @@ static void *server_handle_upload
              * this error, so let's call it a day for this client
              */
 
-            el_perror(ELC, "[%3d] couldn't read end string", cfd);
+            el_perror(ELC, "[%3d] couldn't read end string", cfd->fd);
             el_oprint(OELI, "[%s] rejected: end string read error",
                 inet_ntoa(client.sin_addr));
             server_reply(cfd, "internal server error, try again later\n");
@@ -730,7 +730,8 @@ static void *server_handle_upload
 
     if (ftruncate(fd, written - 8) != 0)
     {
-        el_perror(ELC, "[%3d] couldn't truncate file from ending string", cfd);
+        el_perror(ELC, "[%3d] couldn't truncate file from ending string",
+            cfd->fd);
         el_oprint(OELI, "[%s] rejected: truncate failed",
             inet_ntoa(client.sin_addr));
         server_reply(cfd, "internal server error, try again later\n");
