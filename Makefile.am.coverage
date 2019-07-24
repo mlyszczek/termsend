@@ -2,12 +2,10 @@
 
 if HAVE_GCOV
 
-.PHONY: clean-gcda
 clean-gcda:
 	@echo Removing old coverage results
 	-find -name '*.gcda' -print | xargs -r rm
 
-.PHONY: coverage generate-coverage-html clean-coverage-html
 coverage: clean-gcda
 	-$(MAKE) $(AM_MAKEFLAGS) -k check
 	$(MAKE) $(AM_MAKEFLAGS) generate-coverage-html
@@ -24,3 +22,5 @@ clean-coverage-html: clean-gcda
 clean-local: clean-coverage-html
 
 endif # HAVE_GCOV
+
+.PHONY: coverage generate-coverage-html clean-coverage-html clean-gcda

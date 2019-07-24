@@ -5,6 +5,7 @@ AC_CONFIG_HEADERS([kurload.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CHECK_FUNCS(sigaction sigfillset ftruncate usleep fchown stat)
 AC_PROG_CC
+AC_PROG_SED
 AC_CANONICAL_HOST
 AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile www/Makefile])
 AC_CONFIG_LINKS([tst/test-server.sh:tst/test-server.sh])
