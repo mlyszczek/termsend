@@ -2,7 +2,10 @@
 *.gcno
 *.o
 *.plist
+*.swp
 *~
+.deps
+.dirstamp
 Makefile
 Makefile.in
 aclocal.m4
@@ -13,6 +16,8 @@ config.log
 config.status
 config.sub
 configure
+coverage.info
+coveragereport
 depcomp
 install-sh
 kurload-*
