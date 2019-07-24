@@ -604,35 +604,13 @@ static void *server_handle_upload
 
         if (r == 0)
         {
-            if (cfd->timed)
-            {
-                /* time upload was enabled, in that case we don't
-                 * treat premature connection close as error but we
-                 * assume user has no more data to send and we
-                 * should store it and send him the link to data he
-                 * just uploaded.
-                 */
-
-                goto upload_finished_with_timeout;
-            }
-
-            /* Return code 0 means, that client closed connection
-             * before all data could be uploaded, well, his choice
+            /* r == 0 means that client gently closes connection
+             * by sending FIN, and nicely waits for us to respond,
+             * in that case we do not require client to send ending
+             * kurload\n
              */
 
-            el_oprint(OELI, "[%s] rejected: connection closed by "
-                "client", inet_ntoa(client.sin_addr));
-
-            /* it is also possible that client performed shutdown()
-             * letting us know he has no more data to send. And
-             * since we got here that means we didn't receive ending
-             * "kurload\n" string.
-             */
-
-            server_reply(cfd, "FIN received but not ending "
-                    "\"kurload\\n\" string is present - discarding\n");
-
-            goto error;
+            goto upload_finished_with_fin;
         }
 
         if (written + r > (size_t)g_config.max_size + 8)
@@ -748,6 +726,13 @@ static void *server_handle_upload
      */
 
 upload_finished_with_timeout:
+
+    /* another scenario is when client sends all data and gently
+     * closes connection - and thus nicely waits for us to respond
+     * with link. Treat is like finish with timeout.
+     */
+
+upload_finished_with_fin:
     close(fd);
 
     /* after upload is finished, we send the client, link where he
