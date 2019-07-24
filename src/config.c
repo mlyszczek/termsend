@@ -33,6 +33,10 @@
    ========================================================================== */
 
 
+#ifdef HAVE_CONFIG_H
+#   include "kurload.h"
+#endif
+
 #include "feature.h"
 
 #include "config.h"
@@ -63,7 +67,11 @@
 /* list of short options for getopt_long */
 
 static const char  *shortopts =
-    ":hvcDl:i:a:I:A:s:m:t:T:b:d:u:g:q:p:P:o:L:k:C:f:M:";
+    ":hvcDl:i:a:s:m:t:T:b:d:u:g:q:p:P:o:L:M:"
+#if HAVE_SSL
+    "I:A:k:C:f:"
+#endif
+    ;
 
 /* array of long options for getopt_long */
 
@@ -75,8 +83,6 @@ struct option       longopts[] =
     {"colorful-output",       no_argument,       NULL, 'c'},
     {"listen-port",           required_argument, NULL, 'i'},
     {"timed-listen-port",     required_argument, NULL, 'a'},
-    {"ssl-listen-port",       required_argument, NULL, 'I'},
-    {"timed-ssl-listen-port", required_argument, NULL, 'A'},
     {"max-filesize",          required_argument, NULL, 's'},
     {"daemonize",             no_argument,       NULL, 'D'},
     {"max-connections",       required_argument, NULL, 'm'},
@@ -92,9 +98,13 @@ struct option       longopts[] =
     {"pid-file",              required_argument, NULL, 'P'},
     {"output-dir",            required_argument, NULL, 'o'},
     {"list-file",             required_argument, NULL, 'L'},
+#if HAVE_SSL
+    {"ssl-listen-port",       required_argument, NULL, 'I'},
+    {"timed-ssl-listen-port", required_argument, NULL, 'A'},
     {"key-file",              required_argument, NULL, 'k'},
     {"cert-file",             required_argument, NULL, 'C'},
     {"pem-pass-file",         required_argument, NULL, 'f'},
+#endif
     {NULL, 0, NULL, 0}
 };
 
@@ -199,8 +209,6 @@ static int config_parse_arguments
         case 'l': PARSE_INT(log_level, 0, 7); break;
         case 'i': PARSE_INT(listen_port, 0, UINT16_MAX); break;
         case 'a': PARSE_INT(timed_listen_port, 0, UINT16_MAX); break;
-        case 'I': PARSE_INT(ssl_listen_port, 0, UINT16_MAX); break;
-        case 'A': PARSE_INT(timed_ssl_listen_port, 0, UINT16_MAX); break;
         case 's': PARSE_INT(max_size, 0, LONG_MAX); break;
         case 'm': PARSE_INT(max_connections, 0, LONG_MAX); break;
         case 't': PARSE_INT(max_timeout, 1, LONG_MAX); break;
@@ -215,9 +223,13 @@ static int config_parse_arguments
         case 'P': PARSE_STR(pid_file); break;
         case 'o': PARSE_STR(output_dir); break;
         case 'L': PARSE_STR(list_file); break;
+#if HAVE_SSL
+        case 'I': PARSE_INT(ssl_listen_port, 0, UINT16_MAX); break;
+        case 'A': PARSE_INT(timed_ssl_listen_port, 0, UINT16_MAX); break;
         case 'k': PARSE_STR(key_file); break;
         case 'C': PARSE_STR(cert_file); break;
         case 'f': PARSE_STR(pem_pass_file); break;
+#endif
 
         case 'h':
             printf(
@@ -232,12 +244,14 @@ static int config_parse_arguments
 "\t-c, --colorful-output            enable nice colors for logs\n"
 "\t-i, --listen-port=<port>         port on which program will listen\n"
 "\t-a, --timed-listen-port=<port>   port on which program will listen\n"
+#if HAVE_SSL
 "\t-I, --listen-ssl-port=<port>     ssl port on which program will listen\n"
 "\t-A, --timed-listen-ssl-port=<port>  ssl port on which program will listen\n"
 "\t-k, --key-file=<path>            path to ssl key file\n"
 "\t-C, --cert-file=<path>           path to ssl cert file\n"
-"\t-f, --pem-pass-file=<path>       path where password for key is stored\n",
-argv[0]);
+"\t-f, --pem-pass-file=<path>       path where password for key is stored\n"
+#endif
+,argv[0]);
             printf(
 "\t-s, --max-filesize=<size>        maximum size of file client can upload\n"
 "\t-D, --daemonize                  run as daemon\n"
@@ -389,8 +403,6 @@ void config_print(void)
     CONFIG_PRINT(colorful_output, "%ld");
     CONFIG_PRINT(listen_port, "%ld");
     CONFIG_PRINT(timed_listen_port, "%ld");
-    CONFIG_PRINT(ssl_listen_port, "%ld");
-    CONFIG_PRINT(timed_ssl_listen_port, "%ld");
     CONFIG_PRINT(max_size, "%ld");
     CONFIG_PRINT(domain, "%s");
     CONFIG_PRINT(daemonize, "%ld");
@@ -406,9 +418,13 @@ void config_print(void)
     CONFIG_PRINT(output_dir, "%s");
     CONFIG_PRINT(pid_file, "%s");
     CONFIG_PRINT(bind_ip, "%s");
+#if HAVE_SSL
+    CONFIG_PRINT(ssl_listen_port, "%ld");
+    CONFIG_PRINT(timed_ssl_listen_port, "%ld");
     CONFIG_PRINT(key_file, "%s");
     CONFIG_PRINT(cert_file, "%s");
     CONFIG_PRINT(pem_pass_file, "%s");
+#endif
 
 #undef CONFIG_PRINT
 }

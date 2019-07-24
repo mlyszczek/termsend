@@ -6,8 +6,13 @@ source = bnwlist.c \
 	main.c \
 	server.c \
 	globals.c \
-	getopt.c \
-	ssl/openssl.c
+	getopt.c
+
+if ENABLE_OPENSSL
+source += ssl/openssl.c
+else
+source += ssl/nonessl.c
+endif
 
 bin_PROGRAMS = kurload
 kurload_SOURCES = $(source) \

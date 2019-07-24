@@ -35,6 +35,23 @@ case ${host_os} in
         ;;
 esac
 
+# by default ssl is disabled
+
+AC_DEFINE([HAVE_SSL], [0], [Define to 1 if any of the ssl backend is enabled])
+
+# --enable-openssl
+
+AC_ARG_ENABLE([openssl],
+    AS_HELP_STRING([--enable-openssl], [Enable openssl support]),
+    [enable_openssl="yes"], [enable_openssl="no"])
+AM_CONDITIONAL([ENABLE_OPENSSL], [test "x$enable_openssl" = "xyes"])
+
+AS_IF([test "x$enable_openssl" = "xyes"],
+[
+    AC_DEFINE([HAVE_SSL], [1], [Define to 1 if any of the ssl backend is enabled])
+    AC_CHECK_LIB([ssl], [SSL_library_init])
+    AC_CHECK_LIB([crypto], [EVP_cleanup])
+])
 
 ###
 # --enable-analyzer
