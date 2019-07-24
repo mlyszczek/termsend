@@ -27,15 +27,17 @@ enum list_type
 struct config
 {
     enum el_level   log_level;
-    int             timed_upload;
     long            list_type;
     long            colorful_output;
     long            listen_port;
     long            ssl_listen_port;
+    long            timed_listen_port;
+    long            timed_ssl_listen_port;
     long            max_size;
     long            daemonize;
     long            max_connections;
     long            max_timeout;
+    long            timed_max_timeout;
     char            domain[4096 + 1];
     char            bind_ip[1024 + 1];
     char            user[255 + 1];

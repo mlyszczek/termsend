@@ -92,6 +92,7 @@ struct fdinfo
     int  fd;      /* systems file descriptor of socket */
     int  ssl;     /* is this ssl connection? */
     int  ssl_fd;  /* if ssl is enabled, holds ssl fd for ssl_* functions */
+    int  timed;   /* is this timed-enabled port? */
 };
 
 static struct fdinfo   *sfds;   /* sfds sockets for all interfaces */
@@ -522,7 +523,8 @@ static void *server_handle_upload
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-        cfdtimeo.tv_sec = g_config.max_timeout;
+        cfdtimeo.tv_sec =
+            cfd->timed ? g_config.timed_max_timeout : g_config.max_timeout;
         cfdtimeo.tv_usec = 0;
 
         now = time(NULL);
@@ -543,7 +545,7 @@ static void *server_handle_upload
 
         if (sact == 0)
         {
-            if (g_config.timed_upload)
+            if (cfd->timed)
             {
                 /* time upload was enabled, in that case we don't
                  * treat timeout as error but we assume user has no
@@ -602,7 +604,7 @@ static void *server_handle_upload
 
         if (r == 0)
         {
-            if (g_config.timed_upload)
+            if (cfd->timed)
             {
                 /* time upload was enabled, in that case we don't
                  * treat premature connection close as error but we
@@ -843,9 +845,10 @@ static void server_process_connection
         el_print(ELI, "incoming %sssl connection from %s socket id %d",
             sfd->ssl ? "" : "non-", inet_ntoa(client.sin_addr), cfd->fd);
 
-        /* copy ssl-type to client */
+        /* copy ssl-type and timed info to client */
 
         cfd->ssl = sfd->ssl;
+        cfd->timed = sfd->timed;
 
         /* perform ssl handshake */
 
@@ -969,6 +972,69 @@ static void server_process_connection
 
 
 /* ==========================================================================
+    Functions creates sockets for port for each listen ip (interface)
+    specified in config
+   ========================================================================== */
+
+
+static int create_socket_for_ips
+(
+    int          port,       /* port to create sockets for */
+    int          timed,      /* is this timed-enabled upload port? */
+    int          ssl,        /* is this ssl port? */
+    int          nips,       /* number of ips to listen on*/
+    int         *port_index  /* port index being parsed */
+)
+{
+    int          i;          /* current sfds index */
+    char         bip[sizeof(g_config.bind_ip)];  /* copy of g_config.bind_ip */
+    const char  *ip;         /* tokenized ip from bip */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    if (port <= 0)
+    {
+        /* port is no used, ignore */
+
+        return 0;
+    }
+
+    strcpy(bip, g_config.bind_ip);
+    ip = strtok(bip, ",");
+
+    for (i = *port_index * nips; i != *port_index * nips + nips; ++i)
+    {
+        in_addr_t    netip;  /* ip of the interface to listen on */
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+        netip = inet_addr(ip);
+
+        el_print(ELN, "creating server %s:%d (%s, %s)", ip, port,
+            timed ? "    timed" : "not timed", ssl ? "    ssl" : "non-ssl");
+        if ((sfds[i].fd = server_create_socket(netip, port)) < 0)
+        {
+            el_print(ELF, "couldn't create socket for %s:%d", ip, port);
+            return -1;
+        }
+
+        sfds[i].ssl = ssl;
+        sfds[i].timed = timed;
+
+        /* get next ip address on the list */
+
+        ip = strtok(NULL, ",");
+    }
+
+    /* increase port index, so next time we write to proper sfds
+     * index
+     */
+
+    *port_index += 1;
+    return 0;
+}
+
+
+/* ==========================================================================
                        __     __ _          ____
         ____   __  __ / /_   / /(_)_____   / __/__  __ ____   _____ _____
        / __ \ / / / // __ \ / // // ___/  / /_ / / / // __ \ / ___// ___/
@@ -989,14 +1055,11 @@ static void server_process_connection
 
 int server_init(void)
 {
-    int          i;                              /* simple interator */
-    unsigned     ports[2];                       /* array of listening ports */
-    int          ssl[2];                         /* array of ssl ports */
-    int          nports;                         /* number of listen ports */
-    int          p;                              /* current port index */
-    char         bip[sizeof(g_config.bind_ip)];  /* copy of g_config.bind_ip */
-    int          nips;                           /* number of ips to listen on*/
-    const char  *ip;                             /* tokenized ip from bip */
+    int  i;       /* simple iterator */
+    int  e;       /* error from function */
+    int  pi;      /* current port index */
+    int  nports;  /* number of listen ports */
+    int  nips;    /* number of ips to listen on*/
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -1005,18 +1068,10 @@ int server_init(void)
     /* calculate how many listen ports do we have */
 
     nports = 0;
-
-    if (g_config.listen_port > 0)
-    {
-        ssl[nports] = 0;
-        ports[nports++] = g_config.listen_port;
-    }
-
-    if (g_config.ssl_listen_port > 0)
-    {
-        ssl[nports] = 1;
-        ports[nports++] = g_config.ssl_listen_port;
-    }
+    nports = g_config.listen_port > 0           ? nports + 1 : nports;
+    nports = g_config.ssl_listen_port > 0       ? nports + 1 : nports;
+    nports = g_config.timed_listen_port > 0     ? nports + 1 : nports;
+    nports = g_config.timed_ssl_listen_port > 0 ? nports + 1 : nports;
 
     /* number of server sockets to open, this is number of
      * ips we are going to listen on times number of ports
@@ -1067,37 +1122,14 @@ int server_init(void)
      * specified in configuration file.
      */
 
-    for (p = 0; p != nports; ++p)
-    {
-        strcpy(bip, g_config.bind_ip);
-        ip = strtok(bip, ",");
+    pi = 0;
+    e = 0;
+    e |= create_socket_for_ips(g_config.listen_port, 0, 0, nips, &pi);
+    e |= create_socket_for_ips(g_config.ssl_listen_port, 0, 1, nips, &pi);
+    e |= create_socket_for_ips(g_config.timed_listen_port, 1, 0, nips, &pi);
+    e |= create_socket_for_ips(g_config.timed_ssl_listen_port, 1, 1, nips, &pi);
 
-        for (i = p * nips; i != p * nips + nips; ++i)
-        {
-            in_addr_t    netip;  /* ip of the interface to listen on */
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-            netip = inet_addr(ip);
-
-            el_print(ELN, "creating server %s:%d", ip, ports[p]);
-            if ((sfds[i].fd = server_create_socket(netip, ports[p])) < 0)
-            {
-                el_print(ELF, "couldn't create socket for %s:%d",
-                        ip, ports[p]);
-                goto error;
-            }
-
-            sfds[i].ssl = 0;
-            if (ssl[p] == 1)
-            {
-                /* this is ssl port */
-
-                sfds[i].ssl = 1;
-            }
-
-            ip = strtok(NULL, ",");
-        }
-    }
+    if (e) goto error;
 
     /* seed random number generator for generating unique file name
      * for uploaded files. We don't need any cryptographic
@@ -1137,6 +1169,8 @@ void server_loop_forever(void)
 
 
     prev_flush = 0;
+    el_print(ELN, "server initialized and started");
+
     for (;;)
     {
         int     sact;     /* select activity, just select return value */

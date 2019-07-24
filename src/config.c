@@ -62,36 +62,39 @@
 
 /* list of short options for getopt_long */
 
-static const char  *shortopts = ":hvcDl:i:I:s:m:t:T:b:d:u:Ug:q:p:P:o:L:k:C:f:";
+static const char  *shortopts =
+    ":hvcDl:i:a:I:A:s:m:t:T:b:d:u:g:q:p:P:o:L:k:C:f:M:";
 
 /* array of long options for getopt_long */
 
 struct option       longopts[] =
 {
-    {"help",            no_argument,       NULL, 'h'},
-    {"version",         no_argument,       NULL, 'v'},
-    {"level",           required_argument, NULL, 'l'},
-    {"colorful-output", no_argument,       NULL, 'c'},
-    {"listen-port",     required_argument, NULL, 'i'},
-    {"ssl-listen-port", required_argument, NULL, 'I'},
-    {"max-filesize",    required_argument, NULL, 's'},
-    {"daemonize",       no_argument,       NULL, 'D'},
-    {"max-connections", required_argument, NULL, 'm'},
-    {"max-timeout",     required_argument, NULL, 't'},
-    {"list-type",       required_argument, NULL, 'T'},
-    {"bind-ip",         required_argument, NULL, 'b'},
-    {"domain",          required_argument, NULL, 'd'},
-    {"user",            required_argument, NULL, 'u'},
-    {"timed-upload",    no_argument,       NULL, 'U'},
-    {"group",           required_argument, NULL, 'g'},
-    {"query-log",       required_argument, NULL, 'q'},
-    {"program-log",     required_argument, NULL, 'p'},
-    {"pid-file",        required_argument, NULL, 'P'},
-    {"output-dir",      required_argument, NULL, 'o'},
-    {"list-file",       required_argument, NULL, 'L'},
-    {"key-file",        required_argument, NULL, 'k'},
-    {"cert-file",       required_argument, NULL, 'C'},
-    {"pem-pass-file",   required_argument, NULL, 'f'},
+    {"help",                  no_argument,       NULL, 'h'},
+    {"version",               no_argument,       NULL, 'v'},
+    {"level",                 required_argument, NULL, 'l'},
+    {"colorful-output",       no_argument,       NULL, 'c'},
+    {"listen-port",           required_argument, NULL, 'i'},
+    {"timed-listen-port",     required_argument, NULL, 'a'},
+    {"ssl-listen-port",       required_argument, NULL, 'I'},
+    {"timed-ssl-listen-port", required_argument, NULL, 'A'},
+    {"max-filesize",          required_argument, NULL, 's'},
+    {"daemonize",             no_argument,       NULL, 'D'},
+    {"max-connections",       required_argument, NULL, 'm'},
+    {"max-timeout",           required_argument, NULL, 't'},
+    {"timed-max-timeout",     required_argument, NULL, 'M'},
+    {"list-type",             required_argument, NULL, 'T'},
+    {"bind-ip",               required_argument, NULL, 'b'},
+    {"domain",                required_argument, NULL, 'd'},
+    {"user",                  required_argument, NULL, 'u'},
+    {"group",                 required_argument, NULL, 'g'},
+    {"query-log",             required_argument, NULL, 'q'},
+    {"program-log",           required_argument, NULL, 'p'},
+    {"pid-file",              required_argument, NULL, 'P'},
+    {"output-dir",            required_argument, NULL, 'o'},
+    {"list-file",             required_argument, NULL, 'L'},
+    {"key-file",              required_argument, NULL, 'k'},
+    {"cert-file",             required_argument, NULL, 'C'},
+    {"pem-pass-file",         required_argument, NULL, 'f'},
     {NULL, 0, NULL, 0}
 };
 
@@ -193,13 +196,15 @@ static int config_parse_arguments
         {
         case 'c': g_config.colorful_output = 1; break;
         case 'D': g_config.daemonize = 1; break;
-        case 'U': g_config.timed_upload = 1; break;
         case 'l': PARSE_INT(log_level, 0, 7); break;
         case 'i': PARSE_INT(listen_port, 0, UINT16_MAX); break;
+        case 'a': PARSE_INT(timed_listen_port, 0, UINT16_MAX); break;
         case 'I': PARSE_INT(ssl_listen_port, 0, UINT16_MAX); break;
+        case 'A': PARSE_INT(timed_ssl_listen_port, 0, UINT16_MAX); break;
         case 's': PARSE_INT(max_size, 0, LONG_MAX); break;
         case 'm': PARSE_INT(max_connections, 0, LONG_MAX); break;
         case 't': PARSE_INT(max_timeout, 1, LONG_MAX); break;
+        case 'M': PARSE_INT(timed_max_timeout, 1, LONG_MAX); break;
         case 'T': PARSE_INT(list_type, -1, 1); break;
         case 'b': PARSE_STR(bind_ip); break;
         case 'd': PARSE_STR(domain); break;
@@ -226,7 +231,9 @@ static int config_parse_arguments
 "\t-l, --level=<level>              logging level 0-7\n"
 "\t-c, --colorful-output            enable nice colors for logs\n"
 "\t-i, --listen-port=<port>         port on which program will listen\n"
+"\t-a, --timed-listen-port=<port>   port on which program will listen\n"
 "\t-I, --listen-ssl-port=<port>     ssl port on which program will listen\n"
+"\t-A, --timed-listen-ssl-port=<port>  ssl port on which program will listen\n"
 "\t-k, --key-file=<path>            path to ssl key file\n"
 "\t-C, --cert-file=<path>           path to ssl cert file\n"
 "\t-f, --pem-pass-file=<path>       path where password for key is stored\n",
@@ -236,13 +243,13 @@ argv[0]);
 "\t-D, --daemonize                  run as daemon\n"
 "\t-m, --max-connections=<number>   max number of concurrent connections\n"
 "\t-t, --max-timeout=<seconds>      time before client is presumed dead\n"
+"\t-M, --timed-max-timeout=<seconds>  inactivity time before accepting data\n"
 "\t-T, --list-type=<type>           type of the list_file (black or white)\n"
 "\t-L, --list_file=<path>           path with ip list for black/white list\n"
 "\t-b, --bind-ip=<ip-list>          comma separated list of ips to bind to\n");
             printf(
 "\t-d, --domain=<domain>            domain on which server works\n"
 "\t-u, --user=<user>                user that should run daemon\n"
-"\t-U, --timed-upload               treat timeout as if upload was completed\n"
 "\t-g, --group=<group>              group that should run daemon\n");
             printf(
 "\t-q, --query-log=<path>           where to store query logs\n"
@@ -331,11 +338,14 @@ int config_init
     g_config.list_type = 0;
     g_config.colorful_output = 0;
     g_config.listen_port = 1337;
+    g_config.timed_listen_port = 1338;
     g_config.ssl_listen_port = 0;
+    g_config.timed_ssl_listen_port = 0;
     g_config.max_size = 1024 * 1024; /* 1MiB */
     g_config.daemonize = 0;
     g_config.max_connections = 10;
     g_config.max_timeout = 60;
+    g_config.timed_max_timeout = 3;
     g_config.pem_pass_file[0] = '\0';
     strcpy(g_config.domain, "localhost");
     strcpy(g_config.bind_ip, "0.0.0.0");
@@ -378,14 +388,16 @@ void config_print(void)
     CONFIG_PRINT(log_level, "%d");
     CONFIG_PRINT(colorful_output, "%ld");
     CONFIG_PRINT(listen_port, "%ld");
+    CONFIG_PRINT(timed_listen_port, "%ld");
     CONFIG_PRINT(ssl_listen_port, "%ld");
+    CONFIG_PRINT(timed_ssl_listen_port, "%ld");
     CONFIG_PRINT(max_size, "%ld");
     CONFIG_PRINT(domain, "%s");
     CONFIG_PRINT(daemonize, "%ld");
     CONFIG_PRINT(max_connections, "%ld");
     CONFIG_PRINT(max_timeout, "%ld");
+    CONFIG_PRINT(timed_max_timeout, "%ld");
     CONFIG_PRINT(user, "%s");
-    CONFIG_PRINT(timed_upload, "%d");
     CONFIG_PRINT(group, "%s");
     CONFIG_PRINT(query_log, "%s");
     CONFIG_PRINT(program_log, "%s");

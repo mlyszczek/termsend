@@ -19,9 +19,12 @@ tools
 This server has one job - receive files and return link to uploaded content.
 There are no headers, after client connects every received byte is treated as
 part of file content and is stored on the server.
-Of course, there is a need for at least one control frame - it's not enough
+There is a need for at least one control frame - it's not enough
 to just close connection after file has been transfered, because then,
 uploader won't receive link to his uploaded file.
+Client could of course send FIN with shutdown() function at the end of
+transfer but not all clients do that - nc, for example, nc does not issue FIN 
+once stdin ends, but socat does that.
 The only control frame is an ending string -
 .BR kurload\en .
 When this string is received at the end of stream, server returns link to
@@ -36,7 +39,79 @@ Downloading or displaying files are as easy as calling
 on link that server returns.
 Both text an binary files can be uploaded to the server, but because there are
 no control headers, server knows nothing about it and it's up to the user to
-properly download and process received file.
+properly download and process received file. This mode is good for uploading
+outputs that can stall for long time.
+.PP
+To sumarize, upload will succed when:
+.RS
+- "kurload\\n" is seen at the end of transfer
+.br
+- client sends FIN, which is treated as end of stdin and thus end of upload
+.RE
+.PP
+Upload will fail when:
+.RS
+-
+.B max-timeout
+passes and neither "kurload\\n" nor FIN is seen
+.br
+- client closes connection without waiting for data and FIN from server.
+.RE
+.PP
+.B Timed upload
+.PP
+Normally kurload will wait for "kurload\\n" string and if no data is sent within
+.B MAX_TIMEOUT
+seconds connection will be closed with error and data will not be saved.
+You can however use timed upload to send data without the "kurload\\n" string,
+which will make uploading even easier.
+If you use timed upload, and timeout occurs, server will save uploaded data
+and link will be sent back to the client.
+When "kurload\\n" is seen, link will be transmited back immediately as it is
+done in non-timed upload.
+When client sends FIN, link will also be send immediately, but for clients
+that does nothing when stdin ends (netcat), server will wait timeout seconds
+until link is provided.
+Because of that, it's advisible to set
+.B timed-max-timeout
+to small value like 3 seconds or so.
+So since, timeout upload is more versatile than non-upload one, it is not to
+be used with programs that can output data slowly.
+.PP
+This can be important, for example, when you want to upload output of
+make.
+.PP
+.nf
+    make | nc kl.kurwinet.pl
+.fi
+.PP
+In this situation when make does not output anything, which is not something
+strange when big C++ file with templates is being compiled, server will save
+partial output and close connection.
+On the other hand, if you set timeout to big value, client will hand for that
+time waiting for server to respond.
+.PP
+To sumarize, upload will succed when:
+.RS
+- "kurload\\n" is seen at the end of transfer
+.br
+- client sends FIN, which is treated as end of stdin and thus end of upload
+.br
+-
+.B timed-max-timeout
+passes and no data is seen during that period
+.RE
+.PP
+Upload will fail when:
+.RS
+- client closes connection without waiting for data and FIN from server.
+.RE
+.PP
+If you still don't know which mode to use - if you don't want to support
+uploading from slow programs, use timed upload as it's more versatile.
+Otherwise use non-timed with big timeout. And remember you can always start
+.B kurload
+in both modes working on 2 different ports.
 .SH OPTIONS
 .PP
 .TP
@@ -50,7 +125,7 @@ Prints version number and exits
 Verbosity of logs.
 .I level
 can be on of:
-.EX
+.nf
     0   fatal errors, application cannot continue
     1   major failure, needs immediate attention
     2   critical errors
@@ -59,26 +134,67 @@ can be on of:
     5   normal message, but of high importance
     6   info log, doesn't print that much (default)
     7   debug, not needed in production
-.EE
+.fi
 .TP
 .B -c
 When enabled, ANSI colors will be added to program logs depending on log level.
 Usefull for spotting errors and warnings, but might not work with all terminals
 and tools.
+.PP
+Passing 0 as
+.I port
+number will disable given socket.
 .TP
 .BI "-i, --listen-port=<" port >
 Program will listen on specified
 .I port
 for incoming connections.
-This port will be used for handling unencrypted connections.
+This port will be used for handling unencrypted connections that ends with
+.BR """kurload\en"""
+string.
+When no data in
+.B max-timeout
+is received, connection is closed with error.
 .br
 Default is: 1337
+.TP
+.BI "-a, --timed-listen-port=<" port >
+Program will listen on specified
+.I port
+for incoming connections.
+This port will be used for handling unencrypted connections and data does
+not have to end with 
+.BR """kurload\en"""
+string.
+Transfer ends if either
+.BR """kurload\en"""
+string is seen at the end or, client issues gentle connection close with
+shutdown() function or
+.B timed-max-timeout
+passes.
+.br
+Default is: 1338
 .TP
 .BI "-I, --ssl-listen-port=<" port >
 Program will listen on specified
 .I port
 for incoming connections.
-This port will be used for handling encrypted connections.
+This port will be used for handling encrypted connections that ends with
+.BR """kurload\en"""
+string.
+When no data in
+.B max-timeout
+is received, connection is closed with error.
+For this to work, you will also need to set
+.BR --key-file \ and\  --cert-file .
+.TP
+.BI "-A, --timed-ssl-listen-port=<" port >
+Program will listen on specified
+.I port
+for incoming connections.
+This works in the same way as
+.B timed-listen-port
+but over encrypted socket.
 For this to work, you will also need to set
 .BR --key-file \ and\  --cert-file .
 .TP
@@ -162,28 +278,6 @@ with special phrase
 .BR kurload\en .
 .br
 Default is: 60
-.TP
-.B -U, --timed-upload
-Normally kurload will wait for "kurload\\n" string and if no data is sent within
-.B MAX_TIMEOUT
-seconds connection will be closed with error and data will not be saved.
-If you pass this argument and timeout occurs data will be saved and user will
-receive link to his uploaded data.
-Program will still (and immediately, for what it's worth) react to "kurload\\n"
-string as normal.
-If you set this, don't forget to set
-.B MAX_TIMEOUT
-to some sane value (3 seconds is quite good choice) because user will HAVE TO
-wait this ammount of seconds after transfer is completed to receive link.
-.br
-Setting this option will make upoading easier as there will be no need for
-additional pipes and instruction to append "kurload\\n". But the tradeoff is
-that timeout should be small, so you cannot pipe output from slow programs
-to nc and user will have to wait
-.B MAX_TIMEOUT
-after all data has been sent before link will be sent back.
-Also, when connection breaks or lags out, server will store incomplete file
-on server but noone will ever get link to that file.
 .TP
 .BI "-T, --list-type=<" type >
 When
@@ -281,11 +375,17 @@ These are default file locations.
 They can be changed via
 .IR options .
 .TP
-.B /etc/kurload-iplist
+.B /etc/kurload/iplist
 Separated by new line list of IPs that are filtered (depending on
 .I list_type
 field).
 One IP per line is allowed
+.TP
+.B /etc/kurload/kurload.cert
+SSL certificate to use with encrypted uploads
+.TP
+.B /etc/kurload/kurload.key
+SSL key to use with encrypted uploads
 .TP
 .B /var/run/kurload.pid
 Process id of working daemon.
