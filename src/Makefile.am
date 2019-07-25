@@ -23,7 +23,8 @@ kurload_SOURCES = $(source) \
 	server.h \
 	valid.h \
 	feature.h \
-	getopt.h
+	getopt.h \
+	ssl/ssl.h
 
 kurload_CFLAGS = -I$(top_srcdir) \
 	$(COVERAGE_CFLAGS)
