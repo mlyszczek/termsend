@@ -13,23 +13,6 @@ else
     server="127.0.0.1"
 fi
 
-have_nc=1
-if [ "${os}" = "SunOS" ]
-then
-    nc="nc -F"
-    tailn="tail -n2"
-else
-    nc="nc"
-    tailn="tail -n1"
-fi
-
-have_socat_openssl=0
-if type socat > /dev/null
-then
-    have_socat_openssl=1
-    socat_openssl="socat -t30 - OPENSSL:${server}:61338,verify=0"
-fi
-
 ## ==========================================================================
 #                  _                __           ____
 #    ____   _____ (_)_   __ ____ _ / /_ ___     / __/__  __ ____   _____ _____
@@ -42,24 +25,40 @@ fi
 
 start_kurload()
 {
-    args="${1}" # additional arguments like "-U" for timed uploads
+    common_opts="-D -l7 -c -i61337 -a61338 -s1024 -t3 -m3 -dlocalhost -ukurload \
+        -gkurload -P"${pidfile}" -q./kurload-test/kurload-query.log \
+        -p./kurload-test/kurload.log -L./kurload-test/blacklist -T-1 \
+        -o./kurload-test/out -b${server}"
 
     mkdir -p ./kurload-test/out
     if [ ${ssl_test} = "openssl" ]
     then
-        ../src/kurload -D -l7 -c -i61337 -s1024 -t3 -m3 -dlocalhost -ukurload \
-            -gkurload -P"${pidfile}" -I61338 -k./test-server.key.pem \
-            -C./test-server.cert.pem -f./test-server.key.pass \
-            -q./kurload-test/kurload-query.log -p./kurload-test/kurload.log \
-            -L./kurload-test/blacklist -T-1 -o./kurload-test/out \
-            -b${server} ${args}
+        ../src/kurload ${common_opts} -I61339 -A61340 -k./test-server.key.pem \
+            -C./test-server.cert.pem -f./test-server.key.pass ${args}
     else
-        ../src/kurload -D -l7 -c -i61337 -s1024 -t3 -m3 -dlocalhost -ukurload \
-            -gkurload -P"${pidfile}" \
-            -q./kurload-test/kurload-query.log -p./kurload-test/kurload.log \
-            -L./kurload-test/blacklist -T-1 -o./kurload-test/out \
-            -b${server} ${args}
+        ../src/kurload ${common_opts} ${args}
     fi
+
+    # wait for kurload to start
+
+    tries=0
+    while true
+    do
+        if grep "n/server initialized and started" ./kurload-test/kurload.log \
+            >/dev/null
+        then
+            break
+        fi
+
+        tries=$(( tries + 1 ))
+        if [ ${tries} -eq 50 ]
+        then
+            echo "kurload failed to start" >> /tmp/kurload
+            exit 1
+        fi
+
+        sleep 0.1
+    done
 }
 
 
@@ -69,10 +68,7 @@ start_kurload()
 
 mt_prepare_test()
 {
-    if [ ${prepare_test_on} -eq 1 ]
-    then
-        start_kurload
-    fi
+    start_kurload
 }
 
 
@@ -132,8 +128,9 @@ get_file()
 
 kurload_nc()
 {
-    file="${1}"
-    append_kurload="${2}"
+    port="${1}"
+    file="${2}"
+    append_kurload="${3}"
 
     if [ -z "${append_kurload}" ]
     then
@@ -149,9 +146,9 @@ kurload_nc()
         if [ ${append_kurload} -eq 1 ]
         then
             out="$(cat "${file}" | { cat -; echo 'kurload'; } | \
-                ${nc} -v ${server} 61337 2>"${file}.ncerr")"
+                ${nc} -v ${server} ${port} 2>"${file}.ncerr")"
         else
-            out="$(cat "${file}" | ${nc} -v ${server} 61337 \
+            out="$(cat "${file}" | ${nc} -v ${server} ${port} \
                 2>"${file}.ncerr")"
         fi
 
@@ -184,14 +181,22 @@ kurload_nc()
 }
 
 
-kurload_socat_openssl()
+kurload_socat()
 {
-    file="${1}"
-    append_kurload="${2}"
+    port="${1}"
+    file="${2}"
+    append_kurload="${3}"
 
     if [ -z "${append_kurload}" ]
     then
         append_kurload=1
+    fi
+
+    if [ "${ssl_test}" = "openssl" ]
+    then
+        socat_cmd="socat -t30 - OPENSSL:${server}:${port},verify=0"
+    else
+        socat_cmd="socat -t30 - TCP:${server}:${port}"
     fi
 
     echo "sending file $1 append $2" >> /tmp/kurload
@@ -201,15 +206,15 @@ kurload_socat_openssl()
         if [ ${append_kurload} -eq 1 ]
         then
             out="$(cat "${file}" | { cat -; echo 'kurload'; } | \
-                ${socat_openssl})"
+                ${socat_cmd})"
         else
-            out="$(cat "${file}" | ${socat_openssl})"
+            out="$(cat "${file}" | ${socat_cmd})"
         fi
 
         if [ ${?} -eq 0 ]
         then
             # socat was successfull
-            echo "socat openssl allright" >> /tmp/kurload
+            echo "socat allright" >> /tmp/kurload
             echo $out >> /tmp/kurload
 
             echo "${out}"
@@ -221,13 +226,13 @@ kurload_socat_openssl()
             # 5 seconds passed, server did not start, something
             # is wrong, abort, abort
 
-            echo "socat openssl fucked 5 times" >> /tmp/kurload
+            echo "socat fucked 5 times" >> /tmp/kurload
             return 1
         fi
 
         # socat failed, probably connection refused, let's try again
 
-        echo "socat openssl fucked" >> /tmp/kurload
+        echo "socat fucked" >> /tmp/kurload
         tries=$(( tries + 1 ))
         sleep 1
     done
@@ -238,11 +243,24 @@ kurload()
 {
     case ${prog_test}-${ssl_test} in
     nc-none)
-        kurload_nc ${@}
+        port=61337
+        if [ ${timed_test} -eq 1 ]; then port=61338; fi
+
+        kurload_nc ${port} ${@}
+        ;;
+
+    socat-none)
+        port=61337
+        if [ ${timed_test} -eq 1 ]; then port=61338; fi
+
+        kurload_socat ${port} ${@}
         ;;
 
     socat-openssl)
-        kurload_socat_openssl ${@}
+        port=61339
+        if [ ${timed_test} -eq 1 ]; then port=61340; fi
+
+        kurload_socat ${port} ${@}
         ;;
 
     *)
@@ -424,14 +442,17 @@ test_send_bin_too_big()
 ## ==========================================================================
 
 
-test_send_and_timeout()
+test_send_without_kurload()
 {
     randbin 128 > "${data}"
-    out="$(kurload "${data}" 0 | ${tailn} | tr "\n" ".")"
     if [ "${prog_test}" = "socat" ]
     then
-        mt_fail "[[ \"$out\" == \"FIN received but not ending "kurload\n" string is present - discarding.\"* ]]"
+        # socat nicely closes connection when all data is sent, so error
+        # will not happen here
+        file="$(kurload ${data} | get_file)"
+        mt_fail "diff ${updir}/${file} ${data}"
     else
+        out="$(kurload "${data}" 0 | ${tailn} | tr "\n" ".")"
         mt_fail "[[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string\"* ]]"
     fi
 }
@@ -443,11 +464,6 @@ test_send_and_timeout()
 
 test_timed_upload()
 {
-    ###
-    # start kurload with -U (timed upload) flag set
-    #
-
-    start_kurload "-U"
     randbin 128 > "${data}"
     file="$(kurload "${data}" 0 | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
@@ -460,7 +476,6 @@ test_timed_upload()
 
 test_timed_upload_full()
 {
-    start_kurload "-U"
     randbin 1024 > ${data}
     file="$(kurload "${data}" 0 | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
@@ -473,7 +488,6 @@ test_timed_upload_full()
 
 test_timed_upload_too_big()
 {
-    start_kurload "-U"
     randbin 1337 > ${data}
     out="$(kurload "${data}" 0 | tail -n1)"
     mt_fail "[ \"$out\" == \"file too big, max length is 1024 bytes\" ]"
@@ -486,7 +500,6 @@ test_timed_upload_too_big()
 
 test_timed_upload_with_kurload()
 {
-    start_kurload "-U"
     randbin 128 > "${data}"
     file="$(kurload "${data}" | get_file)"
     mt_fail "diff $updir/$file $data"
@@ -507,18 +520,22 @@ test_totally_random()
 
         if [ $finish -eq 0 ]
         then
+            # send data but don't send ending kurload\n
             if [ $numbytes -gt 1024 ]
             then
                 numbytes=512
             fi
 
             randbin $numbytes > $data
-            out="$(kurload ${data} 0 | ${tailn} | tr "\n" ".")"
 
             if [ "${prog_test}" = "socat" ]
             then
-                mt_fail "[[ \"$out\" == \"FIN received but not ending "kurload\n" string is present - discarding.\"* ]]"
+                # socat nicely closes connection when all data is sent, so error
+                # will not happen here
+                file="$(kurload ${data} | get_file)"
+                mt_fail "diff ${updir}/${file} ${data}"
             else
+                out="$(kurload ${data} 0 | ${tailn} | tr "\n" ".")"
                 mt_fail "[[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string\"* ]]"
             fi
 
@@ -557,6 +574,38 @@ check_sanitizer_logs()
 
 
 ## ==========================================================================
+#           _         ____                        __   __               
+#          (_)____   / __/____     ____ _ ____ _ / /_ / /_   ___   _____
+#         / // __ \ / /_ / __ \   / __ `// __ `// __// __ \ / _ \ / ___/
+#        / // / / // __// /_/ /  / /_/ // /_/ // /_ / / / //  __// /    
+#       /_//_/ /_//_/   \____/   \__, / \__,_/ \__//_/ /_/ \___//_/     
+#                               /____/                                  
+## ==========================================================================
+
+
+have_nc=1
+if [ "${os}" = "SunOS" ]
+then
+    nc="nc -F"
+    tailn="tail -n2"
+else
+    nc="nc"
+    tailn="tail -n1"
+fi
+
+have_socat=0
+if type socat > /dev/null
+then
+    have_socat=1
+fi
+
+have_ssl=0
+if ../src/kurload -h | grep listen-ssl-port > /dev/null
+then
+    have_ssl=1
+fi
+
+## ==========================================================================
 #   __               __                                    __   _
 #  / /_ ___   _____ / /_   ___   _  __ ___   _____ __  __ / /_ (_)____   ____
 # / __// _ \ / ___// __/  / _ \ | |/_// _ \ / ___// / / // __// // __ \ / __ \
@@ -568,7 +617,7 @@ check_sanitizer_logs()
 
 run_tests()
 {
-    prepare_test_on=1
+    timed_test=0
 
     mt_run_named test_is_running "test_is_running-${prog_test}-${ssl_test}"
     mt_run_named test_send_string "test_send_string-${prog_test}-${ssl_test}"
@@ -577,16 +626,11 @@ run_tests()
     mt_run_named test_send_bin "test_send_bin-${prog_test}-${ssl_test}"
     mt_run_named test_send_bin_full "test_send_bin_full-${prog_test}-${ssl_test}"
     mt_run_named test_send_bin_too_big "test_send_bin_too_big-${prog_test}-${ssl_test}"
-    mt_run_named test_send_and_timeout "test_send_and_timeout-${prog_test}-${ssl_test}"
+    mt_run_named test_send_without_kurload "test_send_without_kurload-${prog_test}-${ssl_test}"
     mt_run_named test_threaded "test_threaded-${prog_test}-${ssl_test}"
     mt_run_named test_totally_random "test_totally_random-${prog_test}-${ssl_test}"
 
-    # these tests have custom preparation code so remove default preparation
-    # function and define an empty one
-
-    prepare_test_on=0
-
-    # now run tests without preparation function called
+    timed_test=1
 
     mt_run_named test_timed_upload "test_timed_upload-${prog_test}-${ssl_test}"
     mt_run_named test_timed_upload_full "test_timed_upload_full-${prog_test}-${ssl_test}"
@@ -600,10 +644,14 @@ ssl_test=none
 prog_test=nc
 run_tests
 
-../src/kurload -h | grep listen-ssl-port > /dev/null
-have_ssl=${?}
+if [ ${have_socat} -eq 1 ]
+then
+    ssl_test=none
+    prog_test=socat
+    run_tests
+fi
 
-if [ ${have_socat_openssl} -eq 1 ] && [ ${have_ssl} -eq 0 ]
+if [ ${have_socat} -eq 1 ] && [ ${have_ssl} -eq 1 ]
 then
     ssl_test=openssl
     prog_test=socat
@@ -616,6 +664,8 @@ fi
 # rather exploitable security issues. So we grep log file for
 # sanitizer errors and test fail when there was any error.
 
+unset mt_prepare_test
+unset mt_cleanup_test
 mt_run check_sanitizer_logs
 
 mt_return

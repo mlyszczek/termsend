@@ -14,6 +14,10 @@
    ========================================================================== */
 
 
+#ifdef HAVE_CONFIG_H
+#   include "kurload.h"
+#endif
+
 #include "config.h"
 #include "globals.h"
 #include "mtest.h"
@@ -61,11 +65,14 @@ static void test_prepare(void)
     config.list_type = 0;
     config.colorful_output = 0;
     config.listen_port = 1337;
+    config.timed_listen_port = 1338;
     config.ssl_listen_port = 0;
+    config.timed_ssl_listen_port = 0;
     config.max_size = 1024 * 1024; /* 1MiB */
     config.daemonize = 0;
     config.max_connections = 10;
     config.max_timeout = 60;
+    config.timed_max_timeout = 3;
     config.pem_pass_file[0] = '\0';
     strcpy(config.domain, "localhost");
     strcpy(config.bind_ip, "0.0.0.0");
@@ -75,7 +82,7 @@ static void test_prepare(void)
     strcpy(config.program_log, "/var/log/kurload.log");
     strcpy(config.pid_file, "/var/run/kurload.pid");
     strcpy(config.output_dir, "/var/lib/kurload");
-    strcpy(config.list_file, "/etc/kurload-iplist");
+    strcpy(config.list_file, "/etc/kurload/iplist");
     strcpy(config.key_file, "/etc/kurload/kurload.key");
     strcpy(config.cert_file, "/etc/kurload/kurload.cert");
 }
@@ -115,10 +122,12 @@ static void config_short_opts(void)
         "-l4",
         "-c",
         "-i100",
+        "-a102",
         "-s512",
         "-D",
         "-m", "3",
         "-t20",
+        "-M7",
         "-T", "-1",
         "-dhttp://kurload.kurwinet.pl",
         "-ukur",
@@ -128,12 +137,14 @@ static void config_short_opts(void)
         "-P/pid",
         "-o", "/output",
         "-b0.0.0.0,1.3.3.7",
-        "-L/iplist",
-        "-U",
+#if HAVE_SSL
+        "-A103",
         "-I101",
         "-k/etc/kurload.key",
         "-C/etc/kurload.cert",
-        "-f/etc/kurload.key.pass"
+        "-f/etc/kurload.key.pass",
+#endif
+        "-L/iplist"
     };
     int argc = sizeof(argv) / sizeof(const char *);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -141,15 +152,15 @@ static void config_short_opts(void)
     config_init(argc, argv);
 
     config.log_level = 4;
-    config.timed_upload = 1;
     config.list_type = -1;
     config.colorful_output = 1;
     config.daemonize = 1;
     config.listen_port = 100;
-    config.ssl_listen_port = 101;
+    config.timed_listen_port = 102;
     config.max_size = 512;
     config.max_connections = 3;
     config.max_timeout = 20;
+    config.timed_max_timeout = 7;
     strcpy(config.domain, "http://kurload.kurwinet.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");
@@ -159,9 +170,14 @@ static void config_short_opts(void)
     strcpy(config.pid_file, "/pid");
     strcpy(config.list_file, "/iplist");
     strcpy(config.output_dir, "/output");
+
+#if HAVE_SSL
+    config.ssl_listen_port = 101;
+    config.timed_ssl_listen_port = 103;
     strcpy(config.key_file, "/etc/kurload.key");
     strcpy(config.cert_file, "/etc/kurload.cert");
     strcpy(config.pem_pass_file, "/etc/kurload.key.pass");
+#endif
 
     mt_fok(memcmp(&config, &g_config, sizeof(config)));
 }
@@ -179,10 +195,12 @@ static void config_long_opts(void)
         "--level=4",
         "--colorful-output",
         "--listen-port=100",
+        "--timed-listen-port=102",
         "--max-filesize=512",
         "--daemonize",
         "--max-connections=3",
         "--max-timeout=20",
+        "--timed-max-timeout=7",
         "--list-type=-1",
         "--domain=http://kurload.kurwinet.pl",
         "--user=kur",
@@ -191,12 +209,14 @@ static void config_long_opts(void)
         "--program-log=/program",
         "--pid-file=/pid",
         "--output-dir=/output",
-        "--bind-ip=0.0.0.0,1.3.3.7",
-        "--timed-upload",
+#if HAVE_SSL
+        "--timed-ssl-listen-port=103",
         "--ssl-listen-port=101",
         "--key-file=/etc/kurload.key",
         "--cert-file=/etc/kurload.cert",
-        "--pem-pass-file=/etc/kurload.key.pass"
+        "--pem-pass-file=/etc/kurload.key.pass",
+#endif
+        "--bind-ip=0.0.0.0,1.3.3.7"
     };
     int argc = sizeof(argv) / sizeof(const char *);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -204,15 +224,15 @@ static void config_long_opts(void)
     config_init(argc, argv);
 
     config.log_level = 4;
-    config.timed_upload = 1;
     config.list_type = -1;
     config.colorful_output = 1;
     config.daemonize = 1;
     config.listen_port = 100;
-    config.ssl_listen_port = 101;
+    config.timed_listen_port = 102;
     config.max_size = 512;
     config.max_connections = 3;
     config.max_timeout = 20;
+    config.timed_max_timeout = 7;
     strcpy(config.domain, "http://kurload.kurwinet.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");
@@ -221,9 +241,14 @@ static void config_long_opts(void)
     strcpy(config.program_log, "/program");
     strcpy(config.pid_file, "/pid");
     strcpy(config.output_dir, "/output");
+
+#if HAVE_SSL
+    config.ssl_listen_port = 101;
+    config.timed_ssl_listen_port = 103;
     strcpy(config.key_file, "/etc/kurload.key");
     strcpy(config.cert_file, "/etc/kurload.cert");
     strcpy(config.pem_pass_file, "/etc/kurload.key.pass");
+#endif
 
     mt_fok(memcmp(&config, &g_config, sizeof(config)));
 }

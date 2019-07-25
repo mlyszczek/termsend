@@ -12,7 +12,14 @@ test_SOURCES  = main.c \
 	globals.c \
 	getopt.c
 
+if ENABLE_OPENSSL
+test_SOURCES += openssl.c
+else
+test_SOURCES += nonessl.c
+endif
+
 test_CFLAGS = -I$(top_srcdir)/src \
+	-I$(top_srcdir)/src/ssl \
 	-I/usr/local/include \
 	-I/usr/include \
 	$(COVERAGE_CFLAGS) \
