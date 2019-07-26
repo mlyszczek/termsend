@@ -1312,7 +1312,7 @@ void server_destroy(void)
              * cleaning up operations
              */
 
-            return;
+            break;
         }
 
         if (g_stfu)
@@ -1325,7 +1325,7 @@ void server_destroy(void)
             el_print(ELW, "exiting without waiting for connection to finish "
                 "this may lead to invalid files in %s", g_config.output_dir);
 
-            return;
+            break;
         }
 
         nanosleep(&req, NULL);
