@@ -396,7 +396,7 @@ static void *server_handle_upload
     int                 opathlen;    /* length of output directory path */
     char                path[PATH_MAX];  /* full path to the file */
     char                fname[32];   /* random generated file name */
-    char                url[1024];   /* generated link to uploaded data */
+    char                url[8192 + 1];   /* generated link to uploaded data */
     char                ends[8 + 1]; /* buffer for end string detection */
     static int          flen = 5;    /* length of the filename to generate */
     unsigned char       buf[8192];   /* temp buffer we read uploaded data to */
