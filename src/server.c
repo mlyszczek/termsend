@@ -1252,20 +1252,19 @@ void server_loop_forever(void)
 
         for (i = 0; i != nsfds; ++i)
         {
-            if (FD_ISSET(sfds[i].fd, &readfds) == 0)
+            if (FD_ISSET(sfds[i].fd, &readfds))
             {
-                /* nope, that socket has nothing intereseted going
-                 * on inside
+                /* well, this socket has something to say, pass it
+                 * to processing function to determin what to do
+                 * with it
                  */
 
-                continue;
+                server_process_connection(&sfds[i]);
             }
 
-            /* well, this socket has something to say, pass it to
-             * processing function to determin what to do with it
+            /* nope, that socket has nothing intereseted going on
+             * inside
              */
-
-            server_process_connection(&sfds[i]);
         }
     }
 }
