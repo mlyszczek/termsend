@@ -42,14 +42,14 @@ struct config
     char            bind_ip[1024 + 1];
     char            user[255 + 1];
     char            group[255 + 1];
-    char            query_log[PATH_MAX + 1];
-    char            program_log[PATH_MAX + 1];
-    char            pid_file[PATH_MAX + 1];
-    char            output_dir[PATH_MAX + 1];
-    char            list_file[PATH_MAX + 1];
-    char            key_file[PATH_MAX + 1];
-    char            cert_file[PATH_MAX + 1];
-    char            pem_pass_file[PATH_MAX + 1];
+    char            query_log[PATH_MAX];
+    char            program_log[PATH_MAX];
+    char            pid_file[PATH_MAX];
+    char            output_dir[PATH_MAX];
+    char            list_file[PATH_MAX];
+    char            key_file[PATH_MAX];
+    char            cert_file[PATH_MAX];
+    char            pem_pass_file[PATH_MAX];
 };
 
 
