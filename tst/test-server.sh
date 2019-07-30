@@ -27,7 +27,7 @@ start_kurload()
 {
     common_opts="-D -l7 -c -i61337 -a61338 -s1024 -t3 -m3 -dlocalhost -ukurload \
         -gkurload -P"${pidfile}" -q./kurload-test/kurload-query.log \
-        -p./kurload-test/kurload.log -L./kurload-test/blacklist -T-1 \
+        -p./kurload-test/kurload.log -T0 \
         -o./kurload-test/out -b${server}"
 
     mkdir -p ./kurload-test/out

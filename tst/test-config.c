@@ -135,16 +135,16 @@ static void config_short_opts(void)
         "-q/query",
         "-p/program",
         "-P/pid",
-        "-o", "/output",
+        "-o", "/tmp",
         "-b0.0.0.0,1.3.3.7",
 #if HAVE_SSL
         "-A103",
         "-I101",
-        "-k/etc/kurload.key",
-        "-C/etc/kurload.cert",
-        "-f/etc/kurload.key.pass",
+        "-k./test-server.key.pem",
+        "-C./test-server.cert.pem",
+        "-f./test-server.key.pass",
 #endif
-        "-L/iplist"
+        "-L./main.c"
     };
     int argc = sizeof(argv) / sizeof(const char *);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -168,15 +168,15 @@ static void config_short_opts(void)
     strcpy(config.query_log, "/query");
     strcpy(config.program_log, "/program");
     strcpy(config.pid_file, "/pid");
-    strcpy(config.list_file, "/iplist");
-    strcpy(config.output_dir, "/output");
+    strcpy(config.list_file, "./main.c");
+    strcpy(config.output_dir, "/tmp");
 
 #if HAVE_SSL
     config.ssl_listen_port = 101;
     config.timed_ssl_listen_port = 103;
-    strcpy(config.key_file, "/etc/kurload.key");
-    strcpy(config.cert_file, "/etc/kurload.cert");
-    strcpy(config.pem_pass_file, "/etc/kurload.key.pass");
+    strcpy(config.key_file, "./test-server.key.pem");
+    strcpy(config.cert_file, "./test-server.cert.pem");
+    strcpy(config.pem_pass_file, "./test-server.key.pass");
 #endif
 
     mt_fok(memcmp(&config, &g_config, sizeof(config)));
@@ -208,13 +208,14 @@ static void config_long_opts(void)
         "--query-log=/query",
         "--program-log=/program",
         "--pid-file=/pid",
-        "--output-dir=/output",
+        "--output-dir=/tmp",
+        "--list-file=./main.c",
 #if HAVE_SSL
         "--timed-ssl-listen-port=103",
         "--ssl-listen-port=101",
-        "--key-file=/etc/kurload.key",
-        "--cert-file=/etc/kurload.cert",
-        "--pem-pass-file=/etc/kurload.key.pass",
+        "--key-file=./test-server.key.pem",
+        "--cert-file=./test-server.cert.pem",
+        "--pem-pass-file=./test-server.key.pass",
 #endif
         "--bind-ip=0.0.0.0,1.3.3.7"
     };
@@ -240,14 +241,15 @@ static void config_long_opts(void)
     strcpy(config.query_log, "/query");
     strcpy(config.program_log, "/program");
     strcpy(config.pid_file, "/pid");
-    strcpy(config.output_dir, "/output");
+    strcpy(config.output_dir, "/tmp");
+    strcpy(config.list_file, "./main.c");
 
 #if HAVE_SSL
     config.ssl_listen_port = 101;
     config.timed_ssl_listen_port = 103;
-    strcpy(config.key_file, "/etc/kurload.key");
-    strcpy(config.cert_file, "/etc/kurload.cert");
-    strcpy(config.pem_pass_file, "/etc/kurload.key.pass");
+    strcpy(config.key_file, "./test-server.key.pem");
+    strcpy(config.cert_file, "./test-server.cert.pem");
+    strcpy(config.pem_pass_file, "./test-server.key.pass");
 #endif
 
     mt_fok(memcmp(&config, &g_config, sizeof(config)));
@@ -277,8 +279,8 @@ static void config_mixed_opts(void)
         "-q/query",
         "-p", "/program",
         "--pid-file=/pid",
-        "--output-dir=/output",
-        "--list-file=/iplist",
+        "--output-dir=/tmp",
+        "--list-file=./main.c",
         "--bind-ip=0.0.0.0,1.3.3.7"
     };
     int argc = sizeof(argv) / sizeof(const char *);
@@ -301,8 +303,8 @@ static void config_mixed_opts(void)
     strcpy(config.query_log, "/query");
     strcpy(config.program_log, "/program");
     strcpy(config.pid_file, "/pid");
-    strcpy(config.output_dir, "/output");
-    strcpy(config.list_file, "/iplist");
+    strcpy(config.output_dir, "/tmp");
+    strcpy(config.list_file, "./main.c");
 
     mt_fok(memcmp(&config, &g_config, sizeof(config)));
 }

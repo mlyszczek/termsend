@@ -386,7 +386,54 @@ int config_init
      * default ones
      */
 
-    return config_parse_arguments(argc, argv);
+    if (config_parse_arguments(argc, argv) != 0)
+    {
+        return -1;
+    }
+
+    /* check if we will be able to store uploaded files */
+
+    if (access(g_config.output_dir, W_OK | X_OK) != 0)
+    {
+        fprintf(stderr, "output dir (%s) inaccessible\n",
+                g_config.output_dir);
+        return -1;
+    }
+
+    /* if list filtering is used, check if we can read IPs from it */
+
+    if (g_config.list_type != 0)
+    {
+        if (access(g_config.list_file, R_OK) != 0)
+        {
+            fprintf(stderr, "list file (%s) unreadable\n",
+                    g_config.list_file);
+            return -1;
+        }
+    }
+
+    /* if any of the ssl port is used, check if mandatory key and
+     * cert files are accessible
+     */
+
+    if (g_config.ssl_listen_port != 0 || g_config.timed_ssl_listen_port != 0)
+    {
+        if (access(g_config.key_file, R_OK) != 0)
+        {
+            fprintf(stderr, "ssl key file (%s) unreadable\n",
+                    g_config.key_file);
+            return -1;
+        }
+
+        if (access(g_config.cert_file, R_OK) != 0)
+        {
+            fprintf(stderr, "ssl cert file (%s) unreadable\n",
+                    g_config.cert_file);
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 
