@@ -293,7 +293,16 @@ static int config_parse_arguments
         case 'v':
             fprintf(stdout,
                     PACKAGE_STRING"\n"
-                    "by Michał Łyszczek <michal.lyszczek@bofc.pl>\n");
+                    "by Michał Łyszczek <michal.lyszczek@bofc.pl>\n\n");
+
+            fprintf(stdout, "compilation options:\n\t");
+            fprintf(stdout,
+#if HAVE_SSL
+                    "+"
+#else
+                    "-"
+#endif
+                    "ssl\n");
 
             exit(1);
 
