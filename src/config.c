@@ -312,7 +312,7 @@ static int config_parse_arguments
             return -1;
 
         case '?':
-            fprintf(stdout, "unknown option -%c\n", optopt);
+            fprintf(stdout, "unknown option %s\n", argv[optind - 1]);
             return -1;
 
         default:
