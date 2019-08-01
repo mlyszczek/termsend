@@ -37,10 +37,16 @@ unalias start > /dev/null 2>&1
 
 LOG_LEVEL=${LOG_LEVEL:="6"}
 COLORFUL_OUTPUT=${COLORFUL_OUTPUT:="0"}
-TIMED_UPLOAD=${TIMED_UPLOAD:="0"}
 LISTEN_PORT=${LISTEN_PORT:="1337"}
+TIMED_LISTEN_PORT=${TIMED_LISTEN_PORT:="1338"}
+SSL_LISTEN_PORT=${SSL_LISTEN_PORT:="0"}
+TIMED_SSL_LISTEN_PORT=${TIMED_SSL_LISTEN_PORT:="0"}
+CERT_FILE=${CERT_FILE:="/etc/kurload/kurload.cert"}
+KEY_FILE=${KEY_FILE:="/etc/kurload/kurload.key"}
+PEM_PASS_FILE=${PEM_PASS_FILE:=""}
 MAX_SIZE=${MAX_SIZE:="1048576"}
 MAX_TIMEOUT=${MAX_TIMEOUT:="60"}
+TIMED_MAX_TIMEOUT=${TIMED_MAX_TIMEOUT:="3"}
 MAX_CONNECTIONS=${MAX_CONNECTIONS:="10"}
 DOMAIN=${DOMAIN:="http://kurload.kurwinet.pl"}
 USER=${USER:="kurload"}
@@ -55,7 +61,9 @@ BIND_IP=${BIND_IP:="0.0.0.0"}
 
 command=/usr/local/bin/kurload
 colors=
-timed_upload=
+ssl_listen_port=
+timed_ssl_listen_port=
+ssl_opts=
 
 
 ## ==========================================================================
@@ -77,6 +85,26 @@ timed_upload=
 start_pre()
 {
     echo -n "Checking configuration for kurload server... "
+
+    # if any of the ssl ports are enabled, then pass key and cert
+    # file to kurload
+    if [ ${SSL_LISTEN_PORT} -ne 0 ] ; then
+        ssl_listen_port="--ssl-listen-port=${SSL_LISTEN_PORT}"
+        ssl_opts="--key-file=${KEY_FILE} --cert-file=${CERT_FILE}"
+    fi
+
+    if [ ${TIMED_SSL_LISTEN_PORT} -ne 0 ] ; then
+        timed_ssl_listen_port="--timed-ssl-listen-port=${TIMED_SSL_LISTEN_PORT}"
+        ssl_opts="--key-file=${KEY_FILE} --cert-file=${CERT_FILE}"
+    fi
+
+    if [ "x${PEM_PASS_FILE}" != "x" ] ; then
+        ssl_opts+=" --pem-pass-file=${PEM_PASS_FILE}"
+    fi
+
+    if [ "${COLORFUL_OUTPUT}" -eq "1" ] ; then
+        colors="-c"
+    fi
 
     # check if ${USER} and ${GROUP} exist in the system
     if ! /usr/bin/id -u ${USER} > /dev/null 2>&1 ; then
@@ -140,14 +168,12 @@ start() {
         colors="-c"
     fi
 
-    if [ "${TIMED_UPLOAD}" -eq "1" ] ; then
-        timed_upload="-U"
-    fi
-
     ${command} -l${LOG_LEVEL} ${colors} -i${LISTEN_PORT} -s${MAX_SIZE} \
         -t${MAX_TIMEOUT} -m${MAX_CONNECTIONS} -d"${DOMAIN}" -q"${QUERY_LOG}" \
         -p"${PROGRAM_LOG}" -o"${OUTPUT_DIR}" -T"${LIST_TYPE}" -L"${LIST_FILE}" \
-        -b${BIND_IP} -D -P"${PID_FILE}" -u${USER} -g${GROUP} ${timed_upload}
+        -b${BIND_IP} -D -P"${PID_FILE}" -u${USER} -g${GROUP} \
+        -M${TIMED_MAX_TIMEOUT} \
+        ${ssl_listen_port} ${timed_ssl_listen_port} ${ssl_opts}
 
     if [ "$?" -ne "0" ] ; then
         echo "error"
