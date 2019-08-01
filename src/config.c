@@ -245,8 +245,8 @@ static int config_parse_arguments
 "\t-i, --listen-port=<port>         port on which program will listen\n"
 "\t-a, --timed-listen-port=<port>   port on which program will listen\n"
 #if HAVE_SSL
-"\t-I, --listen-ssl-port=<port>     ssl port on which program will listen\n"
-"\t-A, --timed-listen-ssl-port=<port>  ssl port on which program will listen\n"
+"\t-I, --ssl-listen-port=<port>     ssl port on which program will listen\n"
+"\t-A, --timed-ssl-listen-port=<port>  ssl port on which program will listen\n"
 "\t-k, --key-file=<path>            path to ssl key file\n"
 "\t-C, --cert-file=<path>           path to ssl cert file\n"
 "\t-f, --pem-pass-file=<path>       path where password for key is stored\n"
