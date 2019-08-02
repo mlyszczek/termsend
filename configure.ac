@@ -52,7 +52,7 @@ AM_CONDITIONAL([ENABLE_OPENSSL], [test "x$enable_openssl" = "xyes"])
 AS_IF([test "x$enable_openssl" = "xyes"],
 [
     AC_DEFINE([HAVE_SSL], [1], [Define to 1 if any of the ssl backend is enabled])
-    AC_SEARCH_LIBS([SSL_CTX_new], [ssl])
+    AC_SEARCH_LIBS([SSL_CTX_new], [ssl], [], [], [-lcrypto])
     AC_SEARCH_LIBS([EVP_cleanup], [crypto])
 ])
 
