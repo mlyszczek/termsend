@@ -242,7 +242,12 @@ int ssl_init
         g_ssl[i] = NULL;
     }
 
-    /* initialize openssl library */
+    /* initialize openssl library, initialization is only needed in
+     * version <1.1.0, in 1.1.0 this is done automatically in various
+     * functions. Explicit initialization should be done only, when
+     * we would want to initialize library in non default way - which
+     * we do not need.
+     */
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_load_error_strings();
