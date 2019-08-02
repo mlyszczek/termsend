@@ -9,6 +9,9 @@ AC_PROG_SED
 AC_CANONICAL_HOST
 AC_CONFIG_FILES([Makefile src/Makefile tst/Makefile www/Makefile])
 AC_CONFIG_LINKS([tst/test-server.sh:tst/test-server.sh])
+AC_CONFIG_LINKS([tst/test-server.cert.pem:tst/test-server.cert.pem])
+AC_CONFIG_LINKS([tst/test-server.key.pass:tst/test-server.key.pass])
+AC_CONFIG_LINKS([tst/test-server.key.pem:tst/test-server.key.pem])
 AC_CONFIG_LINKS([tst/mtest.sh:tst/mtest.sh])
 AC_CHECK_HEADERS([linux/limits.h sys/select.h])
 
