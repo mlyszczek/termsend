@@ -52,8 +52,8 @@ AM_CONDITIONAL([ENABLE_OPENSSL], [test "x$enable_openssl" = "xyes"])
 AS_IF([test "x$enable_openssl" = "xyes"],
 [
     AC_DEFINE([HAVE_SSL], [1], [Define to 1 if any of the ssl backend is enabled])
-    AC_CHECK_LIB([ssl], [SSL_library_init])
-    AC_CHECK_LIB([crypto], [EVP_cleanup])
+    AC_SEARCH_LIBS([SSL_CTX_new], [ssl])
+    AC_SEARCH_LIBS([EVP_cleanup], [crypto])
 ])
 
 ###
@@ -69,9 +69,6 @@ AM_CONDITIONAL([ENABLE_ANALYZER], [test "x$enable_analyzer" = "xyes"])
 AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([gethostent], [nsl])
 AC_SEARCH_LIBS([el_init], [embedlog])
-
-AC_SEARCH_LIBS([SSL_library_init], [ssl])
-AC_SEARCH_LIBS([EVP_cleanup], [crypto])
 
 AX_PTHREAD
 LIBS="$PTHREAD_LIBS $LIBS"

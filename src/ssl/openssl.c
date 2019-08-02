@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+#include <openssl/opensslv.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -243,8 +244,10 @@ int ssl_init
 
     /* initialize openssl library */
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_load_error_strings();
     SSL_library_init();
+#endif
 
     /* create context that will live for the entire life of program.
      * SSLv23_server_method() is a ssl method that will negotiate
@@ -315,7 +318,9 @@ int ssl_cleanup
 )
 {
     SSL_CTX_free(g_ctx);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     EVP_cleanup();
+#endif
     free(g_ssl);
     return 0;
 }
