@@ -152,7 +152,7 @@ kurload_nc()
                 2>"${file}.ncerr")"
         fi
 
-        if grep -i "open" "${file}.ncerr" || grep -i "succe" "${file}.ncerr"
+        if grep -i "open\|succe\|received" "${file}.ncerr"
         then
             # nc was successfull
             echo "nc allright" >> /tmp/kurload
@@ -445,10 +445,11 @@ test_send_bin_too_big()
 test_send_without_kurload()
 {
     randbin 128 > "${data}"
-    if [ "${prog_test}" = "socat" ]
+    if [ "${prog_test}" = "socat" ] || \
+        [ "${prog_test}" = "nc" -a "${nctype}" = "nmap" ]
     then
-        # socat nicely closes connection when all data is sent, so error
-        # will not happen here
+        # socat and nmap version of nc nicely close connection when
+        # all data is sent, so error will not happen here
         file="$(kurload ${data} | get_file)"
         mt_fail "diff ${updir}/${file} ${data}"
     else
@@ -528,10 +529,11 @@ test_totally_random()
 
             randbin $numbytes > $data
 
-            if [ "${prog_test}" = "socat" ]
+            if [ "${prog_test}" = "socat" ] || \
+                [ "${prog_test}" = "nc" -a "${nctype}" = "nmap" ]
             then
-                # socat nicely closes connection when all data is sent, so error
-                # will not happen here
+                # socat and nmap version of nc nicely close connection when
+                # all data is sent, so error will not happen here
                 file="$(kurload ${data} | get_file)"
                 mt_fail "diff ${updir}/${file} ${data}"
             else
@@ -591,6 +593,13 @@ then
 else
     nc="nc"
     tailn="tail -n1"
+fi
+
+if nc -v 2>&1 | grep "nmap.org" > /dev/null
+then
+    nctype=nmap
+else
+    nctype=hobbit
 fi
 
 have_socat=0
