@@ -51,7 +51,7 @@ start_kurload()
         fi
 
         tries=$(( tries + 1 ))
-        if [ ${tries} -eq 50 ]
+        if [ ${tries} -eq 600 ]
         then
             echo "kurload failed to start" >> /tmp/kurload
             exit 1
