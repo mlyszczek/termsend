@@ -830,31 +830,6 @@ static void server_process_connection
         el_print(ELI, "incoming %sssl connection from %s socket id %d",
             sfd->ssl ? "" : "non-", inet_ntoa(client.sin_addr), cfd->fd);
 
-        /* copy ssl-type and timed info to client */
-
-        cfd->ssl = sfd->ssl;
-        cfd->timed = sfd->timed;
-
-        /* perform ssl handshake */
-
-        if (cfd->ssl)
-        {
-            cfd->ssl_fd = ssl_accept(cfd->fd);
-            if (cfd->ssl_fd == -1)
-            {
-                el_oprint(OELI, "[%s] rejected: ssl_accept() error",
-                        inet_ntoa(client.sin_addr));
-
-                /* ssl negotation failed, reply in clear text */
-
-                cfd->ssl = 0;
-                server_reply(cfd, "ssl negotation failed\n");
-                close(cfd->fd);
-                free(cfd);
-                continue;
-            }
-        }
-
         /* after accepting connection, we have client's ip, now we
          * check if this ip can upload (it can be banned, or not
          * listen in the whitelist, depending on server
@@ -921,6 +896,34 @@ static void server_process_connection
             close(cfd->fd);
             free(cfd);
             continue;
+        }
+
+        /* copy ssl-type and timed info to client */
+
+        cfd->ssl = sfd->ssl;
+        cfd->timed = sfd->timed;
+
+        /* perform ssl handshake, this should be done after fcntl()
+         * calls, to make sure cfd->fd is in blocking mode on BSDs,
+         * check comment above before fcntl() to know more
+         */
+
+        if (cfd->ssl)
+        {
+            cfd->ssl_fd = ssl_accept(cfd->fd);
+            if (cfd->ssl_fd == -1)
+            {
+                el_oprint(OELI, "[%s] rejected: ssl_accept() error",
+                        inet_ntoa(client.sin_addr));
+
+                /* ssl negotation failed, reply in clear text */
+
+                cfd->ssl = 0;
+                server_reply(cfd, "ssl negotation failed\n");
+                close(cfd->fd);
+                free(cfd);
+                continue;
+            }
         }
 
         /* client is connected, allowed and connection limit has
