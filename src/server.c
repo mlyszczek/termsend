@@ -830,6 +830,14 @@ static void server_process_connection
         el_print(ELI, "incoming %sssl connection from %s socket id %d",
             sfd->ssl ? "" : "non-", inet_ntoa(client.sin_addr), cfd->fd);
 
+        /* at this point, we still have normal unencrypted
+         * connection, so set ssl to 0, so that server_reply()
+         * sends possible error data (without any sensitive
+         * informations) over non-ssl socket.
+         */
+
+        cfd->ssl = 0;
+
         /* after accepting connection, we have client's ip, now we
          * check if this ip can upload (it can be banned, or not
          * listen in the whitelist, depending on server
@@ -898,17 +906,12 @@ static void server_process_connection
             continue;
         }
 
-        /* copy ssl-type and timed info to client */
-
-        cfd->ssl = sfd->ssl;
-        cfd->timed = sfd->timed;
-
         /* perform ssl handshake, this should be done after fcntl()
          * calls, to make sure cfd->fd is in blocking mode on BSDs,
          * check comment above before fcntl() to know more
          */
 
-        if (cfd->ssl)
+        if (sfd->ssl)
         {
             cfd->ssl_fd = ssl_accept(cfd->fd);
             if (cfd->ssl_fd == -1)
@@ -918,13 +921,24 @@ static void server_process_connection
 
                 /* ssl negotation failed, reply in clear text */
 
-                cfd->ssl = 0;
-                server_reply(cfd, "ssl negotation failed\n");
+                server_reply(cfd, "kurload: ssl negotation failed\n");
                 close(cfd->fd);
                 free(cfd);
                 continue;
             }
+
+            /* now connection is encrypted, note that in clients
+             * socket info
+             */
+
+            cfd->ssl = 1;
         }
+
+        /* copy information if client should perform timed uploads
+         * or not
+         */
+
+        cfd->timed = sfd->timed;
 
         /* client is connected, allowed and connection limit has
          * not been reached, we start thread that will take actions
