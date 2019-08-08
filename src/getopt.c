@@ -31,6 +31,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <stdio.h>
+
 char* optarg;
 int optopt;
 /* The variable optind [...] shall be initialized to 1 by the system. */
@@ -168,8 +170,23 @@ int getopt_long(int argc, char* const argv[], const char* optstring,
   if (optind >= argc)
     return -1;
 
-  if (strlen(argv[optind]) < 3 || strncmp(argv[optind], "--", 2) != 0)
-    return getopt(argc, argv, optstring);
+  if (strlen(argv[optind]) < 3 || strncmp(argv[optind], "--", 2) != 0) {
+    const struct option *oo = longopts;
+    int shortopt = argv[optind][1];
+
+    retval = getopt(argc, argv, optstring);
+    if (longindex == NULL)
+      return retval;
+
+    if (shortopt == '\0')
+      return retval;
+
+    for (*longindex = 0; oo->name; ++oo, ++*longindex)
+      if (oo->val == shortopt)
+        return retval;
+
+    return retval;
+  }
 
   /* It's an option; starts with -- and is longer than two chars. */
   current_argument = argv[optind] + 2;
