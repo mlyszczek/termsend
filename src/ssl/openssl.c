@@ -59,26 +59,36 @@ static SSL     **g_ssl;
 
 
 /* ==========================================================================
-    Prints earliest openssl error
+    Prints earliest openssl error. If ssl_fd is -1, ssl_ret is ignored and
+    error for ssl_err will not be printed.
    ========================================================================== */
 
 
 void print_openssl_error
 (
-    void
+    int ssl_fd,               /* current ssl socket in use */
+    int ssl_ret               /* return value from ssl function */
 )
 {
     char           msg[128];  /* human readable error message */
     unsigned long  err;       /* openssl error */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    if (ssl_fd != -1)
+    {
+        /* get ssl error (from accept() write() etc */
+
+        err = SSL_get_error(g_ssl[ssl_fd], ssl_ret);
+        ERR_error_string(err, msg);
+        el_print(ELE, "openssl ssl_get_error: %s", msg);
+    }
 
     /* print every error in openssl's error queue */
 
     while ((err = ERR_get_error()) != 0)
     {
         ERR_error_string(err, msg);
-        el_print(ELE, "openssl: %s", msg);
+        el_print(ELE, "openssl err_get_error: %s", msg);
     }
 }
 
@@ -262,14 +272,14 @@ int ssl_init
     g_ctx = SSL_CTX_new(SSLv23_server_method());
     if (g_ctx == NULL)
     {
-        print_openssl_error();
+        print_openssl_error(-1, 0);
         free(g_ssl);
         return -1;
     }
 
     if (SSL_CTX_set_ecdh_auto(g_ctx, 1) != 1)
     {
-        print_openssl_error();
+        print_openssl_error(-1, 0);
         free(g_ssl);
         SSL_CTX_free(g_ctx);
         return -1;
@@ -290,7 +300,7 @@ int ssl_init
             SSL_FILETYPE_PEM);
     if (ret <= 0)
     {
-        print_openssl_error();
+        print_openssl_error(-1, 0);
         free(g_ssl);
         SSL_CTX_free(g_ctx);
         return -1;
@@ -300,7 +310,7 @@ int ssl_init
             SSL_FILETYPE_PEM);
     if (ret <= 0)
     {
-        print_openssl_error();
+        print_openssl_error(-1, 0);
         free(g_ssl);
         SSL_CTX_free(g_ctx);
         return -1;
@@ -350,6 +360,7 @@ int ssl_accept
 )
 {
     int  slot;  /* free ssl slot */
+    int  ret;   /* return from ssl_accept() */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -367,7 +378,7 @@ int ssl_accept
     g_ssl[slot] = SSL_new(g_ctx);
     if (g_ssl[slot] == NULL)
     {
-        print_openssl_error();
+        print_openssl_error(-1, 0);
         return -1;
     }
 
@@ -377,9 +388,10 @@ int ssl_accept
 
     /* wait for ssl handshake from client */
 
-    if (SSL_accept(g_ssl[slot]) <= 0)
+    ret = SSL_accept(g_ssl[slot]);
+    if (ret <= 0)
     {
-        print_openssl_error();
+        print_openssl_error(slot, ret);
         SSL_free(g_ssl[slot]);
         g_ssl[slot] = NULL;
         return -1;
@@ -430,7 +442,7 @@ ssize_t ssl_write
     ret = SSL_write(g_ssl[ssl_fd], buf, count);
     if (ret < 0)
     {
-        print_openssl_error();
+        print_openssl_error(ssl_fd, ret);
         return -1;
     }
 
@@ -457,7 +469,7 @@ ssize_t ssl_read
     ret = SSL_read(g_ssl[ssl_fd], buf, count);
     if (ret < 0)
     {
-        print_openssl_error();
+        print_openssl_error(ssl_fd, ret);
         return -1;
     }
 
