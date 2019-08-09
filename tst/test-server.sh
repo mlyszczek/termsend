@@ -152,7 +152,7 @@ kurload_nc()
                 2>"${file}.ncerr")"
         fi
 
-        if grep -i "open\|succe\|received" "${file}.ncerr"
+        if egrep -i "open|succe|received" "${file}.ncerr"
         then
             # nc was successfull
             echo "nc allright" >> /tmp/kurload
