@@ -311,20 +311,24 @@ multi_thread_check()
 
     if [ "${out}" = "all upload slots are taken, try again later" ]
     then
+        touch "${1}.test_check"
         return 0
     elif [[ "${out}" = "upload complete, link to file localhost/"* ]]
     then
         file="$(echo "${out}" | rev | cut -d/ -f-1 | rev)"
         mt_fail "diff ${updir}/${file} ${data}.${fname}"
+        touch "${1}.test_check"
         return $?
     else
         if [ -z "${out}" ]
         then
+            touch "${1}.test_check"
             return
         fi
 
         echo "something weird received: '${out}'"
         mt_fail false
+        touch "${1}.test_check"
         return 0
     fi
 }
@@ -371,11 +375,37 @@ test_send_string()
 
 test_threaded()
 {
+    max_wait=60
+
     for i in $(seq 1 1 16)
     do
-        multi_thread_check &
+        multi_thread_check ${i} &
     done
-    sleep 10
+
+    # we expect 16 files to be created, finish test once all 16 files
+    # are present
+
+    i=0
+    while true
+    do
+        num_files="$(ls -1 *.test_check | wc -l)"
+        if [ ${num_files} -eq 16 ]
+        then
+            # all files generated, we're good
+            break
+        fi
+
+        if [ ${i} -gt ${max_wait} ]
+        then
+            mt_fail "[ \"threaded test timedout\" = \"error force\" ]"
+            break
+        fi
+
+        i=$(( i + 1 ))
+        sleep 1
+    done
+
+    rm *.test_check
 }
 
 ## ==========================================================================
