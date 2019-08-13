@@ -257,9 +257,12 @@ int ssl_init
      * functions. Explicit initialization should be done only, when
      * we would want to initialize library in non default way - which
      * we do not need.
+     *
+     * if LIBRESSL_VERSION_NUMBER is defined, we are dealing with
+     * libressl, in that case we have to initialize manually libssl
      */
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
     SSL_load_error_strings();
     SSL_library_init();
 #endif
@@ -333,7 +336,7 @@ int ssl_cleanup
 )
 {
     SSL_CTX_free(g_ctx);
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
     EVP_cleanup();
 #endif
     free(g_ssl);
