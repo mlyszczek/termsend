@@ -93,11 +93,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (g_config.daemonize)
-    {
-        daemonize(g_config.pid_file, g_config.user, g_config.group);
-    }
-
     /* configure logger for diagnostic logs */
 
     el_init();
@@ -165,6 +160,11 @@ int main(int argc, char *argv[])
         rv = 1;
         el_print(ELE, "couldn't start server, aborting");
         goto server_error;
+    }
+
+    if (g_config.daemonize)
+    {
+        daemonize(g_config.pid_file, g_config.user, g_config.group);
     }
 
     server_loop_forever();
