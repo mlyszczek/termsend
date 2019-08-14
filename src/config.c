@@ -391,11 +391,23 @@ int config_init
         return -1;
     }
 
+    return 0;
+}
+
+
+/* ==========================================================================
+    Performs some config validation. Should be called once embedlog is
+    initialized.
+   ========================================================================== */
+
+
+int config_validate(void)
+{
     /* check if we will be able to store uploaded files */
 
     if (access(g_config.output_dir, W_OK | X_OK) != 0)
     {
-        fprintf(stderr, "output dir (%s) inaccessible\n",
+        el_print(ELF, "output dir (%s) inaccessible\n",
                 g_config.output_dir);
         return -1;
     }
@@ -406,7 +418,7 @@ int config_init
     {
         if (access(g_config.list_file, R_OK) != 0)
         {
-            fprintf(stderr, "list file (%s) unreadable\n",
+            el_print(ELF, "list file (%s) unreadable\n",
                     g_config.list_file);
             return -1;
         }
@@ -420,14 +432,14 @@ int config_init
     {
         if (access(g_config.key_file, R_OK) != 0)
         {
-            fprintf(stderr, "ssl key file (%s) unreadable\n",
+            el_print(ELF, "ssl key file (%s) unreadable\n",
                     g_config.key_file);
             return -1;
         }
 
         if (access(g_config.cert_file, R_OK) != 0)
         {
-            fprintf(stderr, "ssl cert file (%s) unreadable\n",
+            el_print(ELF, "ssl cert file (%s) unreadable\n",
                     g_config.cert_file);
             return -1;
         }

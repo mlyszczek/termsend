@@ -147,6 +147,12 @@ int main(int argc, char *argv[])
 
     config_print();
 
+    if (config_validate() != 0)
+    {
+        rv = 1;
+        goto config_validate_error;
+    }
+
     if (bnw_init(g_config.list_file, g_config.list_type) != 0)
     {
         rv = 1;
@@ -180,5 +186,6 @@ bnw_error:
         daemonize_cleanup(g_config.pid_file);
     }
 
+config_validate_error:
     return rv;
 }

@@ -56,6 +56,6 @@ struct config
 int config_init(int argc, char *argv[]);
 void config_destroy(void);
 void config_print(void);
-
+int config_validate(void);
 
 #endif
