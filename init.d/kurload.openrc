@@ -42,7 +42,7 @@ start_pre()
     # file to kurload
     if [ ${SSL_LISTEN_PORT} -ne 0 ] ; then
         ssl_listen_port="--ssl-listen-port=${SSL_LISTEN_PORT}"
-        sl_opts="--key-file=${KEY_FILE} --cert-file=${CERT_FILE}"
+        ssl_opts="--key-file=${KEY_FILE} --cert-file=${CERT_FILE}"
     fi
 
     if [ ${TIMED_SSL_LISTEN_PORT} -ne 0 ] ; then
