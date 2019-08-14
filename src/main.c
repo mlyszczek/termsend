@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
     if (bnw_init(g_config.list_file, g_config.list_type) != 0)
     {
         rv = 1;
-        el_print(ELE, "couldn't initialize list from file %s",
+        el_print(ELF, "couldn't initialize list from file %s",
             g_config.list_file);
         goto bnw_error;
     }
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
     if (server_init() != 0)
     {
         rv = 1;
-        el_print(ELE, "couldn't start server, aborting");
+        el_print(ELF, "couldn't start server, aborting");
         goto server_error;
     }
 
