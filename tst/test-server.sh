@@ -472,6 +472,38 @@ test_send_bin_too_big()
 ## ==========================================================================
 
 
+test_send_empty_with_kurload()
+{
+    truncate -s0 "${data}"
+    out="$(kurload "${data}" | tail -n1)"
+    mt_fail "[ \"${out}\" == \"no data has been sent\" ]"
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
+test_send_empty()
+{
+    truncate -s0 "${data}"
+    out="$(kurload "${data}" 0 | ${tailn} | tr "\n" ".")"
+
+    if [ "${prog_test}" = "socat" ] || \
+        [ "${prog_test}" = "nc" -a "${nctype}" = "nmap" ]
+    then
+        mt_fail "[ \"${out}\" == \"no data has been sent.\" ]"
+    else
+        mt_fail "[[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string\"* ]]"
+    fi
+
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
 test_send_without_kurload()
 {
     randbin 128 > "${data}"
@@ -666,6 +698,8 @@ run_tests()
     mt_run_named test_send_bin_full "test_send_bin_full-${prog_test}-${ssl_test}"
     mt_run_named test_send_bin_too_big "test_send_bin_too_big-${prog_test}-${ssl_test}"
     mt_run_named test_send_without_kurload "test_send_without_kurload-${prog_test}-${ssl_test}"
+    mt_run_named test_send_empty_with_kurload "test_send_empty_with_kurload-${prog_test}-${ssl_test}"
+    mt_run_named test_send_empty "test_send_empty-${prog_test}-${ssl_test}"
     mt_run_named test_threaded "test_threaded-${prog_test}-${ssl_test}"
     mt_run_named test_totally_random "test_totally_random-${prog_test}-${ssl_test}"
 

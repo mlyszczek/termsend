@@ -610,6 +610,18 @@ static void *server_handle_upload
              * kurload\n
              */
 
+            if (written == 0)
+            {
+                /* client closed connection without sending any data,
+                 * this is not normal
+                 */
+
+                el_oprint(OELI, "[%s] rejected: no data has been sent",
+                    inet_ntoa(client.sin_addr));
+                server_reply(cfd, "no data has been sent\n");
+                goto error;
+            }
+
             goto upload_finished_with_fin;
         }
 
@@ -694,6 +706,18 @@ static void *server_handle_upload
             }
 
             continue;
+        }
+
+        if (written == 8)
+        {
+            /* we have received only ending "kurload\n" string, which
+             * means there is no real data
+             */
+
+            el_oprint(OELI, "[%s] rejected: no data has been sent",
+                inet_ntoa(client.sin_addr));
+            server_reply(cfd, "no data has been sent\n");
+            goto error;
         }
 
         /* full file received without errors, we even got ending
