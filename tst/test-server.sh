@@ -545,7 +545,7 @@ test_totally_random()
 {
     for i in `seq 1 1 128`
     do
-        numbytes=$((RANDOM % 2048))
+        numbytes=$(((RANDOM % 2048) + 1))
         finish=$((RANDOM % 32))
 
 
