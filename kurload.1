@@ -216,15 +216,21 @@ Both key and self-signed certificate can be generated via
  
 .br
 .nf
-    openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem
+    # create new 2048 bit long RSA key
+    openssl genrsa -out kurload.key 2048
+    # create self-signed certificate
+    openssl req -new -key kurload.key -x509 -out kurload.crt
+    # key should be secret and unavailable to outer world
+    chmod 600 kurload.key
 .fi
 .br
  
 .br
-But keep in mind users will receive error about unknown CA for certificate
-and may have hard time using your service if they don't add your certificate
-to trusted or explicitly ignore unknown cert.
-Consider 3rd party certificate issuer like letsencrypt.
+Keep in mind, that users will have to have your
+.B kurload.crt
+file in order to verify your server.
+Without that, user will not be sure if your server really belongs to you
+and will be suscible to man-in-the-middle attack.
 .TP
 .BI "-f, --pem-pass-file=<" path >
 If your key is encrypted with password, you can pass path to a file, which
