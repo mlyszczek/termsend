@@ -407,7 +407,7 @@ int config_validate(void)
 
     if (access(g_config.output_dir, W_OK | X_OK) != 0)
     {
-        el_perror(ELF, "output dir (%s) inaccessible\n",
+        el_perror(ELF, "output dir (%s) inaccessible",
                 g_config.output_dir);
         return -1;
     }
@@ -418,7 +418,7 @@ int config_validate(void)
     {
         if (access(g_config.list_file, R_OK) != 0)
         {
-            el_perror(ELF, "list file (%s) unreadable\n",
+            el_perror(ELF, "list file (%s) unreadable",
                     g_config.list_file);
             return -1;
         }
@@ -432,14 +432,14 @@ int config_validate(void)
     {
         if (access(g_config.key_file, R_OK) != 0)
         {
-            el_perror(ELF, "ssl key file (%s) unreadable\n",
+            el_perror(ELF, "ssl key file (%s) unreadable",
                     g_config.key_file);
             return -1;
         }
 
         if (access(g_config.cert_file, R_OK) != 0)
         {
-            el_perror(ELF, "ssl cert file (%s) unreadable\n",
+            el_perror(ELF, "ssl cert file (%s) unreadable",
                     g_config.cert_file);
             return -1;
         }
