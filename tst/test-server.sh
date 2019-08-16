@@ -537,6 +537,18 @@ test_timed_upload()
 ## ==========================================================================
 
 
+test_timed_upload_empty()
+{
+    truncate -s0 > "${data}"
+    out="$(kurload "${data}" 0 | ${tailn} | tr "\n" ".")"
+    mt_fail "[ \"${out}\" == \"no data has been sent.\" ]"
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
 test_timed_upload_full()
 {
     randbin 1024 > ${data}
@@ -706,6 +718,7 @@ run_tests()
     timed_test=1
 
     mt_run_named test_timed_upload "test_timed_upload-${prog_test}-${ssl_test}"
+    mt_run_named test_timed_upload_empty "test_timed_upload_empty-${prog_test}-${ssl_test}"
     mt_run_named test_timed_upload_full "test_timed_upload_full-${prog_test}-${ssl_test}"
     mt_run_named test_timed_upload_too_big "test_timed_upload_too_big-${prog_test}-${ssl_test}"
     mt_run_named test_timed_upload_with_kurload "test_timed_upload_with_kurload-${prog_test}-${ssl_test}"

@@ -553,6 +553,18 @@ static void *server_handle_upload
                  * send him the link to data he just uploaded.
                  */
 
+                if (written == 0)
+                {
+                    /* client connected but did not send anything
+                     * during timeout period
+                     */
+
+                    el_oprint(OELI, "[%s] rejected: no data has been sent",
+                            inet_ntoa(client.sin_addr));
+                    server_reply(cfd, "no data has been sent\n");
+                    goto error;
+                }
+
                 goto upload_finished_with_timeout;
             }
 
