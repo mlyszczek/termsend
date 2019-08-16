@@ -553,18 +553,6 @@ static void *server_handle_upload
                  * send him the link to data he just uploaded.
                  */
 
-                if (written == 0)
-                {
-                    /* client connected but did not send anything
-                     * during timeout period
-                     */
-
-                    el_oprint(OELI, "[%s] rejected: no data has been sent",
-                            inet_ntoa(client.sin_addr));
-                    server_reply(cfd, "no data has been sent\n");
-                    goto error;
-                }
-
                 goto upload_finished_with_timeout;
             }
 
@@ -621,18 +609,6 @@ static void *server_handle_upload
              * in that case we do not require client to send ending
              * kurload\n
              */
-
-            if (written == 0)
-            {
-                /* client closed connection without sending any data,
-                 * this is not normal
-                 */
-
-                el_oprint(OELI, "[%s] rejected: no data has been sent",
-                    inet_ntoa(client.sin_addr));
-                server_reply(cfd, "no data has been sent\n");
-                goto error;
-            }
 
             goto upload_finished_with_fin;
         }
@@ -720,18 +696,6 @@ static void *server_handle_upload
             continue;
         }
 
-        if (written == 8)
-        {
-            /* we have received only ending "kurload\n" string, which
-             * means there is no real data
-             */
-
-            el_oprint(OELI, "[%s] rejected: no data has been sent",
-                inet_ntoa(client.sin_addr));
-            server_reply(cfd, "no data has been sent\n");
-            goto error;
-        }
-
         /* full file received without errors, we even got ending
          * string, we can now break out of loop to perform
          * finishing touch on upload.
@@ -741,10 +705,13 @@ static void *server_handle_upload
     }
 
     /* to finish, we need to truncate file, to cut off ending
-     * string from file and close it.
+     * string from file and close it. We carefully check in
+     * previous lines that written is at least 8 bytes long,
+     * so this subtact is ok.
      */
 
-    if (ftruncate(fd, written - 8) != 0)
+    written -= 8;
+    if (ftruncate(fd, written) != 0)
     {
         el_perror(ELC, "[%3d] couldn't truncate file from ending string",
             cfd->fd);
@@ -769,6 +736,20 @@ upload_finished_with_timeout:
      */
 
 upload_finished_with_fin:
+
+    /* one more thing to check after upload finishes, that is if
+     * there was any real data transmited, if not, emit error and
+     * not save empty file
+     */
+
+    if (written == 0)
+    {
+        el_oprint(OELI, "[%s] rejected: no data has been sent",
+            inet_ntoa(client.sin_addr));
+        server_reply(cfd, "no data has been sent\n");
+        goto error;
+    }
+
     close(fd);
 
     /* after upload is finished, we send the client, link where he
