@@ -1,0 +1,5 @@
+kurload (@{VERSION}) @{CODENAME}; urgency=low
+
+    * kurload package
+
+ -- Michał Łyszczek <michal.lyszczek@bofc.pl>  @{DATE}

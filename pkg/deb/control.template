@@ -1,0 +1,17 @@
+Source: kurload
+Section: devel
+Priority: optional
+Maintainer: Michał Łyszczek <michal.lyszczek@bofc.pl>
+Build-Depends: libembedlog0 (>=0.5.0), debhelper (>=10), autotools-dev, dh-autoreconf
+Standards-Version: 3.9.8
+Vcs-Git: https://git.kurwinet.pl/kurload
+Vcs-browser: https://git.kurwinet.pl/kurload
+Homepage: https://kurload.kurwinet.pl
+
+Package: kurload
+Section: net
+Pre-Depends: ${misc:Pre-Depends}
+Architecture: any
+Depends: adduser, libembedlog0 (>=0.5.0), ${shlibs:Depends}, ${misc:Depends}
+Description: share files or program output from command line using the most
+ basic UNIX tools
