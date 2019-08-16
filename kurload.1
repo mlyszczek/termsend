@@ -56,6 +56,10 @@ Upload will fail when:
 passes and neither "kurload\\n" nor FIN is seen
 .br
 - client closes connection without waiting for data and FIN from server.
+.br
+- client connects and immediately sends FIN (no data sent)
+.br
+- client connects sends, only "kurload\en" and sends FIN (no data sent)
 .RE
 .PP
 .B Timed upload
@@ -105,6 +109,12 @@ passes and no data is seen during that period
 Upload will fail when:
 .RS
 - client closes connection without waiting for data and FIN from server.
+.br
+- client connects and immediately sends FIN (no data sent)
+.br
+- client connects sends, only "kurload\en" and sends FIN (no data sent)
+.br
+- client connects and does not send anything until timeout occurs (no data sent)
 .RE
 .PP
 If you still don't know which mode to use - if you don't want to support
