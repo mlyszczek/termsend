@@ -4,7 +4,7 @@ About
 =====
 
 Server application to share files (or program output) from command line using
-the most basic UNIX tools, like **netcat**.
+the most basic UNIX tools, like **netcat** or **socat**.
 
 Usage
 =====
@@ -12,30 +12,56 @@ Usage
 Client
 ------
 
-Clients doesn't need any sophisticated tools. To upload to server pipe standard
-output from any application to **netcat**. But because **netcat** doesn't send
-information about file size, you need to append **kurload\n** string at the end
-of upload as and end-of-file indicator.
+### uploading
 
-~~~
-$ cat /path/to/file | { cat -; echo 'kurload'; } | nc kl.kurwinet.pl 1337
-~~~
+Clients don't need any sophisticated tools. To upload to server - pipe standard
+output from any application to **socat**:
 
-Quite long and irritating to type everytime you want to upload something. It is
-recommended to create alias to work-around this tedious work.
+```
+$ echo "test string" | socat - TCP:kl.kurwinet.pl:1337"
+```
 
-~~~
-alias kl="{ cat -; echo 'kurload'; } | nc kl.kurwinet.pl 1337"
-~~~
+Server reads data until **FIN** is seen or string **kurload\n** at the very
+end of transfer. **socat** and nmap version of **netcat** send **FIN** when
+stdin ends so it is advisible to use them. If you are stuck with hobbit
+version of **netcat**, you need to also append **kurload\n** at the very end
+of transfer:
 
-Now you can upload file as simple as calling
+```
+$ echo "test string" | { cat -; echo 'kurload'; } | nc kl.kurwinet.pl 1337"
+```
 
-~~~
-$ ls -l | kl               # uploads detailed list of files in current directory
+If, for some reason, you are not able to pass **kurload\n**, you can always
+use timed upload. In this mode, server will read data until there is no
+activity on the socket for at least 3 seconds, after that **kurload** assumes
+transfer to be complete and link is returned. This is not recommended, due to
+the fact that you will have to wait 3 seconds after all data is sent, and you
+might end up with incomplete upload when your output program stalls.
+
+```
+$ echo "test string" | nc kl.kurwinet.pl 1338"
+```
+
+### easy to use alias
+
+It's quite long and irritating to type these pipes everytime you want to
+upload something. It is recommended to create alias to work-around this
+tedious work.
+
+```{.sh}
+# add this to your .bashrc or .zshrc or whatever shell you use
+alias kl="socat - TCP:kl.kurwinet.pl:1337"
+```
+
+Now you can upload anything by simply piping it to "kl" alias. Examples
+will explain it best:
+
+```
+$ ls -l | kl               # uploads list of files in current directory
 $ cat error.log | kl       # uploads file 'error.log'
 $ make | kl                # uploads compilation output
 $ cat binary-file | kl     # uploads some binary file
-~~~
+```
 
 After transfer is complete, server will print link which you can later use to
 get uploaded content (like send it to someone via IRC). If uploaded content is
@@ -43,33 +69,47 @@ a simple text file, you can read it directly in terminal using **curl**, or if
 output is known to be big, **curl** output can be piped to **less**. Check out
 this simple example.
 
-~~~
+```
 $ make distcheck 2>&1 | kl
-nc: using stream socket
-uploaded       4100 bytes
-uploaded       5351 bytes
-uploaded       8381 bytes
-uploaded      16044 bytes
-uploaded      29463 byte
-upload complete, link to file http://kl.kurwinet.pl/msf62
-$ curl http://kl.kurwinet.pl/msf62 | less
-~~~
+uploaded        400 bytes
+uploaded        468 bytes
+uploaded       1044 bytes
+uploaded       1562 bytes
+uploaded       3272 bytes
+uploaded       4505 bytes
+uploaded       4639 bytes
+uploaded      10120 bytes
+uploaded      10297 bytes
+uploaded      10432 bytes
+uploaded      12975 bytes
+uploaded      62261 bytes
+uploaded      69904 bytes
+uploaded      71297 bytes
+upload complete, link to file http://kl.kurwinet.pl/e7wcz
+$ curl http://kl.kurwinet.pl/e7wcz | less
+```
 
 In this example, we upload output of **make distcheck** program into server, and
 later we read in in less (for example on another computer).
 
 Server will notify uploader about how much bytes were transfered every second.
-If information is no received for longer than 1 second, that means program did
+If information is not received for longer than 1 second, that means program did
 not produce any output and server didn't receive any data.
+
+For all aliases check [alias page](https://kurload.kurwinet.pl/aliases.html).
 
 Server
 ------
 
 Information about server usage and its options can be found in man page
-[kurload](http://kurload.kurwinet.pl/kurload.1.html)(1)
+[kurload](http://kurload.kurwinet.pl/kurload.1.html)(1).
 
 Test results
 ============
+
+Newest *kurload* is tested against these operating systems and architectures.
+Note that test results are taken from **master** branch, release version
+**always** passes all these tests.
 
 operating system tests
 ----------------------
@@ -79,6 +119,7 @@ operating system tests
 * i686-builder-freebsd-11.1 ![test-result-svg][x32fb]
 * i686-builder-netbsd-8.0 ![test-result-svg][x32nb]
 * i686-builder-openbsd-6.2 ![test-result-svg][x32ob]
+* x86_64-builder-dragonfly-5.0 ![test-result-svg][x64df]
 * x86_64-builder-solaris-11.3 ![test-result-svg][x64ss]
 * i686-builder-linux-gnu-4.9 ![test-result-svg][x32lg]
 * i686-builder-linux-musl-4.9 ![test-result-svg][x32lm]
@@ -86,6 +127,7 @@ operating system tests
 * x86_64-builder-linux-gnu-4.9 ![test-result-svg][x64lg]
 * x86_64-builder-linux-musl-4.9 ![test-result-svg][x64lm]
 * x86_64-builder-linux-uclibc-4.9 ![test-result-svg][x64lu]
+* i686-builder-qnx-6.4.0 ![test-result-svg][x32qnx]
 
 machine tests
 -------------
@@ -117,12 +159,12 @@ Compile and install
 
 Program uses autotools so instalation is as easy as
 
-~~~
+```{.sh}
 $ ./autogen.sh
 $ ./configure
 $ make
 # make install
-~~~
+```
 
 License
 =======
@@ -144,6 +186,8 @@ See also
 * [continous integration](http://ci.kurload.kurwinet.pl) with test results
 * [polarhome](http://www.polarhome.com) nearly free shell accounts for virtually
   any unix there is.
+* [pvs studio](https://www.viva64.com/en/pvs-studio) static code analyzer with
+  free licenses for open source projects
 
 [a64lg]: http://ci.kurload.kurwinet.pl/badges/aarch64-builder-linux-gnu-tests.svg
 [armv5]: http://ci.kurload.kurwinet.pl/badges/armv5te926-builder-linux-gnueabihf-tests.svg
@@ -163,6 +207,8 @@ See also
 [x64ss]: http://ci.kurload.kurwinet.pl/badges/x86_64-builder-solaris-tests.svg
 [prhpux]: http://ci.kurload.kurwinet.pl/badges/parisc-polarhome-hpux-tests.svg
 [p4aix]: http://ci.kurload.kurwinet.pl/badges/power4-polarhome-aix-tests.svg
+[x32qnx]: http://ci.kurload.kurwinet.pl/badges/i686-builder-qnx-tests.svg
+[x64df]: http://ci.kurload.kurwinet.pl/badges/x86_64-builder-dragonfly-tests.svg
 
 [fsan]: http://ci.kurload.kurwinet.pl/badges/fsanitize-address.svg
 [fsleak]: http://ci.kurload.kurwinet.pl/badges/fsanitize-leak.svg
