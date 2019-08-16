@@ -513,8 +513,6 @@ static void *server_handle_upload
      */
 
     written = 0;
-    FD_ZERO(&readfds);
-    FD_SET(cfd->fd, &readfds);
     memset(ends, 0, sizeof(ends));
 
     for (;;)
@@ -522,6 +520,9 @@ static void *server_handle_upload
         int     sact;  /* select activity, just return from select() */
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+
+        FD_ZERO(&readfds);
+        FD_SET(cfd->fd, &readfds);
 
         cfdtimeo.tv_sec =
             cfd->timed ? g_config.timed_max_timeout : g_config.max_timeout;
