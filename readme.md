@@ -85,8 +85,8 @@ uploaded      12975 bytes
 uploaded      62261 bytes
 uploaded      69904 bytes
 uploaded      71297 bytes
-upload complete, link to file http://kl.kurwinet.pl/e7wcz
-$ curl http://kl.kurwinet.pl/e7wcz | less
+upload complete, link to file https://kl.kurwinet.pl/e7wcz
+$ curl https://kl.kurwinet.pl/e7wcz | less
 ```
 
 In this example, we upload output of **make distcheck** program into server, and
@@ -102,7 +102,7 @@ Server
 ------
 
 Information about server usage and its options can be found in man page
-[kurload](http://kurload.kurwinet.pl/kurload.1.html)(1).
+[kurload](https://kurload.kurwinet.pl/kurload.1.html)(1).
 
 Test results
 ============
@@ -150,7 +150,7 @@ sanitizers
 Dependencies
 ============
 
-* [>=embedlog-0.5.0](http://embedlog.kurwinet.pl) (embedlog itself has no
+* [>=embedlog-0.5.0](https://embedlog.kurwinet.pl) (embedlog itself has no
   dependencies)
 * pthread
 
@@ -179,10 +179,10 @@ Michał Łyszczek <michal.lyszczek@bofc.pl>
 See also
 ========
 
-* [embedlog](http://embedlog.kurwinet.pl) easy to use but feature-rich logger
+* [embedlog](https://embedlog.kurwinet.pl) easy to use but feature-rich logger
   for **c/c++** applications
-* [mtest](http://mtest.kurwinet.pl) macro unit test framework for **c/c++**
-* [git repository](http://git.kurwinet.pl/kurload) to browse sources online
+* [mtest](https://mtest.kurwinet.pl) macro unit test framework for **c/c++**
+* [git repository](https://git.kurwinet.pl/kurload) to browse sources online
 * [continous integration](http://ci.kurload.kurwinet.pl) with test results
 * [polarhome](http://www.polarhome.com) nearly free shell accounts for virtually
   any unix there is.
