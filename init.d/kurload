@@ -4,6 +4,17 @@
 #   Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
 ## ==========================================================================
 
+### BEGIN INIT INFO
+# Provides:
+# Required-Start: $local_fs $network
+# Required-Stop: $local_fs
+# Default-Start: 3 4 5
+# Default-Stop: 0 1 2 6
+# Short-Description: start and stop kurload daemon
+# Description: share files or program output from command line using the most
+#   basic UNIX tools
+### END INIT INFO
+
 ###
 # some systems like solaris has alias on stop, remove those aliases so our
 # init script can work as expected
