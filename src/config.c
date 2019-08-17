@@ -288,7 +288,7 @@ static int config_parse_arguments
 "\t 0        disable list (everyone can upload\n"
 "\t 1        whitelist mode, only ips from list can upload\n");
 
-            exit(1);
+            exit(0);
 
         case 'v':
             fprintf(stdout,
@@ -304,19 +304,22 @@ static int config_parse_arguments
 #endif
                     "ssl\n");
 
-            exit(1);
+            exit(0);
 
         case ':':
             fprintf(stderr, "option -%c, --%s requires an argument\n",
                 optopt, longopts[loptind].name);
+            fprintf(stderr, "check --help for info about usage\n");
             return -1;
 
         case '?':
-            fprintf(stdout, "unknown option %s\n", argv[optind - 1]);
+            fprintf(stderr, "unknown option %s\n", argv[optind - 1]);
+            fprintf(stderr, "check --help for info about usage\n");
             return -1;
 
         default:
             fprintf(stderr, "unexpected return from getopt '0x%02x'\n", arg);
+            fprintf(stderr, "check --help for info about usage\n");
             return -1;
         }
     }
