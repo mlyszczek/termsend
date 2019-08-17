@@ -214,22 +214,22 @@ stop() {
 
 
 case "$1" in
-    "start")
+    start)
         start_pre
         start
         ;;
 
-    "stop")
+    stop)
         stop
         ;;
 
-    "restart")
+    restart|force-reload)
         stop
         start_pre
         start
         ;;
 
-    "status")
+    status)
         if [ ! -f "${PID_FILE}" ] ; then
             # file doesn't exist, server wasn't started yet, or it was closed
             # and server removed pid file
