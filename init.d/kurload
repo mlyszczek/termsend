@@ -234,14 +234,14 @@ case "$1" in
             # file doesn't exist, server wasn't started yet, or it was closed
             # and server removed pid file
             echo "server is not running"
-            exit 1
+            exit 3
         fi
 
         if [ $(/usr/bin/stat -c %s "${PID_FILE}") -eq 0 ] ; then
             # file exists but its size is 0, meaning server started and ended
             # but couldn't remove pid, so it truncated it to 0 bytes size
             echo "server is not running"
-            exit 1
+            exit 3
         fi
 
         if /bin/ps -p $(cat "${PID_FILE}") > /dev/null 2>&1 ; then
@@ -253,7 +253,7 @@ case "$1" in
         # information about pid exists in pid file, but process is not running
         # that means server exited in non-clean way and didn't clean pid file
         echo "server crashed"
-        exit 2
+        exit 1
         ;;
     *)
         echo -e "usage: $0 {start|stop|status|restart}"
@@ -269,8 +269,8 @@ case "$1" in
         echo -e ""
         echo -e "\tstatus"
         echo -e "\t\t0\tserver is running"
-        echo -e "\t\t1\tserver is not running"
-        echo -e "\t\t2\tserver crashed"
+        echo -e "\t\t1\tserver crashed"
+        echo -e "\t\t3\tserver is not running"
         echo -e ""
         echo -e "\trestart"
         echo -e "\t\t0\tserver restarted"
