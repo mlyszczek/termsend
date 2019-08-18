@@ -539,7 +539,7 @@ test_timed_upload()
 
 test_timed_upload_empty()
 {
-    truncate -s0 > "${data}"
+    truncate -s0 "${data}"
     out="$(kurload "${data}" 0 | ${tailn} | tr "\n" ".")"
     mt_fail "echo \"${out}\" | grep \"no data has been sent.\""
 }
