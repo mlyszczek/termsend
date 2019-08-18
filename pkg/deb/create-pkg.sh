@@ -118,8 +118,7 @@ do
     lintian ${d}
 done
 
-dpkg -i "${project}_${version}_${arch}.deb"
-systemctl stop kurload
+dpkg -i --no-triggers "${project}_${version}_${arch}.deb"
 
 if ldd $(which kurload) | grep "\/usr\/bofc"
 then
