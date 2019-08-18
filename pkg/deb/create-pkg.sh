@@ -119,6 +119,7 @@ do
     lintian ${d}
 done
 
+export RUNLEVEL=3
 dpkg -i --no-triggers "${project}_${version}_${arch}.deb"
 
 if ldd $(which kurload) | grep "\/usr\/bofc"
