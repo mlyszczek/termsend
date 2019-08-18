@@ -119,6 +119,7 @@ do
 done
 
 dpkg -i "${project}_${version}_${arch}.deb"
+systemctl stop kurload
 
 if ldd $(which kurload) | grep "\/usr\/bofc"
 then
