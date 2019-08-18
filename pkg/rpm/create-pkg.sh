@@ -23,8 +23,8 @@ atexit()
         yum remove -y "${project}"
     fi
 
-    groupdel kurload
     userdel kurload
+    groupdel kurload
     rmdir /var/lib/kurload
 
     if [ "x${1}" != "xno-exit" ]

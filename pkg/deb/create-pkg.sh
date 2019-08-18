@@ -14,8 +14,8 @@ atexit()
     dpkg -r libembedlog-dev
     dpkg -r libembedlog0
     # manually remove kurload group and user as package uninstall won't do it
-    groupdel kurload
     userdel kurload
+    groupdel kurload
     rmdir /var/lib/kurload
     rm /etc/kurload.conf
 
