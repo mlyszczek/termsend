@@ -11,6 +11,7 @@ if ! getent passwd kurload >/dev/null; then
         --gid $(getent group kurload | cut -f3 -d:) kurload
 fi
 
+mkdir -p /var/lib/kurload
 chown kurload:kurload /var/lib/kurload
 
 #DEBHELPER#
