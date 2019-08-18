@@ -113,3 +113,5 @@ then
     scp "${workdir}/${project}-${version}-${arch}-${revision}.tgz" \
         "${scp_server}:${project}/${host_os}/${arch}" || exit 1
 fi
+
+retval=0
