@@ -49,7 +49,7 @@ if ! getent group kurload >/dev/null; then
     groupadd --system kurload
 fi
 if ! getent passwd kurload >/dev/null; then
-    adduser --system --home /var/lib/kurload --shell /usr/sbin/nologin \
+    useradd --system --home-dir /var/lib/kurload --shell /bin/false \
         --gid $(getent group kurload | cut -f3 -d:) kurload
 fi
 mkdir -p /var/lib/kurload
