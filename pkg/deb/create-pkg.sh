@@ -16,7 +16,7 @@ atexit()
     # manually remove kurload group and user as package uninstall won't do it
     userdel kurload
     groupdel kurload
-    rmdir /var/lib/kurload
+    rm -rf /var/lib/kurload
     rm /etc/kurload.conf
 
     if [ "x${1}" != "xno-exit" ]
