@@ -10,6 +10,7 @@ atexit()
 
     /etc/init.d/kurload stop
     pkill kurload
+    rm /etc/init.d/kurload
     dpkg --purge "${project}"
     # remove dependencies
     dpkg -r libembedlog-dev
