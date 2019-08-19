@@ -40,7 +40,7 @@ MOSTLYCLEANFILES = $(analyze_plists)
 
 $(analyze_plists): %.plist: %.c
 	@echo "  CCSA  " $@
-	@clang --analyze -I.. $< -o $@
+	@clang --analyze -I.. -I. $< -o $@
 
 analyze: $(analyze_plists)
 
