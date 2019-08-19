@@ -248,7 +248,7 @@ case "$1" in
             exit 3
         fi
 
-        if [ $(/usr/bin/stat -c %s "${PID_FILE}") -eq 0 ] ; then
+        if [ $(wc -c < "${PID_FILE}") -eq 0 ] ; then
             # file exists but its size is 0, meaning server started and ended
             # but couldn't remove pid, so it truncated it to 0 bytes size
             echo "server is not running"
