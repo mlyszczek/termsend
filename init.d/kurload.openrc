@@ -23,12 +23,14 @@ LIST_FILE=${LIST_FILE:="/etc/kurload-iplist"}
 LIST_TYPE=${LIST_TYPE:="0"}
 OUTPUT_DIR=${OUTPUT_DIR:="/var/lib/kurload"}
 BIND_IP=${BIND_IP:="0.0.0.0"}
+UMASK=${UMASK:="022"}
 
 command=/usr/bin/kurload
 colors=
 ssl_listen_port=
 timed_ssl_listen_port=
 ssl_opts=
+umask ${UMASK}
 
 depend() {
     need net localmount
