@@ -251,6 +251,17 @@ drop_privilige_finished:
         exit(0);
     }
 
+    /* since child is forked to the backgroud, and does not have any
+     * controlling terminal (if it ever had one) we close stdout
+     * and stderr. We do this reopening both streams to /dev/null,
+     * as writing to closed FILE is UB. freopen() will close original
+     * file descriptor detaching any process that might be reading
+     * them (like cron)
+     */
+
+    freopen("/dev/null", "w", stdout);
+    freopen("/dev/null", "w", stderr);
+
     /* ok, cool, now that we got rid of parent, the fun can start.
      * We return from the function to our daemon code, since
      * everything is already done.
