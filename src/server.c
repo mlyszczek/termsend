@@ -456,7 +456,7 @@ static void *server_handle_upload
         server_generate_fname(fname, flen);
         strcpy(path + opathlen, fname);
 
-        if ((fd = open(path, O_CREAT | O_EXCL | O_APPEND | O_RDWR, 0640)) >= 0)
+        if ((fd = open(path, O_CREAT | O_EXCL | O_APPEND | O_RDWR, 0644)) >= 0)
         {
             /* file opened with success, break out of the loop */
 
