@@ -119,22 +119,7 @@ start_pre()
         colors="-c"
     fi
 
-    # check if ${USER} and ${GROUP} exist in the system
-    if ! /usr/bin/id -u ${USER} > /dev/null 2>&1 ; then
-        echo "error"
-        echo "User ${USER} doesn't exist in current system"
-        echo "failed to start kurload server"
-        exit 1
-    fi
-
-    if ! /usr/bin/id -g ${GROUP} > /dev/null 2>&1 ; then
-        echo "error"
-        echo "Group ${GROUP} doesn't exist in current system"
-        echo "failed to start kurload server"
-        exit 1
-    fi
-
-    # chcek if output directory exists and is writeable by configured user
+    # chcek if output directory exists
     if [ ! -d "${OUTPUT_DIR}" ] ; then
         echo "error"
         echo "Output directory \"${OUTPUT_DIR}\" doesn\'t exist"
@@ -143,27 +128,56 @@ start_pre()
         exit 1
     fi
 
-    if /bin/su ${USER} -c "if [ -w "${OUTPUT_DIR}" ]; then exit 1; fi"; then
-        echo "error"
-        echo "Output directory \"${OUTPUT_DIR}\" is not writeable"
-        echo "for user ${USER}"
-        echo "failed to start kurload server"
-        exit 1
-    fi
+    if [ $(id -u) -eq 0 ]; then
+        # these checks are valid only when run from root
 
-    # create log files if they don't exist and set proper permissions
-    if [ ! -f "${QUERY_LOG}" ] ; then
-        /bin/touch "${QUERY_LOG}"
-        /bin/chown ${USER} "${QUERY_LOG}"
-        /bin/chgrp adm "${QUERY_LOG}"
-        /bin/chmod 640 "${QUERY_LOG}"
-    fi
+        # check if ${USER} and ${GROUP} exist in the system
+        if ! /usr/bin/id -u ${USER} > /dev/null 2>&1 ; then
+            echo "error"
+            echo "User ${USER} doesn't exist in current system"
+            echo "failed to start kurload server"
+            exit 1
+        fi
 
-    if [ ! -f "${PROGRAM_LOG}" ] ; then
-        /bin/touch "${PROGRAM_LOG}"
-        /bin/chown ${USER} "${PROGRAM_LOG}"
-        /bin/chgrp adm "${PROGRAM_LOG}"
-        /bin/chmod 640 "${PROGRAM_LOG}"
+        if ! /usr/bin/id -g ${GROUP} > /dev/null 2>&1 ; then
+            echo "error"
+            echo "Group ${GROUP} doesn't exist in current system"
+            echo "failed to start kurload server"
+            exit 1
+        fi
+
+        # is directory writeable by selected user?
+        if /bin/su ${USER} -c "if [ -w "${OUTPUT_DIR}" ]; then exit 1; fi"; then
+            echo "error"
+            echo "Output directory \"${OUTPUT_DIR}\" is not writeable"
+            echo "for user ${USER}"
+            echo "failed to start kurload server"
+            exit 1
+        fi
+
+        # create log files if they don't exist and set proper permissions
+        if [ ! -f "${QUERY_LOG}" ] ; then
+            /bin/touch "${QUERY_LOG}"
+            /bin/chown ${USER} "${QUERY_LOG}"
+            /bin/chgrp adm "${QUERY_LOG}"
+            /bin/chmod 640 "${QUERY_LOG}"
+        fi
+
+        if [ ! -f "${PROGRAM_LOG}" ] ; then
+            /bin/touch "${PROGRAM_LOG}"
+            /bin/chown ${USER} "${PROGRAM_LOG}"
+            /bin/chgrp adm "${PROGRAM_LOG}"
+            /bin/chmod 640 "${PROGRAM_LOG}"
+        fi
+    else
+        # is directory writeable by current user?
+        if [ ! -w "${OUTPUT_DIR}" ]; then
+            echo "error"
+            echo "Output directory \"${OUTPUT_DIR}\" is not writeable"
+            echo "for user ${USER}"
+            echo "failed to start kurload server"
+            exit 1
+        fi
     fi
 
     echo "ok"
