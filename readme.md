@@ -18,7 +18,7 @@ Clients don't need any sophisticated tools. To upload to server - pipe standard
 output from any application to **socat**:
 
 ```
-$ echo "test string" | socat - TCP:kl.kurwinet.pl:1337"
+$ echo "test string" | socat - TCP:kl.kurwinet.pl:1337
 ```
 
 Server reads data until **FIN** is seen or string **kurload\n** at the very
@@ -28,7 +28,7 @@ version of **netcat**, you need to also append **kurload\n** at the very end
 of transfer:
 
 ```
-$ echo "test string" | { cat -; echo 'kurload'; } | nc kl.kurwinet.pl 1337"
+$ echo "test string" | { cat -; echo 'kurload'; } | nc kl.kurwinet.pl 1337
 ```
 
 If, for some reason, you are not able to pass **kurload\n**, you can always
@@ -39,7 +39,7 @@ the fact that you will have to wait 3 seconds after all data is sent, and you
 might end up with incomplete upload when your output program stalls.
 
 ```
-$ echo "test string" | nc kl.kurwinet.pl 1338"
+$ echo "test string" | nc kl.kurwinet.pl 1338
 ```
 
 ### easy to use alias
