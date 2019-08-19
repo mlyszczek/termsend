@@ -229,7 +229,7 @@ Both key and self-signed certificate can be generated via
     # create new 2048 bit long RSA key
     openssl genrsa -out kurload.key 2048
     # create self-signed certificate
-    openssl req -new -key kurload.key -x509 -out kurload.crt
+    openssl req -new -key kurload.key -x509 -days 3650 -out kurload.crt
     # key should be secret and unavailable to outer world
     chmod 600 kurload.key
 .fi
