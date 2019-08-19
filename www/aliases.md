@@ -40,9 +40,9 @@ Send data over encrypted socket using **socat** program and verify that
 **kl.kurwinet.pl** is really valid server and not man-in-the-middle. Note
 that you should treat all data sent to **kl.kurwinet.pl** as public and
 this example is usefull when you self host **kurload** and want to have really
-secure socket.
+secure socket. [kurload.crt can be downloaded here][1]
 ```{.sh}
-alias kls="socat - OPENSSL:kl.kurwinet.pl:1339,cafile=/usr/share/ca/kurload.crt"
+alias kls="socat - OPENSSL:kl.kurwinet.pl:1339,cafile=/usr/share/ca/kl.crt"
 ```
 
 netcat
@@ -82,3 +82,5 @@ is **bash** present.
 alias kl="{ exec 5<>/dev/tcp/kl.kurwinet.pl/1337; \
     { cat - >&5; echo 'kurload' >&5; }; cat <&5; }"
 ```
+
+[1]: https://kl.kurwinet.pl/kl.crt
