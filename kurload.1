@@ -227,17 +227,17 @@ Both key and self-signed certificate can be generated via
 .br
 .nf
     # create new 2048 bit long RSA key
-    openssl genrsa -out kurload.key 2048
+    openssl genrsa -out kl.key 2048
     # create self-signed certificate
-    openssl req -new -key kurload.key -x509 -days 3650 -out kurload.crt
+    openssl req -new -key kl.key -x509 -days 3650 -out kl.crt
     # key should be secret and unavailable to outer world
-    chmod 600 kurload.key
+    chmod 600 kl.key
 .fi
 .br
  
 .br
 Keep in mind, that users will have to have your
-.B kurload.crt
+.B kl.crt
 file in order to verify your server.
 Without that, user will not be sure if your server really belongs to you
 and will be suscible to man-in-the-middle attack.
