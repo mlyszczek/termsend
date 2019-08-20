@@ -88,6 +88,10 @@ do
 
     for a in ${archs}
     do
+        files="$(get_files_from_remote "${remote}/${d}/${a}" | \
+            grep "${project}-[0-9]*\.[0-9]*\.[0-9][\.-]\(r[0-9]\)\?")"
+        versions="$(echo "${files}" | tr ' ' '\n' | rev | \
+            cut -f1 -d- | rev | cut -f1-3 -d. | sort -Vur)"
         files="$(get_files_from_remote "${remote}/${d}/${a}/")"
         echo "<h2>${a}</h2>"
 
