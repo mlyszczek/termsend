@@ -87,7 +87,7 @@ uploaded      40200 bytes
 uploaded    1604104 bytes
 uploaded    4668396 bytes
 uploaded    4690455 bytes
-upload complete, link to file https://kl.kurwinet.pl/o/6p3e1
+https://kl.kurwinet.pl/o/6p3e1
 $ curl https://kl.kurwinet.pl/o/6p3e1 | less
 ```
 
