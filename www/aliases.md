@@ -83,4 +83,16 @@ alias kl="{ exec 5<>/dev/tcp/kl.kurwinet.pl/1337; \
     { cat - >&5; echo 'kurload' >&5; }; cat <&5; }"
 ```
 
+alias examples
+==============
+
+Different various aliases to make life easier. These assume that you already
+have **kl** alias defined prior to these ones.
+
+Upload and store link into clipboard
+
+```{.bash}
+alias klc="kl | tail -n1 | xclip"
+```
+
 [1]: https://kl.kurwinet.pl/kl.crt

@@ -71,22 +71,21 @@ this simple example.
 
 ```
 $ make distcheck 2>&1 | kl
-uploaded        400 bytes
-uploaded        468 bytes
-uploaded       1044 bytes
-uploaded       1562 bytes
-uploaded       3272 bytes
-uploaded       4505 bytes
-uploaded       4639 bytes
-uploaded      10120 bytes
-uploaded      10297 bytes
-uploaded      10432 bytes
-uploaded      12975 bytes
-uploaded      62261 bytes
-uploaded      69904 bytes
-uploaded      71297 bytes
-upload complete, link to file https://kl.kurwinet.pl/e7wcz
-$ curl https://kl.kurwinet.pl/e7wcz | less
+uploaded       3454 bytes
+uploaded       8203 bytes
+uploaded       9524 bytes
+uploaded      11821 bytes
+uploaded      16626 bytes
+uploaded      23026 bytes
+uploaded      31482 bytes
+uploaded      32913 bytes
+uploaded      33867 bytes
+uploaded      40200 bytes
+uploaded    1604104 bytes
+uploaded    4668396 bytes
+uploaded    4690455 bytes
+https://kl.kurwinet.pl/o/6p3e1
+$ curl https://kl.kurwinet.pl/o/6p3e1 | less
 ```
 
 In this example, we upload output of **make distcheck** program into server, and
