@@ -761,7 +761,7 @@ upload_finished_with_fin:
     strcat(url, "/");
     strcat(url, fname);
     el_oprint(OELI, "[%s] %s", inet_ntoa(client.sin_addr), fname);
-    server_reply(cfd, "upload complete, link to file %s\n", url);
+    server_reply(cfd, "%s\n", url);
     server_linger(cfd);
     if (cfd->ssl) ssl_close(cfd->ssl_fd);
     close(cfd->fd);
