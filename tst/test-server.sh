@@ -313,7 +313,7 @@ multi_thread_check()
     then
         touch "${1}.test_check"
         return 0
-    elif [[ "${out}" = "upload complete, link to file localhost/"* ]]
+    elif [[ "${out}" = "localhost/"* ]]
     then
         file="$(echo "${out}" | rev | cut -d/ -f-1 | rev)"
         mt_fail "diff ${updir}/${file} ${data}.${fname}"
