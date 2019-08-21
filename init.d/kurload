@@ -174,7 +174,7 @@ start_pre()
         if [ ! -w "${OUTPUT_DIR}" ]; then
             echo "error"
             echo "Output directory \"${OUTPUT_DIR}\" is not writeable"
-            echo "for user ${USER}"
+            echo "for user $(whoami)"
             echo "failed to start kurload server"
             exit 1
         fi
