@@ -46,7 +46,7 @@ rm -rf "${workdir}"
 mkdir "${workdir}"
 cd "${workdir}"
 
-wget "https://git.kurwinet.pl/${project}/snapshot/${project}-${git_version}.tar.gz"
+wget "https://git.bofc.pl/${project}/snapshot/${project}-${git_version}.tar.gz"
 tar xf "${project}-${git_version}.tar.gz"
 cd "${project}-${git_version}"
 
@@ -57,7 +57,7 @@ sed -i 's@^\. /usr/local/etc/kurload.conf$@. /etc/kurload.conf@' init.d/kurload
 sed -i 's@^command=/usr/local/bin/kurload$@command=/usr/bin/kurload@' init.d/kurload
 
 # install deps
-wget https://distfiles.kurwinet.pl/embedlog/${host_os}/${arch}/embedlog-0.5.0-${arch}-1.tgz
+wget https://distfiles.bofc.pl/embedlog/${host_os}/${arch}/embedlog-0.5.0-${arch}-1.tgz
 installpkg embedlog-0.5.0-${arch}-1.tgz
 
 version="$(grep "AC_INIT(" "configure.ac" | cut -f3 -d\[ | cut -f1 -d\])"

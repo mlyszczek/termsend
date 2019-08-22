@@ -129,7 +129,7 @@ static void config_short_opts(void)
         "-t20",
         "-M7",
         "-T", "-1",
-        "-dhttp://kurload.kurwinet.pl",
+        "-dhttp://kurload.bofc.pl",
         "-ukur",
         "-gload",
         "-q/query",
@@ -161,7 +161,7 @@ static void config_short_opts(void)
     config.max_connections = 3;
     config.max_timeout = 20;
     config.timed_max_timeout = 7;
-    strcpy(config.domain, "http://kurload.kurwinet.pl");
+    strcpy(config.domain, "http://kurload.bofc.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");
     strcpy(config.group, "load");
@@ -202,7 +202,7 @@ static void config_long_opts(void)
         "--max-timeout=20",
         "--timed-max-timeout=7",
         "--list-type=-1",
-        "--domain=http://kurload.kurwinet.pl",
+        "--domain=http://kurload.bofc.pl",
         "--user=kur",
         "--group=load",
         "--query-log=/query",
@@ -234,7 +234,7 @@ static void config_long_opts(void)
     config.max_connections = 3;
     config.max_timeout = 20;
     config.timed_max_timeout = 7;
-    strcpy(config.domain, "http://kurload.kurwinet.pl");
+    strcpy(config.domain, "http://kurload.bofc.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");
     strcpy(config.group, "load");
@@ -273,7 +273,7 @@ static void config_mixed_opts(void)
         "--max-connections=3",
         "--max-timeout=20",
         "--list-type=-1",
-        "-d", "http://kurload.kurwinet.pl",
+        "-d", "http://kurload.bofc.pl",
         "--user=kur",
         "--group=load",
         "-q/query",
@@ -296,7 +296,7 @@ static void config_mixed_opts(void)
     config.max_size = 512;
     config.max_connections = 3;
     config.max_timeout = 20;
-    strcpy(config.domain, "http://kurload.kurwinet.pl");
+    strcpy(config.domain, "http://kurload.bofc.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");
     strcpy(config.group, "load");

@@ -5,8 +5,8 @@ Summary:        share files or program output from command line using the most b
 
 Group:          Applications/Internet
 License:        BSD
-URL:            https://kurload.kurwinet.pl
-Source0:        https://git.kurwinet.pl/kurload/snapshot/kurload-%{version}.tar.gz
+URL:            https://kurload.bofc.pl
+Source0:        https://git.bofc.pl/kurload/snapshot/kurload-%{version}.tar.gz
 Vendor:         Bits of Code
 Packager:       Michał Łyszczek <michal.lyszczek@bofc.pl>
 

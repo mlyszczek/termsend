@@ -13,7 +13,7 @@ MAX_SIZE=${MAX_SIZE:="1048576"}
 MAX_TIMEOUT=${MAX_TIMEOUT:="60"}
 TIMED_MAX_TIMEOUT=${TIMED_MAX_TIMEOUT:="3"}
 MAX_CONNECTIONS=${MAX_CONNECTIONS:="10"}
-DOMAIN=${DOMAIN:="http://kurload.kurwinet.pl"}
+DOMAIN=${DOMAIN:="http://kurload.bofc.pl"}
 USER=${USER:="kurload"}
 GROUP=${GROUP:="kurload"}
 PID_FILE=${PID_FILE:="/var/run/kurload.pid"}
