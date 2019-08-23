@@ -181,6 +181,7 @@ Michał Łyszczek <michal.lyszczek@bofc.pl>
 See also
 ========
 
+* [termsend.pl](https://termsend.pl) **termsend** functional demo
 * [embedlog](https://embedlog.bofc.pl) easy to use but feature-rich logger
   for **c/c++** applications
 * [mtest](https://mtest.bofc.pl) macro unit test framework for **c/c++**
