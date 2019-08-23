@@ -14,8 +14,8 @@ else
 source += ssl/nonessl.c
 endif
 
-bin_PROGRAMS = kurload
-kurload_SOURCES = $(source) \
+bin_PROGRAMS = termsend
+termsend_SOURCES = $(source) \
 	bnwlist.h \
 	config.h \
 	daemonize.h \
@@ -26,10 +26,10 @@ kurload_SOURCES = $(source) \
 	getopt.h \
 	ssl/ssl.h
 
-kurload_CFLAGS = -I$(top_srcdir) \
+termsend_CFLAGS = -I$(top_srcdir) \
 	$(COVERAGE_CFLAGS)
 
-kurload_LDFLAGS = $(COVERAGE_LDFLAGS)
+termsend_LDFLAGS = $(COVERAGE_LDFLAGS)
 
 # static code analyzer
 

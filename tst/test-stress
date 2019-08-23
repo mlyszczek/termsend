@@ -1,32 +1,32 @@
 #!/bin/bash
 
-kurload()
+termsend()
 {
-    cat - <(echo 'kurload') | nc 127.6.13.37 61337 2>/dev/null
+    cat - <(echo 'termsend') | nc 127.6.13.37 61337 2>/dev/null
 }
 
-mkdir -p /tmp/kurload-test/out
+mkdir -p /tmp/termsend-test/out
 i=0
 
 
-../src/kurload -D -l6 -c -i61337 -s1024 -t1 -m2 -dlocalhost -ukurload \
-    -gkurload -P/tmp/kurload-test/kurload.pid \
-    -q/tmp/kurload-test/kurload-query.log -p/tmp/kurload-test/kurload.log \
-    -L/tmp/kurload-test/blacklist -T-1 -o/tmp/kurload-test/out \
+../src/termsend -D -l6 -c -i61337 -s1024 -t1 -m2 -dlocalhost -utermsend \
+    -gtermsend -P/tmp/termsend-test/termsend.pid \
+    -q/tmp/termsend-test/termsend-query.log -p/tmp/termsend-test/termsend.log \
+    -L/tmp/termsend-test/blacklist -T-1 -o/tmp/termsend-test/out \
     -b127.6.13.37
 data=`head -c 1000 < /dev/urandom`
 
 while :
 do
     ((i++))
-    echo "$data" | kurload >/dev/null 2>&1  &
+    echo "$data" | termsend >/dev/null 2>&1  &
     if [ $i -eq 10000 ]
     then
         i=0
-        rm /tmp/kurload-test/out/*
-        echo "" > /tmp/kurload-test/kurload-query.log
+        rm /tmp/termsend-test/out/*
+        echo "" > /tmp/termsend-test/termsend-query.log
     fi
 done
 
-kill -15 `cat /tmp/kurload-test/kurload.pid`
-rm -rf /tmp/kurload-test
+kill -15 `cat /tmp/termsend-test/termsend.pid`
+rm -rf /tmp/termsend-test

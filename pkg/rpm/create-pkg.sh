@@ -1,6 +1,6 @@
 #!/bin/sh
 
-project="kurload"
+project="termsend"
 scp_server="pkgs@kurwik"
 retval=1
 
@@ -8,7 +8,7 @@ atexit()
 {
     set +e
 
-    /etc/init.d/kurload stop
+    /etc/init.d/termsend stop
 
     if type zypper >/dev/null
     then
@@ -23,9 +23,9 @@ atexit()
         yum remove -y "${project}"
     fi
 
-    userdel kurload
-    groupdel kurload
-    rmdir /var/lib/kurload
+    userdel termsend
+    groupdel termsend
+    rmdir /var/lib/termsend
 
     if [ "x${1}" != "xno-exit" ]
     then
@@ -52,13 +52,13 @@ trap atexit EXIT
 set -e
 
 cd "${HOME}/rpmbuild"
-pkg_version="$(curl "https://git.kurwinet.pl/${project}/plain/configure.ac?h=${git_version}" | \
+pkg_version="$(curl "https://git.bofc.pl/${project}/plain/configure.ac?h=${git_version}" | \
     grep "AC_INIT(" | cut -f3 -d\[ | cut -f1 -d\])"
-wget "https://git.kurwinet.pl/${project}/snapshot/${project}-${git_version}.tar.gz" \
+wget "https://git.bofc.pl/${project}/snapshot/${project}-${git_version}.tar.gz" \
     -O "SOURCES/${project}-${pkg_version}.tar.gz"
-wget "https://git.kurwinet.pl/${project}/plain/pkg/rpm/${project}.spec.template?h=${git_version}" \
+wget "https://git.bofc.pl/${project}/plain/pkg/rpm/${project}.spec.template?h=${git_version}" \
     -O "SPECS/${project}-${pkg_version}.spec"
-lt_version="$(curl "https://git.kurwinet.pl/${project}/plain/lib/Makefile.am?h=${git_version}" | \
+lt_version="$(curl "https://git.bofc.pl/${project}/plain/lib/Makefile.am?h=${git_version}" | \
     grep "${project}_la_LDFLAGS = -version-info" | cut -f4 -d\ )"
 
 current="$(echo ${lt_version} | cut -f1 -d:)"
@@ -110,7 +110,7 @@ else
         "RPMS/${arch}/${project}-${pkg_version}-${rel_version}.${arch}.rpm"
 fi
 
-if ldd $(which kurload) | grep "\/usr\/bofc"
+if ldd $(which termsend) | grep "\/usr\/bofc"
 then
     # sanity check to make sure test program uses system libraries
     # and not locally installed ones (which are used as build
@@ -121,10 +121,10 @@ then
     exit 1
 fi
 
-kurload -v
-/etc/init.d/kurload start
-/etc/init.d/kurload restart
-/etc/init.d/kurload stop
+termsend -v
+/etc/init.d/termsend start
+/etc/init.d/termsend restart
+/etc/init.d/termsend stop
 
 # cleanup
 atexit "no-exit"
@@ -133,10 +133,10 @@ atexit "no-exit"
 # should no longer be in the system.
 retval=0
 set +e
-kurload -v && retval=1
-getent passwd kurload && retval=2
-getent group kurload && retval=3
-[ -d /var/lib/kurload ] && retval=4
+termsend -v && retval=1
+getent passwd termsend && retval=2
+getent group termsend && retval=3
+[ -d /var/lib/termsend ] && retval=4
 
 if [ ${retval} -ne 0 ]
 then

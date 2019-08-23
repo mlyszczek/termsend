@@ -1,10 +1,10 @@
 #!/bin/sh
 
-project='kurload'
+project='termsend'
 out='www/downloads.html'
-remote="https://distfiles.kurwinet.pl/${project}"
-gpg="https://distfiles.kurwinet.pl/bofc-signing.pub.gpg"
-asc="https://distfiles.kurwinet.pl/bofc-signing.pub.asc"
+remote="https://distfiles.bofc.pl/${project}"
+gpg="https://distfiles.bofc.pl/bofc-signing.pub.gpg"
+asc="https://distfiles.bofc.pl/bofc-signing.pub.asc"
 
 get_files_from_remote()
 {
@@ -41,14 +41,14 @@ echo "git clone git://git.bofc.pl/${project}<br>"
 echo "git clone http://git.bofc.pl/${project}<br>"
 echo "</p>"
 echo "<h1>repositories</h1>"
-echo "<p>You can also add kurwinet.pl repository to your system and let"
+echo "<p>You can also add bofc.pl repository to your system and let"
 echo "package manager to deal with install and updates. Depending on your"
 echo "distributions there are couple of repositories - neccessary instructions"
 echo "on how to add repository is on theirs respective sites</p>"
-echo "<ul><li><b>yum</b> based distros - <a href=\"https://yum.kurwinet.pl\">"
-echo "https://yum.kurwinet.pl</a></li>"
-echo "<li><b>apt</b> based distros - <a href=\"https://apt.kurwinet.pl\">"
-echo "https://apt.kurwinet.pl</a></li></ul>"
+echo "<ul><li><b>yum</b> based distros - <a href=\"https://yum.bofc.pl\">"
+echo "https://yum.bofc.pl</a></li>"
+echo "<li><b>apt</b> based distros - <a href=\"https://apt.bofc.pl\">"
+echo "https://apt.bofc.pl</a></li></ul>"
 echo "<h1>tarballs (source code)</h1>"
 echo "<pre>"
 

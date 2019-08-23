@@ -44,7 +44,7 @@
    ========================================================================== */
 
 #define IPTESTNUM 1000
-#define BNWFILE "/tmp/kurload-test-bnwlist"
+#define BNWFILE "/tmp/termsend-test-bnwlist"
 mt_defs_ext();
 
 static int bnwfd;

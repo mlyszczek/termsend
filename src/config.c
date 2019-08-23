@@ -34,7 +34,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-#   include "kurload.h"
+#   include "termsend.h"
 #endif
 
 #include "feature.h"
@@ -233,7 +233,7 @@ static int config_parse_arguments
 
         case 'h':
             printf(
-"kurload - easy file sharing\n"
+"termsend - easy file sharing\n"
 "\n"
 "Usage: %s [-h | -v | options]\n"
 "\n"
@@ -375,15 +375,15 @@ int config_init
     g_config.pem_pass_file[0] = '\0';
     strcpy(g_config.domain, "localhost");
     strcpy(g_config.bind_ip, "0.0.0.0");
-    strcpy(g_config.user, "kurload");
-    strcpy(g_config.group, "kurload");
-    strcpy(g_config.query_log, "/var/log/kurload-query.log");
-    strcpy(g_config.program_log, "/var/log/kurload.log");
-    strcpy(g_config.pid_file, "/var/run/kurload.pid");
-    strcpy(g_config.output_dir, "/var/lib/kurload");
-    strcpy(g_config.list_file, "/etc/kurload/iplist");
-    strcpy(g_config.key_file, "/etc/kurload/kurload.key");
-    strcpy(g_config.cert_file, "/etc/kurload/kurload.cert");
+    strcpy(g_config.user, "termsend");
+    strcpy(g_config.group, "termsend");
+    strcpy(g_config.query_log, "/var/log/termsend-query.log");
+    strcpy(g_config.program_log, "/var/log/termsend.log");
+    strcpy(g_config.pid_file, "/var/run/termsend.pid");
+    strcpy(g_config.output_dir, "/var/lib/termsend");
+    strcpy(g_config.list_file, "/etc/termsend/iplist");
+    strcpy(g_config.key_file, "/etc/termsend/termsend.key");
+    strcpy(g_config.cert_file, "/etc/termsend/termsend.cert");
 
     /* parse options from command line argument overwriting
      * default ones
@@ -469,7 +469,7 @@ void config_print(void)
 
 
     el_print(ELI, PACKAGE_STRING);
-    el_print(ELI, "kurload configuration");
+    el_print(ELI, "termsend configuration");
     CONFIG_PRINT(log_level, "%d");
     CONFIG_PRINT(colorful_output, "%ld");
     CONFIG_PRINT(listen_port, "%ld");

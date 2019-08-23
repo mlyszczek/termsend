@@ -1,12 +1,12 @@
 #!/bin/sh
 
-hostname="http://kurload.kurwinet.pl"
+hostname="http://termsend.bofc.pl"
 out="$(pwd)/www"
 root="$(pwd)"
-ftmp="/tmp/kurload-man2html"
+ftmp="/tmp/termsend-man2html"
 
 
-m="kurload.1"
+m="termsend.1"
 n="1"
 man2html -r -H "${hostname}" "${m}" > "${ftmp}"
 
@@ -22,7 +22,7 @@ name="$(basename ${m})"
 name="${name%.*}"
 version_info="$(head -n1 ${ftmp} | cut -f3 -d: | cut -f1 -d\<)"
 tail -n+2 "${ftmp}" > tmp; mv tmp "${ftmp}"
-sed -i "1s/^/<p class=\"info left\">${name}(${n})<\/p><p class=\"info center\">kurwinet manual pages<\/p><p class=\"info right\">${name}(${n})<\/p>\n<br><P> /" "${ftmp}"
+sed -i "1s/^/<p class=\"info left\">${name}(${n})<\/p><p class=\"info center\">bofc manual pages<\/p><p class=\"info right\">${name}(${n})<\/p>\n<br><P> /" "${ftmp}"
 
 # remove uneeded links to non-existing index
 sed -i 's/<A HREF="\.\.\/index.html">Return to Main Contents<\/A><HR>//' "${ftmp}"

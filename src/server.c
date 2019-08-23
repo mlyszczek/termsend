@@ -397,7 +397,7 @@ static void *server_handle_upload
     char                path[PATH_MAX];  /* full path to the file */
     char                fname[32];   /* random generated file name */
     char                url[8192 + 1];   /* generated link to uploaded data */
-    char                ends[8 + 1]; /* buffer for end string detection */
+    char                ends[9 + 1]; /* buffer for end string detection */
     static int          flen = 5;    /* length of the filename to generate */
     unsigned char       buf[8192];   /* temp buffer we read uploaded data to */
     size_t              written;     /* total written bytes to file */
@@ -507,7 +507,7 @@ static void *server_handle_upload
      * netcat cannot close connection on upload complete, to inform
      * us about upload completed, so we expect an ending string at
      * the end of transfer that will inform us that transfer is
-     * completed.  That ending string is "kurload\n". Yes, this may
+     * completed.  That ending string is "termsend\n". Yes, this may
      * lead to prepature end of transfer, but chances are so slim,
      * we can neglect them.
      */
@@ -571,13 +571,13 @@ static void *server_handle_upload
 
             /* well, there may be one more case for inactivity from
              * clients side. It may be that he forgot to add ending
-             * string "kurload\n", so we send reply to the client
+             * string "termsend\n", so we send reply to the client
              * as there is a chance he is still alive.
              */
 
             server_reply(cfd, "disconnected due to inactivity for %d "
                 "seconds, did you forget to append termination "
-                "string - \"kurload\\n\"?\n", g_config.max_timeout);
+                "string - \"termsend\\n\"?\n", g_config.max_timeout);
             goto error;
         }
 
@@ -608,17 +608,17 @@ static void *server_handle_upload
             /* r == 0 means that client gently closes connection
              * by sending FIN, and nicely waits for us to respond,
              * in that case we do not require client to send ending
-             * kurload\n
+             * termsend\n
              */
 
             goto upload_finished_with_fin;
         }
 
-        if (written + r > (size_t)g_config.max_size + 8)
+        if (written + r > (size_t)g_config.max_size + 9)
         {
             /* we received, in total, more bytes then we can
              * accept, we remove such file and return error to the
-             * client. That +8 is for ending string "kurload\n" as
+             * client. That +9 is for ending string "termsend\n" as
              * we will delete that anyway and file will not get
              * more than g_config.max_size size.
              */
@@ -631,7 +631,7 @@ static void *server_handle_upload
         }
 
         /* received some data, simply store them into file, right
-         * now we don't care if ending string "kurload\n" ends up
+         * now we don't care if ending string "termsend\n" ends up
          * in a file, we will take care of it later.
          */
 
@@ -645,11 +645,11 @@ static void *server_handle_upload
         }
 
         /* write was successful, now let's check if data written to
-         * file contains ending string "kurload\n". For that we
-         * read 8 last characters from data stored in file.
+         * file contains ending string "termsend\n". For that we
+         * read 9 last characters from data stored in file.
          */
 
-        if ((written += w) < 8)
+        if ((written += w) < 9)
         {
             /* we didn't receive enough bytes to check for ending
              * string, so we don't check for ending string, simple.
@@ -658,15 +658,15 @@ static void *server_handle_upload
             continue;
         }
 
-        /* we seek 8 bytes back, as its length of "kurload\n" and
-         * read last 8 bytes to check for end string existance. We
+        /* we seek 9 bytes back, as its length of "termsend\n" and
+         * read last 9 bytes to check for end string existance. We
          * don't need to seek back to end of file, as reading will
          * move the pointer by itself.
          */
 
-        lseek(fd, -8, SEEK_CUR);
+        lseek(fd, -9, SEEK_CUR);
 
-        if (read(fd, ends, 8) != 8)
+        if (read(fd, ends, 9) != 9)
         {
             /* totally unexpected, but still we expect it, like a
              * good swat team. We don't know how to recover from
@@ -680,7 +680,7 @@ static void *server_handle_upload
             goto error;
         }
 
-        if (strcmp(ends, "kurload\n") != 0)
+        if (strcmp(ends, "termsend\n") != 0)
         {
             /* ending string has not yet been received, we continue
              * getting data from client, and we send information to
@@ -707,11 +707,11 @@ static void *server_handle_upload
 
     /* to finish, we need to truncate file, to cut off ending
      * string from file and close it. We carefully check in
-     * previous lines that written is at least 8 bytes long,
+     * previous lines that written is at least 9 bytes long,
      * so this subtact is ok.
      */
 
-    written -= 8;
+    written -= 9;
     if (ftruncate(fd, written) != 0)
     {
         el_perror(ELC, "[%3d] couldn't truncate file from ending string",
@@ -724,7 +724,7 @@ static void *server_handle_upload
 
     /* we will jump to this only when timed upload is enabled and
      * connection has timed out. In that case we don't need (we
-     * cannot!) truncate dta by 8 bytes of "kurload\n" string,
+     * cannot!) truncate dta by 9 bytes of "termsend\n" string,
      * because such string was not (and could not have been) sent
      * to us.
      */
@@ -939,7 +939,7 @@ static void server_process_connection
 
                 /* ssl negotation failed, reply in clear text */
 
-                server_reply(cfd, "kurload: ssl negotation failed\n");
+                server_reply(cfd, "termsend: ssl negotation failed\n");
                 close(cfd->fd);
                 free(cfd);
                 continue;

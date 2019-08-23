@@ -2,11 +2,11 @@ include Makefile.am.coverage
 ACLOCAL_AMFLAGS=-I m4
 SUBDIRS = src tst www
 
-dist_sysconf_DATA = init.d/kurload.conf
+dist_sysconf_DATA = init.d/termsend.conf
 init_ddir = $(sysconfdir)/init.d
-dist_init_d_SCRIPTS = init.d/kurload
-dist_man_MANS = kurload.1
-EXTRA_DIST = init.d/kurload.openrc man2html.sh gen-download-page.sh readme.md tap-driver.sh
+dist_init_d_SCRIPTS = init.d/termsend
+dist_man_MANS = termsend.1
+EXTRA_DIST = init.d/termsend.openrc man2html.sh gen-download-page.sh readme.md tap-driver.sh
 
 analyze:
 	make analyze -C src

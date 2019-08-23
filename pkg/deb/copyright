@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: kurload
-Source: https://git.kurwinet.pl/kurload
+Upstream-Name: termsend
+Source: https://git.bofc.pl/termsend
 
 Files: *
 Copyright: 2017, 2018 Michał Łyszczek <michal.lyszczek@bofc.pl>

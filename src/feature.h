@@ -8,7 +8,7 @@
  */
 
 #if HAVE_CONFIG_H
-#   include "kurload.h"
+#   include "termsend.h"
 #endif
 
 

@@ -7,7 +7,7 @@
 #ifndef APP_CONFIG_H
 #define APP_CONFIG_H 1
 
-#include "kurload.h"
+#include "termsend.h"
 
 #include <embedlog.h>
 #include <limits.h>
