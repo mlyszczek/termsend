@@ -53,17 +53,17 @@ tedious work.
 
 ```{.sh}
 # add this to your .bashrc or .zshrc or whatever shell you use
-alias kl="socat - TCP:termsend.pl:1337"
+alias ts="socat - TCP:termsend.pl:1337"
 ```
 
-Now you can upload anything by simply piping it to "kl" alias. Examples
+Now you can upload anything by simply piping it to "ts" alias. Examples
 will explain it best:
 
 ```
-$ ls -l | kl               # uploads list of files in current directory
-$ cat error.log | kl       # uploads file 'error.log'
-$ make | kl                # uploads compilation output
-$ cat binary-file | kl     # uploads some binary file
+$ ls -l | ts               # uploads list of files in current directory
+$ cat error.log | ts       # uploads file 'error.log'
+$ make | ts                # uploads compilation output
+$ cat binary-file | ts     # uploads some binary file
 ```
 
 After transfer is complete, server will print link which you can later use to
@@ -73,7 +73,7 @@ output is known to be big, **curl** output can be piped to **less**. Check out
 this simple example.
 
 ```
-$ make distcheck 2>&1 | kl
+$ make distcheck 2>&1 | ts
 uploaded       3454 bytes
 uploaded       8203 bytes
 uploaded       9524 bytes
