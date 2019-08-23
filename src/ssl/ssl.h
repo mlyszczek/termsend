@@ -3,8 +3,8 @@
     Author: Michał Łyszczek <michal.lyszczek@bofc.pl>
    ========================================================================== */
 
-#ifndef KURLOAD_SSL_H
-#define KURLOAD_SSL_H 1
+#ifndef TERMSEND_SSL_H
+#define TERMSEND_SSL_H 1
 
 #include <sys/types.h>
 
