@@ -15,7 +15,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-#   include "kurload.h"
+#   include "termsend.h"
 #endif
 
 #include "config.h"
@@ -76,15 +76,15 @@ static void test_prepare(void)
     config.pem_pass_file[0] = '\0';
     strcpy(config.domain, "localhost");
     strcpy(config.bind_ip, "0.0.0.0");
-    strcpy(config.user, "kurload");
-    strcpy(config.group, "kurload");
-    strcpy(config.query_log, "/var/log/kurload-query.log");
-    strcpy(config.program_log, "/var/log/kurload.log");
-    strcpy(config.pid_file, "/var/run/kurload.pid");
-    strcpy(config.output_dir, "/var/lib/kurload");
-    strcpy(config.list_file, "/etc/kurload/iplist");
-    strcpy(config.key_file, "/etc/kurload/kurload.key");
-    strcpy(config.cert_file, "/etc/kurload/kurload.cert");
+    strcpy(config.user, "termsend");
+    strcpy(config.group, "termsend");
+    strcpy(config.query_log, "/var/log/termsend-query.log");
+    strcpy(config.program_log, "/var/log/termsend.log");
+    strcpy(config.pid_file, "/var/run/termsend.pid");
+    strcpy(config.output_dir, "/var/lib/termsend");
+    strcpy(config.list_file, "/etc/termsend/iplist");
+    strcpy(config.key_file, "/etc/termsend/termsend.key");
+    strcpy(config.cert_file, "/etc/termsend/termsend.cert");
 }
 
 
@@ -104,7 +104,7 @@ static void test_prepare(void)
 
 static void config_all_default(void)
 {
-    char  *argv[] = { "kurload" };
+    char  *argv[] = { "termsend" };
     config_init(1, argv);
     mt_fok(memcmp(&config, &g_config, sizeof(config)));
 }
@@ -118,7 +118,7 @@ static void config_short_opts(void)
 {
     char *argv[] =
     {
-        "kurload",
+        "termsend",
         "-l4",
         "-c",
         "-i100",
@@ -129,7 +129,7 @@ static void config_short_opts(void)
         "-t20",
         "-M7",
         "-T", "-1",
-        "-dhttp://kurload.bofc.pl",
+        "-dhttp://termsend.bofc.pl",
         "-ukur",
         "-gload",
         "-q/query",
@@ -161,7 +161,7 @@ static void config_short_opts(void)
     config.max_connections = 3;
     config.max_timeout = 20;
     config.timed_max_timeout = 7;
-    strcpy(config.domain, "http://kurload.bofc.pl");
+    strcpy(config.domain, "http://termsend.bofc.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");
     strcpy(config.group, "load");
@@ -191,7 +191,7 @@ static void config_long_opts(void)
 {
     char *argv[] =
     {
-        "kurload",
+        "termsend",
         "--level=4",
         "--colorful-output",
         "--listen-port=100",
@@ -202,7 +202,7 @@ static void config_long_opts(void)
         "--max-timeout=20",
         "--timed-max-timeout=7",
         "--list-type=-1",
-        "--domain=http://kurload.bofc.pl",
+        "--domain=http://termsend.bofc.pl",
         "--user=kur",
         "--group=load",
         "--query-log=/query",
@@ -234,7 +234,7 @@ static void config_long_opts(void)
     config.max_connections = 3;
     config.max_timeout = 20;
     config.timed_max_timeout = 7;
-    strcpy(config.domain, "http://kurload.bofc.pl");
+    strcpy(config.domain, "http://termsend.bofc.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");
     strcpy(config.group, "load");
@@ -264,7 +264,7 @@ static void config_mixed_opts(void)
 {
     char *argv[] =
     {
-        "kurload",
+        "termsend",
         "-l4",
         "--colorful-output",
         "--listen-port=100",
@@ -273,7 +273,7 @@ static void config_mixed_opts(void)
         "--max-connections=3",
         "--max-timeout=20",
         "--list-type=-1",
-        "-d", "http://kurload.bofc.pl",
+        "-d", "http://termsend.bofc.pl",
         "--user=kur",
         "--group=load",
         "-q/query",
@@ -296,7 +296,7 @@ static void config_mixed_opts(void)
     config.max_size = 512;
     config.max_connections = 3;
     config.max_timeout = 20;
-    strcpy(config.domain, "http://kurload.bofc.pl");
+    strcpy(config.domain, "http://termsend.bofc.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");
     strcpy(config.group, "load");

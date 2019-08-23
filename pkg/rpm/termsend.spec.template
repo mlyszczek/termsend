@@ -1,12 +1,12 @@
-Name:           kurload
+Name:           termsend
 Version:        @{VERSION}
 Release:        1
 Summary:        share files or program output from command line using the most basic UNIX tools
 
 Group:          Applications/Internet
 License:        BSD
-URL:            https://kurload.bofc.pl
-Source0:        https://git.bofc.pl/kurload/snapshot/kurload-%{version}.tar.gz
+URL:            https://termsend.bofc.pl
+Source0:        https://git.bofc.pl/termsend/snapshot/termsend-%{version}.tar.gz
 Vendor:         Bits of Code
 Packager:       Michał Łyszczek <michal.lyszczek@bofc.pl>
 
@@ -18,7 +18,7 @@ Server application to share files (or program output) from command line using
 the most basic UNIX tools, like netcat.
 
 %prep
-%setup -q -n kurload-@{GIT_VERSION}
+%setup -q -n termsend-@{GIT_VERSION}
 
 # debug packge macro, it is commented by default as rhel and centos
 # automatically build debug package, but open suse does not. Change it to
@@ -28,11 +28,11 @@ the most basic UNIX tools, like netcat.
 # __DEBUG_PACKAGE__
 
 %build
-# kurload rc script sources config from /usr/local/etc, and if package is
+# termsend rc script sources config from /usr/local/etc, and if package is
 # installed from package manager, config file is in /etc
-sed -i 's@^\. /usr/local/etc/kurload.conf$@. /etc/kurload.conf@' init.d/kurload
+sed -i 's@^\. /usr/local/etc/termsend.conf$@. /etc/termsend.conf@' init.d/termsend
 # same for command path
-sed -i 's@^command=/usr/local/bin/kurload$@command=/usr/bin/kurload@' init.d/kurload
+sed -i 's@^command=/usr/local/bin/termsend$@command=/usr/bin/termsend@' init.d/termsend
 ./autogen.sh
 %configure --enable-openssl
 make %{?_smp_mflags}
@@ -45,22 +45,22 @@ make DESTDIR=$RPM_BUILD_ROOT install
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
 
 %post
-if ! getent group kurload >/dev/null; then
-    groupadd --system kurload
+if ! getent group termsend >/dev/null; then
+    groupadd --system termsend
 fi
-if ! getent passwd kurload >/dev/null; then
-    useradd --system --home-dir /var/lib/kurload --shell /bin/false \
-        --gid $(getent group kurload | cut -f3 -d:) kurload
+if ! getent passwd termsend >/dev/null; then
+    useradd --system --home-dir /var/lib/termsend --shell /bin/false \
+        --gid $(getent group termsend | cut -f3 -d:) termsend
 fi
-mkdir -p /var/lib/kurload
-chown kurload:kurload /var/lib/kurload
+mkdir -p /var/lib/termsend
+chown termsend:termsend /var/lib/termsend
 
 %files
 %defattr(-,root,root,-)
 %doc AUTHORS LICENSE readme.md
 %{_mandir}/*/*
-%{_bindir}/kurload
-%{_sysconfdir}/kurload.conf
-%attr(755, root, root)%{_sysconfdir}/init.d/kurload
+%{_bindir}/termsend
+%{_sysconfdir}/termsend.conf
+%attr(755, root, root)%{_sysconfdir}/init.d/termsend
 
 %changelog

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-project='kurload'
+project='termsend'
 out='www/downloads.html'
 remote="https://distfiles.bofc.pl/${project}"
 gpg="https://distfiles.bofc.pl/bofc-signing.pub.gpg"

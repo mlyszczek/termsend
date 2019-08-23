@@ -1,4 +1,4 @@
-in_title="kurload.bofc.pl - terminal friendly file server"
+in_title="termsend.bofc.pl - terminal friendly file server"
 in_description="Server application to share files (or program output) from command line using the most basic UNIX tools, like netcat"
 in_author="Michał Łyszczek"
 in_lang="en"

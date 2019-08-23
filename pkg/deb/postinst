@@ -2,16 +2,16 @@
 
 set -e
 
-if ! getent group kurload >/dev/null; then
-    groupadd --system kurload
+if ! getent group termsend >/dev/null; then
+    groupadd --system termsend
 fi
 
-if ! getent passwd kurload >/dev/null; then
-    adduser --system --home /var/lib/kurload --shell /usr/sbin/nologin \
-        --gid $(getent group kurload | cut -f3 -d:) kurload
+if ! getent passwd termsend >/dev/null; then
+    adduser --system --home /var/lib/termsend --shell /usr/sbin/nologin \
+        --gid $(getent group termsend | cut -f3 -d:) termsend
 fi
 
-mkdir -p /var/lib/kurload
-chown kurload:kurload /var/lib/kurload
+mkdir -p /var/lib/termsend
+chown termsend:termsend /var/lib/termsend
 
 #DEBHELPER#

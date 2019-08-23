@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-updir="./kurload-test/out"
-data="./kurload-test/data"
-pidfile="./kurload-test/kurload.pid"
+updir="./termsend-test/out"
+data="./termsend-test/data"
+pidfile="./termsend-test/termsend.pid"
 
 . ./mtest.sh
 os="$(uname)"
@@ -23,28 +23,28 @@ fi
 ## ==========================================================================
 
 
-start_kurload()
+start_termsend()
 {
-    common_opts="-D -l7 -c -i61337 -a61338 -s1024 -t3 -m3 -dlocalhost -ukurload \
-        -gkurload -P"${pidfile}" -q./kurload-test/kurload-query.log \
-        -p./kurload-test/kurload.log -T0 \
-        -o./kurload-test/out -b${server}"
+    common_opts="-D -l7 -c -i61337 -a61338 -s1024 -t3 -m3 -dlocalhost -utermsend \
+        -gtermsend -P"${pidfile}" -q./termsend-test/termsend-query.log \
+        -p./termsend-test/termsend.log -T0 \
+        -o./termsend-test/out -b${server}"
 
-    mkdir -p ./kurload-test/out
+    mkdir -p ./termsend-test/out
     if [ ${ssl_test} = "openssl" ]
     then
-        ../src/kurload ${common_opts} -I61339 -A61340 -k./test-server.key.pem \
+        ../src/termsend ${common_opts} -I61339 -A61340 -k./test-server.key.pem \
             -C./test-server.cert.pem -f./test-server.key.pass ${args}
     else
-        ../src/kurload ${common_opts} ${args}
+        ../src/termsend ${common_opts} ${args}
     fi
 
-    # wait for kurload to start
+    # wait for termsend to start
 
     tries=0
     while true
     do
-        if grep "n/server initialized and started" ./kurload-test/kurload.log \
+        if grep "n/server initialized and started" ./termsend-test/termsend.log \
             >/dev/null
         then
             break
@@ -53,7 +53,7 @@ start_kurload()
         tries=$(( tries + 1 ))
         if [ ${tries} -eq 600 ]
         then
-            echo "kurload failed to start" >> /tmp/kurload
+            echo "termsend failed to start" >> /tmp/termsend
             exit 1
         fi
 
@@ -68,7 +68,7 @@ start_kurload()
 
 mt_prepare_test()
 {
-    start_kurload
+    start_termsend
 }
 
 
@@ -82,13 +82,13 @@ mt_cleanup_test()
     kill -15 "${pid}"
 
     tries=0
-    echo "killing kurload" >> /tmp/kurload
+    echo "killing termsend" >> /tmp/termsend
     while true
     do
         if ! kill -s 0 "${pid}" 2>/dev/null
         then
-            # kurload died
-            echo "it died" >> /tmp/kurload
+            # termsend died
+            echo "it died" >> /tmp/termsend
 
             break
         fi
@@ -97,19 +97,19 @@ mt_cleanup_test()
 
         if [ ${tries} -eq 5 ]
         then
-        echo "could kill 5 times" >> /tmp/kurload
+        echo "could kill 5 times" >> /tmp/termsend
             exit 1
             break
         fi
         sleep 1
     done
 
-    rm -rf ./kurload-test
+    rm -rf ./termsend-test
 }
 
 
 ## ==========================================================================
-#   Parses output from kurload server to get generated file name where data
+#   Parses output from termsend server to get generated file name where data
 #   was stored in
 ## ==========================================================================
 
@@ -121,31 +121,31 @@ get_file()
 
 
 ## ==========================================================================
-#   sends content of file from path $1, to kurload server and returns
+#   sends content of file from path $1, to termsend server and returns
 #   response from the server. Tries for up to 5 seconds
 ## ==========================================================================
 
 
-kurload_nc()
+termsend_nc()
 {
     port="${1}"
     file="${2}"
-    append_kurload="${3}"
+    append_termsend="${3}"
 
-    if [ -z "${append_kurload}" ]
+    if [ -z "${append_termsend}" ]
     then
-        append_kurload=1
+        append_termsend=1
     fi
 
-    echo "sending file $1 append $2" >> /tmp/kurload
+    echo "sending file $1 append $2" >> /tmp/termsend
     tries=0
     while true
     do
         printf "" > "${file}.ncerr"
 
-        if [ ${append_kurload} -eq 1 ]
+        if [ ${append_termsend} -eq 1 ]
         then
-            out="$(cat "${file}" | { cat -; echo 'kurload'; } | \
+            out="$(cat "${file}" | { cat -; echo 'termsend'; } | \
                 ${nc} -v ${server} ${port} 2>"${file}.ncerr")"
         else
             out="$(cat "${file}" | ${nc} -v ${server} ${port} \
@@ -155,8 +155,8 @@ kurload_nc()
         if egrep -i "open|succe|received" "${file}.ncerr"
         then
             # nc was successfull
-            echo "nc allright" >> /tmp/kurload
-            echo $out >> /tmp/kurload
+            echo "nc allright" >> /tmp/termsend
+            echo $out >> /tmp/termsend
 
             echo "${out}"
             return 0
@@ -167,29 +167,29 @@ kurload_nc()
             # 5 seconds passed, server did not start, something
             # is wrong, abort, abort
 
-            echo "nc fucked 5 times" >> /tmp/kurload
+            echo "nc fucked 5 times" >> /tmp/termsend
             return 1
         fi
 
         # nc failed, probably connection refused, let's try again
 
-        echo "nc fucked" >> /tmp/kurload
-        cat ${file}.ncerr >> /tmp/kurload
+        echo "nc fucked" >> /tmp/termsend
+        cat ${file}.ncerr >> /tmp/termsend
         tries=$(( tries + 1 ))
         sleep 1
     done
 }
 
 
-kurload_socat()
+termsend_socat()
 {
     port="${1}"
     file="${2}"
-    append_kurload="${3}"
+    append_termsend="${3}"
 
-    if [ -z "${append_kurload}" ]
+    if [ -z "${append_termsend}" ]
     then
-        append_kurload=1
+        append_termsend=1
     fi
 
     if [ "${ssl_test}" = "openssl" ]
@@ -199,13 +199,13 @@ kurload_socat()
         socat_cmd="socat -t30 - TCP:${server}:${port}"
     fi
 
-    echo "sending file $1 append $2" >> /tmp/kurload
+    echo "sending file $1 append $2" >> /tmp/termsend
     tries=0
     while true
     do
-        if [ ${append_kurload} -eq 1 ]
+        if [ ${append_termsend} -eq 1 ]
         then
-            out="$(cat "${file}" | { cat -; echo 'kurload'; } | \
+            out="$(cat "${file}" | { cat -; echo 'termsend'; } | \
                 ${socat_cmd})"
         else
             out="$(cat "${file}" | ${socat_cmd})"
@@ -214,8 +214,8 @@ kurload_socat()
         if [ ${?} -eq 0 ]
         then
             # socat was successfull
-            echo "socat allright" >> /tmp/kurload
-            echo $out >> /tmp/kurload
+            echo "socat allright" >> /tmp/termsend
+            echo $out >> /tmp/termsend
 
             echo "${out}"
             return 0
@@ -226,45 +226,45 @@ kurload_socat()
             # 5 seconds passed, server did not start, something
             # is wrong, abort, abort
 
-            echo "socat fucked 5 times" >> /tmp/kurload
+            echo "socat fucked 5 times" >> /tmp/termsend
             return 1
         fi
 
         # socat failed, probably connection refused, let's try again
 
-        echo "socat fucked" >> /tmp/kurload
+        echo "socat fucked" >> /tmp/termsend
         tries=$(( tries + 1 ))
         sleep 1
     done
 }
 
 
-kurload()
+termsend()
 {
     case ${prog_test}-${ssl_test} in
     nc-none)
         port=61337
         if [ ${timed_test} -eq 1 ]; then port=61338; fi
 
-        kurload_nc ${port} ${@}
+        termsend_nc ${port} ${@}
         ;;
 
     socat-none)
         port=61337
         if [ ${timed_test} -eq 1 ]; then port=61338; fi
 
-        kurload_socat ${port} ${@}
+        termsend_socat ${port} ${@}
         ;;
 
     socat-openssl)
         port=61339
         if [ ${timed_test} -eq 1 ]; then port=61340; fi
 
-        kurload_socat ${port} ${@}
+        termsend_socat ${port} ${@}
         ;;
 
     *)
-        echo "invalid kurload arguments: ${ssl_test}${have_nc}"
+        echo "invalid termsend arguments: ${ssl_test}${have_nc}"
         ;;
     esac
 }
@@ -307,7 +307,7 @@ multi_thread_check()
 {
     fname="$(randstr 120)"
     randstr 128 > "${data}.${fname}"
-    out="$(kurload "${data}.${fname}" | tail -n1)"
+    out="$(termsend "${data}.${fname}" | tail -n1)"
 
     if [ "${out}" = "all upload slots are taken, try again later" ]
     then
@@ -346,7 +346,7 @@ multi_thread_check()
 
 test_is_running()
 {
-    mt_fail "kill -s 0 `cat ./kurload-test/kurload.pid`"
+    mt_fail "kill -s 0 `cat ./termsend-test/termsend.pid`"
 
     # sleep for 1 second, since it is possible that we run the test
     # so quickly, that in cleanup kill SIGTERM is emited to early
@@ -364,7 +364,7 @@ test_is_running()
 test_send_string()
 {
     randstr 128 > ${data}
-    file="$(kurload "${data}" | get_file)"
+    file="$(termsend "${data}" | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
 }
 
@@ -415,7 +415,7 @@ test_threaded()
 test_send_string_full()
 {
     randstr 1023 > ${data}
-    file="$(kurload "${data}" | get_file)"
+    file="$(termsend "${data}" | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
 }
 
@@ -427,7 +427,7 @@ test_send_string_full()
 test_send_string_too_big()
 {
     randstr 1337 > ${data}
-    out="$(kurload "${data}" | tail -n1)"
+    out="$(termsend "${data}" | tail -n1)"
     mt_fail "[ \"${out}\" == \"file too big, max length is 1024 bytes\" ]"
 }
 
@@ -439,7 +439,7 @@ test_send_string_too_big()
 test_send_bin()
 {
     randbin 128 > ${data}
-    file="$(kurload "${data}" | get_file)"
+    file="$(termsend "${data}" | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
 }
 
@@ -451,7 +451,7 @@ test_send_bin()
 test_send_bin_full()
 {
     randbin 1024 > ${data}
-    file="$(kurload ${data} | get_file)"
+    file="$(termsend ${data} | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
 }
 
@@ -463,7 +463,7 @@ test_send_bin_full()
 test_send_bin_too_big()
 {
     randbin 1337 > "${data}"
-    out="$(kurload "${data}" | tail -n1)"
+    out="$(termsend "${data}" | tail -n1)"
     mt_fail "[ \"${out}\" == \"file too big, max length is 1024 bytes\" ]"
 }
 
@@ -472,10 +472,10 @@ test_send_bin_too_big()
 ## ==========================================================================
 
 
-test_send_empty_with_kurload()
+test_send_empty_with_termsend()
 {
     truncate -s0 "${data}"
-    out="$(kurload "${data}" | tail -n1)"
+    out="$(termsend "${data}" | tail -n1)"
     mt_fail "[ \"${out}\" == \"no data has been sent\" ]"
 }
 
@@ -487,7 +487,7 @@ test_send_empty_with_kurload()
 test_send_empty()
 {
     truncate -s0 "${data}"
-    out="$(kurload "${data}" 0 | ${tailn} | tr "\n" ".")"
+    out="$(termsend "${data}" 0 | ${tailn} | tr "\n" ".")"
 
     if [ "${prog_test}" = "socat" ] || \
         [ "${prog_test}" = "nc" -a "${nctype}" = "nmap" ]
@@ -504,7 +504,7 @@ test_send_empty()
 ## ==========================================================================
 
 
-test_send_without_kurload()
+test_send_without_termsend()
 {
     randbin 128 > "${data}"
     if [ "${prog_test}" = "socat" ] || \
@@ -512,10 +512,10 @@ test_send_without_kurload()
     then
         # socat and nmap version of nc nicely close connection when
         # all data is sent, so error will not happen here
-        file="$(kurload ${data} | get_file)"
+        file="$(termsend ${data} | get_file)"
         mt_fail "diff ${updir}/${file} ${data}"
     else
-        out="$(kurload "${data}" 0 | ${tailn} | tr "\n" ".")"
+        out="$(termsend "${data}" 0 | ${tailn} | tr "\n" ".")"
         mt_fail "[[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string\"* ]]"
     fi
 }
@@ -528,7 +528,7 @@ test_send_without_kurload()
 test_timed_upload()
 {
     randbin 128 > "${data}"
-    file="$(kurload "${data}" 0 | get_file)"
+    file="$(termsend "${data}" 0 | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
 }
 
@@ -540,7 +540,7 @@ test_timed_upload()
 test_timed_upload_empty()
 {
     truncate -s0 "${data}"
-    out="$(kurload "${data}" 0 | ${tailn} | tr "\n" ".")"
+    out="$(termsend "${data}" 0 | ${tailn} | tr "\n" ".")"
     mt_fail "echo \"${out}\" | grep \"no data has been sent.\""
 }
 
@@ -552,7 +552,7 @@ test_timed_upload_empty()
 test_timed_upload_full()
 {
     randbin 1024 > ${data}
-    file="$(kurload "${data}" 0 | get_file)"
+    file="$(termsend "${data}" 0 | get_file)"
     mt_fail "diff ${updir}/${file} ${data}"
 }
 
@@ -564,7 +564,7 @@ test_timed_upload_full()
 test_timed_upload_too_big()
 {
     randbin 1337 > ${data}
-    out="$(kurload "${data}" 0 | tail -n1)"
+    out="$(termsend "${data}" 0 | tail -n1)"
     mt_fail "[ \"$out\" == \"file too big, max length is 1024 bytes\" ]"
 }
 
@@ -573,10 +573,10 @@ test_timed_upload_too_big()
 ## ==========================================================================
 
 
-test_timed_upload_with_kurload()
+test_timed_upload_with_termsend()
 {
     randbin 128 > "${data}"
-    file="$(kurload "${data}" | get_file)"
+    file="$(termsend "${data}" | get_file)"
     mt_fail "diff $updir/$file $data"
 }
 
@@ -595,7 +595,7 @@ test_totally_random()
 
         if [ $finish -eq 0 ]
         then
-            # send data but don't send ending kurload\n
+            # send data but don't send ending termsend\n
             if [ $numbytes -gt 1024 ]
             then
                 numbytes=512
@@ -608,10 +608,10 @@ test_totally_random()
             then
                 # socat and nmap version of nc nicely close connection when
                 # all data is sent, so error will not happen here
-                file="$(kurload ${data} | get_file)"
+                file="$(termsend ${data} | get_file)"
                 mt_fail "diff ${updir}/${file} ${data}"
             else
-                out="$(kurload ${data} 0 | ${tailn} | tr "\n" ".")"
+                out="$(termsend ${data} 0 | ${tailn} | tr "\n" ".")"
                 mt_fail "[[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string\"* ]]"
             fi
 
@@ -620,13 +620,13 @@ test_totally_random()
 
             if [ $numbytes -gt 1024 ]
             then
-                out="$(kurload "${data}" | tail -n1)"
+                out="$(termsend "${data}" | tail -n1)"
                 if [ ! -z "$out" ]
                 then
                     mt_fail "[ \"$out\" == \"file too big, max length is 1024 bytes\" ]"
                 fi
             else
-                file="$(kurload "${data}" | get_file)"
+                file="$(termsend "${data}" | get_file)"
                 mt_fail "diff $updir/$file $data"
             fi
         fi
@@ -683,7 +683,7 @@ then
 fi
 
 have_ssl=0
-if ../src/kurload -v | grep +ssl > /dev/null
+if ../src/termsend -v | grep +ssl > /dev/null
 then
     have_ssl=1
 fi
@@ -709,8 +709,8 @@ run_tests()
     mt_run_named test_send_bin "test_send_bin-${prog_test}-${ssl_test}"
     mt_run_named test_send_bin_full "test_send_bin_full-${prog_test}-${ssl_test}"
     mt_run_named test_send_bin_too_big "test_send_bin_too_big-${prog_test}-${ssl_test}"
-    mt_run_named test_send_without_kurload "test_send_without_kurload-${prog_test}-${ssl_test}"
-    mt_run_named test_send_empty_with_kurload "test_send_empty_with_kurload-${prog_test}-${ssl_test}"
+    mt_run_named test_send_without_termsend "test_send_without_termsend-${prog_test}-${ssl_test}"
+    mt_run_named test_send_empty_with_termsend "test_send_empty_with_termsend-${prog_test}-${ssl_test}"
     mt_run_named test_send_empty "test_send_empty-${prog_test}-${ssl_test}"
     mt_run_named test_threaded "test_threaded-${prog_test}-${ssl_test}"
     mt_run_named test_totally_random "test_totally_random-${prog_test}-${ssl_test}"
@@ -721,10 +721,10 @@ run_tests()
     mt_run_named test_timed_upload_empty "test_timed_upload_empty-${prog_test}-${ssl_test}"
     mt_run_named test_timed_upload_full "test_timed_upload_full-${prog_test}-${ssl_test}"
     mt_run_named test_timed_upload_too_big "test_timed_upload_too_big-${prog_test}-${ssl_test}"
-    mt_run_named test_timed_upload_with_kurload "test_timed_upload_with_kurload-${prog_test}-${ssl_test}"
+    mt_run_named test_timed_upload_with_termsend "test_timed_upload_with_termsend-${prog_test}-${ssl_test}"
 }
 
-rm -rf ./kurload-test
+rm -rf ./termsend-test
 
 ssl_test=none
 prog_test=nc

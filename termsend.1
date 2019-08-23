@@ -1,12 +1,12 @@
 .TH "KURLOAD" "1" "01 Jan 1970 (v9999)" "bofc.pl"
 .SH NAME
 .PP
-.B kurload
+.B termsend
 - share files or program output from command line using the most basic UNIX
 tools
 .SH SYNOPSIS
 .PP
-.B kurload
+.B termsend
 [
 .B -h
 |
@@ -26,7 +26,7 @@ Client could of course send FIN with shutdown() function at the end of
 transfer but not all clients do that - nc, for example, nc does not issue FIN 
 once stdin ends, but socat does that.
 The only control frame is an ending string -
-.BR kurload\en .
+.BR termsend\en .
 When this string is received at the end of stream, server returns link to
 uploaded content and closes connection.
 This simplicity is intentional, as thanks to this, files can be uploaded to
@@ -44,7 +44,7 @@ outputs that can stall for long time.
 .PP
 To sumarize, upload will succed when:
 .RS
-- "kurload\\n" is seen at the end of transfer
+- "termsend\\n" is seen at the end of transfer
 .br
 - client sends FIN, which is treated as end of stdin and thus end of upload
 .RE
@@ -53,25 +53,25 @@ Upload will fail when:
 .RS
 -
 .B max-timeout
-passes and neither "kurload\\n" nor FIN is seen
+passes and neither "termsend\\n" nor FIN is seen
 .br
 - client closes connection without waiting for data and FIN from server.
 .br
 - client connects and immediately sends FIN (no data sent)
 .br
-- client connects sends, only "kurload\en" and sends FIN (no data sent)
+- client connects sends, only "termsend\en" and sends FIN (no data sent)
 .RE
 .PP
 .B Timed upload
 .PP
-Normally kurload will wait for "kurload\\n" string and if no data is sent within
+Normally termsend will wait for "termsend\\n" string and if no data is sent within
 .B MAX_TIMEOUT
 seconds connection will be closed with error and data will not be saved.
-You can however use timed upload to send data without the "kurload\\n" string,
+You can however use timed upload to send data without the "termsend\\n" string,
 which will make uploading even easier.
 If you use timed upload, and timeout occurs, server will save uploaded data
 and link will be sent back to the client.
-When "kurload\\n" is seen, link will be transmited back immediately as it is
+When "termsend\\n" is seen, link will be transmited back immediately as it is
 done in non-timed upload.
 When client sends FIN, link will also be send immediately, but for clients
 that does nothing when stdin ends (netcat), server will wait timeout seconds
@@ -97,7 +97,7 @@ time waiting for server to respond.
 .PP
 To sumarize, upload will succed when:
 .RS
-- "kurload\\n" is seen at the end of transfer
+- "termsend\\n" is seen at the end of transfer
 .br
 - client sends FIN, which is treated as end of stdin and thus end of upload
 .br
@@ -112,7 +112,7 @@ Upload will fail when:
 .br
 - client connects and immediately sends FIN (no data sent)
 .br
-- client connects sends, only "kurload\en" and sends FIN (no data sent)
+- client connects sends, only "termsend\en" and sends FIN (no data sent)
 .br
 - client connects and does not send anything until timeout occurs (no data sent)
 .RE
@@ -120,7 +120,7 @@ Upload will fail when:
 If you still don't know which mode to use - if you don't want to support
 uploading from slow programs, use timed upload as it's more versatile.
 Otherwise use non-timed with big timeout. And remember you can always start
-.B kurload
+.B termsend
 in both modes working on 2 different ports.
 .SH OPTIONS
 .PP
@@ -160,7 +160,7 @@ Program will listen on specified
 .I port
 for incoming connections.
 This port will be used for handling unencrypted connections that ends with
-.BR """kurload\en"""
+.BR """termsend\en"""
 string.
 When no data in
 .B max-timeout
@@ -174,10 +174,10 @@ Program will listen on specified
 for incoming connections.
 This port will be used for handling unencrypted connections and data does
 not have to end with 
-.BR """kurload\en"""
+.BR """termsend\en"""
 string.
 Transfer ends if either
-.BR """kurload\en"""
+.BR """termsend\en"""
 string is seen at the end or, client issues gentle connection close with
 shutdown() function or
 .B timed-max-timeout
@@ -190,7 +190,7 @@ Program will listen on specified
 .I port
 for incoming connections.
 This port will be used for handling encrypted connections that ends with
-.BR """kurload\en"""
+.BR """termsend\en"""
 string.
 When no data in
 .B max-timeout
@@ -261,7 +261,7 @@ Default is: 1048576 bytes (1MiB)
 .TP
 .BI "-D, --daemonize"
 Program will try to run as daemon. If
-.B kurload
+.B termsend
 is called as
 .BR root ,
 program will try to drop priviliges and run with
@@ -273,7 +273,7 @@ priviliges. If
 and
 .I group
 is not set, program will try to run with
-.B kurload
+.B termsend
 user and group.
 .br
 Default is: off
@@ -291,7 +291,7 @@ If during upload, client doesn't send any single bytes for configured
 server will close connection and information will be sent back to the client
 informing him about timeout - as it is possible that he forgot to end upload
 with special phrase
-.BR kurload\en .
+.BR termsend\en .
 .br
 Default is: 60
 .TP
@@ -331,7 +331,7 @@ Path to list of IPs, which will be filtered base on
 .B list-type
 option. One IP per line is allowed.
 .br
-Default is: /etc/kurload-iplist
+Default is: /etc/termsend-iplist
 .TP
 .BI "-b, --bind-ip=<" ip-list >
 Comma separeted list of IPs. Program will listen only on IPs listed in
@@ -351,76 +351,76 @@ Default is: localhost - you definately want to change this.
 .I user
 that should run server. Only works when run as daemon started from root account.
 .br
-Default is: kurload
+Default is: termsend
 .TP
 .BI "-g, --group=<" group >
 .I group
 that should run server. Only works when run as daemon started from root account.
 .br
-Default is: kurload
+Default is: termsend
 .TP
 .BI "-q, --query-log=<" path >
 Place where all queries will be logged. Check
 .B FILES
 section for more information
 .br
-Default is: /var/log/kurload-query.log
+Default is: /var/log/termsend-query.log
 .TP
 .BI "-p, --program-log=<" path >
 Program log path. Check
 .B FILES
 section for more information.
 .br
-Default is: /var/log/kurload.log
+Default is: /var/log/termsend.log
 .TP
 .BI "-P, --pid-file=<" path >
 Where to store programs pid.
 Only works if run as daemon.
 .br
-Default is: /var/run/kurload.pid
+Default is: /var/run/termsend.pid
 .TP
 .BI "-o, --output-dir=<" path >
 Location where all uploaded files will be stored. Check
 .B FILES
 section for more information.
 .br
-Default is: /var/lib/kurload
+Default is: /var/lib/termsend
 .SH FILES
 .PP
 These are default file locations.
 They can be changed via
 .IR options .
 .TP
-.B /etc/kurload/iplist
+.B /etc/termsend/iplist
 Separated by new line list of IPs that are filtered (depending on
 .I list_type
 field).
 One IP per line is allowed
 .TP
-.B /etc/kurload/kurload.cert
+.B /etc/termsend/termsend.cert
 SSL certificate to use with encrypted uploads
 .TP
-.B /etc/kurload/kurload.key
+.B /etc/termsend/termsend.key
 SSL key to use with encrypted uploads
 .TP
-.B /var/run/kurload.pid
+.B /var/run/termsend.pid
 Process id of working daemon.
 This file is created only when program is run with
 .B -d
 option
 .TP
-.B /var/log/kurload-query.log
+.B /var/log/termsend-query.log
 Every upload query will be logged here exactly once.
 If query failed, short reason is added and more information about failure can be
 found in program log.
 For successful queries, filename is loged.
 All queries will contain date of upload and source IP.
 .TP
-.B /var/log/kurload.log
+.B /var/log/termsend.log
 General execution logs are kept here.
 Detailed information about errornous queries will be here.
 .TP
-.B /var/lib/kurload
+.B /var/lib/termsend
 Directory where all uploaded files are stored - usually root of http from
 where people can download files.
 User that runs program should have write access to this directory.

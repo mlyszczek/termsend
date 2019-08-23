@@ -10,7 +10,7 @@
 # Required-Stop: $remote_fs $local_fs
 # Default-Start: 3 4 5
 # Default-Stop: 0 1 2 6
-# Short-Description: start and stop kurload daemon
+# Short-Description: start and stop termsend daemon
 # Description: share files or program output from command line using the most
 #   basic UNIX tools
 ### END INIT INFO
@@ -33,7 +33,7 @@ unalias start > /dev/null 2>&1
 ## ==========================================================================
 
 
-. /usr/local/etc/kurload.conf
+. /usr/local/etc/termsend.conf
 
 
 ## ==========================================================================
@@ -52,26 +52,26 @@ LISTEN_PORT=${LISTEN_PORT:="1337"}
 TIMED_LISTEN_PORT=${TIMED_LISTEN_PORT:="1338"}
 SSL_LISTEN_PORT=${SSL_LISTEN_PORT:="0"}
 TIMED_SSL_LISTEN_PORT=${TIMED_SSL_LISTEN_PORT:="0"}
-CERT_FILE=${CERT_FILE:="/etc/kurload/kurload.cert"}
-KEY_FILE=${KEY_FILE:="/etc/kurload/kurload.key"}
+CERT_FILE=${CERT_FILE:="/etc/termsend/termsend.cert"}
+KEY_FILE=${KEY_FILE:="/etc/termsend/termsend.key"}
 PEM_PASS_FILE=${PEM_PASS_FILE:=""}
 MAX_SIZE=${MAX_SIZE:="1048576"}
 MAX_TIMEOUT=${MAX_TIMEOUT:="60"}
 TIMED_MAX_TIMEOUT=${TIMED_MAX_TIMEOUT:="3"}
 MAX_CONNECTIONS=${MAX_CONNECTIONS:="10"}
-DOMAIN=${DOMAIN:="http://kurload.bofc.pl"}
-USER=${USER:="kurload"}
-GROUP=${GROUP:="kurload"}
-PID_FILE=${PID_FILE:="/var/run/kurload.pid"}
-QUERY_LOG=${QUERY_LOG:="/var/log/kurload-query.log"}
-PROGRAM_LOG=${PROGRAM_LOG:="/var/log/kurload.log"}
-LIST_FILE=${LIST_FILE:="/etc/kurload-iplist"}
+DOMAIN=${DOMAIN:="http://termsend.bofc.pl"}
+USER=${USER:="termsend"}
+GROUP=${GROUP:="termsend"}
+PID_FILE=${PID_FILE:="/var/run/termsend.pid"}
+QUERY_LOG=${QUERY_LOG:="/var/log/termsend-query.log"}
+PROGRAM_LOG=${PROGRAM_LOG:="/var/log/termsend.log"}
+LIST_FILE=${LIST_FILE:="/etc/termsend-iplist"}
 LIST_TYPE=${LIST_TYPE:="0"}
-OUTPUT_DIR=${OUTPUT_DIR:="/var/lib/kurload"}
+OUTPUT_DIR=${OUTPUT_DIR:="/var/lib/termsend"}
 BIND_IP=${BIND_IP:="0.0.0.0"}
 UMASK=${UMASK:="022"}
 
-command=/usr/local/bin/kurload
+command=/usr/local/bin/termsend
 colors=
 ssl_listen_port=
 timed_ssl_listen_port=
@@ -97,10 +97,10 @@ umask ${UMASK}
 
 start_pre()
 {
-    echo -n "Checking configuration for kurload server... "
+    echo -n "Checking configuration for termsend server... "
 
     # if any of the ssl ports are enabled, then pass key and cert
-    # file to kurload
+    # file to termsend
     if [ ${SSL_LISTEN_PORT} -ne 0 ] ; then
         ssl_listen_port="--ssl-listen-port=${SSL_LISTEN_PORT}"
         ssl_opts="--key-file=${KEY_FILE} --cert-file=${CERT_FILE}"
@@ -124,7 +124,7 @@ start_pre()
         echo "error"
         echo "Output directory \"${OUTPUT_DIR}\" doesn\'t exist"
         echo "You need to create it first before you can start server"
-        echo "failed to start kurload server"
+        echo "failed to start termsend server"
         exit 1
     fi
 
@@ -135,14 +135,14 @@ start_pre()
         if ! /usr/bin/id -u ${USER} > /dev/null 2>&1 ; then
             echo "error"
             echo "User ${USER} doesn't exist in current system"
-            echo "failed to start kurload server"
+            echo "failed to start termsend server"
             exit 1
         fi
 
         if ! /usr/bin/id -g ${GROUP} > /dev/null 2>&1 ; then
             echo "error"
             echo "Group ${GROUP} doesn't exist in current system"
-            echo "failed to start kurload server"
+            echo "failed to start termsend server"
             exit 1
         fi
 
@@ -151,7 +151,7 @@ start_pre()
             echo "error"
             echo "Output directory \"${OUTPUT_DIR}\" is not writeable"
             echo "for user ${USER}"
-            echo "failed to start kurload server"
+            echo "failed to start termsend server"
             exit 1
         fi
 
@@ -175,7 +175,7 @@ start_pre()
             echo "error"
             echo "Output directory \"${OUTPUT_DIR}\" is not writeable"
             echo "for user $(whoami)"
-            echo "failed to start kurload server"
+            echo "failed to start termsend server"
             exit 1
         fi
     fi
@@ -190,7 +190,7 @@ start_pre()
 
 
 start() {
-    echo -n "Starting kurload server... "
+    echo -n "Starting termsend server... "
     if [ "${COLORFUL_OUTPUT}" -eq "1" ] ; then
         colors="-c"
     fi
@@ -220,7 +220,7 @@ start() {
 
 
 stop() {
-    echo -n "Stopping kurload server... "
+    echo -n "Stopping termsend server... "
     if /bin/kill -15 $(cat "${PID_FILE}") > /dev/null 2>&1; then
         echo "ok"
         return 0

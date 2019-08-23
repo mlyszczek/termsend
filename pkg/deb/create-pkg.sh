@@ -1,25 +1,25 @@
 #!/bin/sh
 
 scp_server="pkgs@kurwik"
-project="kurload"
+project="termsend"
 retval=1
 
 atexit()
 {
     set +e
 
-    /etc/init.d/kurload stop
-    pkill kurload
-    rm /etc/init.d/kurload
+    /etc/init.d/termsend stop
+    pkill termsend
+    rm /etc/init.d/termsend
     dpkg --purge "${project}"
     # remove dependencies
     dpkg -r libembedlog-dev
     dpkg -r libembedlog0
-    # manually remove kurload group and user as package uninstall won't do it
-    userdel kurload
-    groupdel kurload
-    rm -rf /var/lib/kurload
-    rm /etc/kurload.conf
+    # manually remove termsend group and user as package uninstall won't do it
+    userdel termsend
+    groupdel termsend
+    rm -rf /var/lib/termsend
+    rm /etc/termsend.conf
 
     if [ "x${1}" != "xno-exit" ]
     then
@@ -67,11 +67,11 @@ then
     exit 1
 fi
 
-# kurload rc script sources config from /usr/local/etc, and if package is
+# termsend rc script sources config from /usr/local/etc, and if package is
 # installed from package manager, config file is in /etc
-sed -i 's@^\. /usr/local/etc/kurload.conf$@. /etc/kurload.conf@' init.d/kurload
+sed -i 's@^\. /usr/local/etc/termsend.conf$@. /etc/termsend.conf@' init.d/termsend
 # same for command path
-sed -i 's@^command=/usr/local/bin/kurload$@command=/usr/bin/kurload@' init.d/kurload
+sed -i 's@^command=/usr/local/bin/termsend$@command=/usr/bin/termsend@' init.d/termsend
 
 version="$(grep "AC_INIT(" "configure.ac" | cut -f3 -d\[ | cut -f1 -d\])"
 
@@ -123,17 +123,17 @@ done
 export RUNLEVEL=3
 dpkg -i --no-triggers "${project}_${version}_${arch}.deb"
 
-if ldd $(which kurload) | grep "\/usr\/bofc"
+if ldd $(which termsend) | grep "\/usr\/bofc"
 then
     echo "test prog uses libs from manually installed /usr/bofc \
         instead of system path!"
     exit 1
 fi
 
-kurload -v
-/etc/init.d/kurload start
-/etc/init.d/kurload restart
-/etc/init.d/kurload stop
+termsend -v
+/etc/init.d/termsend start
+/etc/init.d/termsend restart
+/etc/init.d/termsend stop
 
 atexit "no-exit"
 
@@ -141,10 +141,10 @@ atexit "no-exit"
 # should fail as there is no library in the system any more
 set +e
 retval=0
-kurload -v && retval=1
-getent passwd kurload && retval=2
-getent group kurload && retval=3
-[ -d /var/lib/kurload ] && retval=4
+termsend -v && retval=1
+getent passwd termsend && retval=2
+getent group termsend && retval=3
+[ -d /var/lib/termsend ] && retval=4
 
 if [ ${retval} -ne 0 ]
 then

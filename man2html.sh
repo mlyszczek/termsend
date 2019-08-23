@@ -1,12 +1,12 @@
 #!/bin/sh
 
-hostname="http://kurload.bofc.pl"
+hostname="http://termsend.bofc.pl"
 out="$(pwd)/www"
 root="$(pwd)"
-ftmp="/tmp/kurload-man2html"
+ftmp="/tmp/termsend-man2html"
 
 
-m="kurload.1"
+m="termsend.1"
 n="1"
 man2html -r -H "${hostname}" "${m}" > "${ftmp}"
 

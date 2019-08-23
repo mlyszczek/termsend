@@ -1,5 +1,5 @@
-kurload (@{VERSION}) @{CODENAME}; urgency=low
+termsend (@{VERSION}) @{CODENAME}; urgency=low
 
-    * kurload package
+    * termsend package
 
  -- Michał Łyszczek <michal.lyszczek@bofc.pl>  @{DATE}

@@ -1,14 +1,14 @@
-Source: kurload
+Source: termsend
 Section: devel
 Priority: optional
 Maintainer: Michał Łyszczek <michal.lyszczek@bofc.pl>
 Build-Depends: libembedlog0 (>=0.5.0), debhelper (>=10), autotools-dev, dh-autoreconf
 Standards-Version: 3.9.8
-Vcs-Git: https://git.bofc.pl/kurload
-Vcs-browser: https://git.bofc.pl/kurload
-Homepage: https://kurload.bofc.pl
+Vcs-Git: https://git.bofc.pl/termsend
+Vcs-browser: https://git.bofc.pl/termsend
+Homepage: https://termsend.bofc.pl
 
-Package: kurload
+Package: termsend
 Section: net
 Pre-Depends: ${misc:Pre-Depends}
 Architecture: any

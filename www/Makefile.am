@@ -6,5 +6,5 @@ www:
 
 make clean:
 	$(RM) -r out
-	$(RM) kurload.1.html
+	$(RM) termsend.1.html
 	$(RM) downloads.html
