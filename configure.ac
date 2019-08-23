@@ -1,4 +1,4 @@
-AC_INIT([termsend], [1.1.0], [michal.lyszczek@bofc.pl])
+AC_INIT([termsend], [1.1.1], [michal.lyszczek@bofc.pl])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_HEADERS([termsend.h])
