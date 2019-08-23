@@ -26,23 +26,23 @@ Send data over unencrypted socket using **socat** program. **socat** is cool
 program, as it sends **FIN** when **stdin** ends, so there is no need to
 append **termsend\n** at the end of transfer.
 ```{.sh}
-alias kl="socat - TCP:kl.bofc.pl:1337"
+alias kl="socat - TCP:termsend.pl:1337"
 ```
 
 Send data over encrypted socket using **socat** program, use this if you do not
-need to verify that you are really talking to **kl.bofc.pl** server and not
+need to verify that you are really talking to **termsend.pl** server and not
 some man-in-the-middle.
 ```{.sh}
-alias kls="socat - OPENSSL:kl.bofc.pl:1339,verify=0"
+alias kls="socat - OPENSSL:termsend.pl:1339,verify=0"
 ```
 
 Send data over encrypted socket using **socat** program and verify that
-**kl.bofc.pl** is really valid server and not man-in-the-middle. Note
-that you should treat all data sent to **kl.bofc.pl** as public and
+**termsend.pl** is really valid server and not man-in-the-middle. Note
+that you should treat all data sent to **termsend.pl** as public and
 this example is usefull when you self host **termsend** and want to have really
 secure socket. [termsend.crt can be downloaded here][1]
 ```{.sh}
-alias kls="socat - OPENSSL:kl.bofc.pl:1339,cafile=/usr/share/ca/kl.crt"
+alias kls="socat - OPENSSL:termsend.pl:1339,cafile=/usr/share/ca/kl.crt"
 ```
 
 netcat
@@ -59,13 +59,13 @@ Send data over unencrypted, timed socket. Note that after all data is sent,
 you will need to wait 3 seconds (or time configured on server) for server
 to notice timeout to receive link.
 ```{.sh}
-alias kl="nc kl.bofc.pl 1338"
+alias kl="nc termsend.pl 1338"
 ```
 
 Send data over unencrypted socket. This is workaround for **netcat** not
 sending **FIN** packet. This will work with every flavour of **netcat**.
 ```{.sh}
-alias kl="{ cat -; echo 'termsend'; } | nc kl.bofc.pl 1337"
+alias kl="{ cat -; echo 'termsend'; } | nc termsend.pl 1337"
 ```
 
 bash
@@ -79,7 +79,7 @@ bash
 For when there is neither **socat** nor **nc** available, there almost always
 is **bash** present.
 ```{.bash}
-alias kl="{ exec 5<>/dev/tcp/kl.bofc.pl/1337; \
+alias kl="{ exec 5<>/dev/tcp/termsend.pl/1337; \
     { cat - >&5; echo 'termsend' >&5; }; cat <&5; }"
 ```
 
@@ -95,4 +95,4 @@ Upload and store link into clipboard
 alias klc="kl | tail -n1 | xclip"
 ```
 
-[1]: https://kl.bofc.pl/kl.crt
+[1]: https://termsend.pl/kl.crt

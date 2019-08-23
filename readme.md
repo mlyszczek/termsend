@@ -17,11 +17,11 @@ Client
 Clients don't need any sophisticated tools. To upload to server - pipe standard
 output from any application to **socat**:
 
-Note: **kl.bofc.pl** is demo server which you can use to play with termsend.
+Note: **termsend.pl** is demo server which you can use to play with termsend.
 You can also use it like ordinary no paste service to share data with people.
 
 ```
-$ echo "test string" | socat - TCP:kl.bofc.pl:1337
+$ echo "test string" | socat - TCP:termsend.pl:1337
 ```
 
 Server reads data until **FIN** is seen or string **termsend\n** at the very
@@ -31,7 +31,7 @@ version of **netcat**, you need to also append **termsend\n** at the very end
 of transfer:
 
 ```
-$ echo "test string" | { cat -; echo 'termsend'; } | nc kl.bofc.pl 1337
+$ echo "test string" | { cat -; echo 'termsend'; } | nc termsend.pl 1337
 ```
 
 If, for some reason, you are not able to pass **termsend\n**, you can always
@@ -42,7 +42,7 @@ the fact that you will have to wait 3 seconds after all data is sent, and you
 might end up with incomplete upload when your output program stalls.
 
 ```
-$ echo "test string" | nc kl.bofc.pl 1338
+$ echo "test string" | nc termsend.pl 1338
 ```
 
 ### easy to use alias
@@ -53,7 +53,7 @@ tedious work.
 
 ```{.sh}
 # add this to your .bashrc or .zshrc or whatever shell you use
-alias kl="socat - TCP:kl.bofc.pl:1337"
+alias kl="socat - TCP:termsend.pl:1337"
 ```
 
 Now you can upload anything by simply piping it to "kl" alias. Examples
@@ -87,8 +87,8 @@ uploaded      40200 bytes
 uploaded    1604104 bytes
 uploaded    4668396 bytes
 uploaded    4690455 bytes
-https://kl.bofc.pl/o/6p3e1
-$ curl https://kl.bofc.pl/o/6p3e1 | less
+https://termsend.pl/o/6p3e1
+$ curl https://termsend.pl/o/6p3e1 | less
 ```
 
 In this example, we upload output of **make distcheck** program into server, and
