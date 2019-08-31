@@ -56,17 +56,24 @@
 
 static void sigint_handler(int signo)
 {
-    (void)signo;
 
-    if (g_shutdown)
+    if (signo == SIGTERM || signo == SIGINT)
     {
-        /* someone hit ctrl-c second time, impatient fella */
+        if (g_shutdown)
+        {
+            /* someone hit ctrl-c second time, impatient fella */
 
-        g_stfu = 1;
-        return;
+            el_print(ELN, "Double SIGTERM received, quiting immediately");
+            g_stfu = 1;
+            return;
+        }
+
+        el_print(ELN, "SIGTERM received, waiting for connection to finish");
+        g_shutdown = 1;
     }
 
-    g_shutdown = 1;
+    if (signo == SIGALRM)
+        g_sigalrm = 1;
 }
 
 
@@ -96,7 +103,7 @@ int main(int argc, char *argv[])
     /* configure logger for diagnostic logs */
 
     el_init();
-    el_option(EL_THREAD_SAFE, 1);
+    el_option(EL_THREAD_SAFE, 0);
     el_option(EL_LEVEL, g_config.log_level);
     el_option(EL_OUT, EL_OUT_FILE);
     el_option(EL_TS, EL_TS_LONG);
@@ -118,7 +125,7 @@ int main(int argc, char *argv[])
     /* configure logger to log queries */
 
     el_oinit(&g_qlog);
-    el_ooption(&g_qlog, EL_THREAD_SAFE, 1);
+    el_ooption(&g_qlog, EL_THREAD_SAFE, 0);
     el_ooption(&g_qlog, EL_LEVEL, EL_INFO);
     el_ooption(&g_qlog, EL_OUT, EL_OUT_FILE);
     el_ooption(&g_qlog, EL_TS, EL_TS_LONG);
@@ -144,6 +151,7 @@ int main(int argc, char *argv[])
     sa.sa_handler = sigint_handler;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGALRM, &sa, NULL);
 
     config_print();
 

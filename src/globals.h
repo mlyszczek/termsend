@@ -12,6 +12,7 @@
 extern struct config  g_config;
 extern int            g_shutdown;
 extern int            g_stfu;
+extern int            g_sigalrm;
 extern struct el      g_qlog;
 
 #endif

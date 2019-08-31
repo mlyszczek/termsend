@@ -40,7 +40,6 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <netinet/in.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -83,23 +82,32 @@
 
 #define EL_OPTIONS_OBJECT &g_qlog
 
-/* struct holding info about fd and whether is it ssl socket
- * or not
- */
+/* struct holding info about server socket */
 
-struct fdinfo
+struct sinfo
 {
-    int  fd;      /* systems file descriptor of socket */
-    int  ssl;     /* is this ssl connection? */
-    int  ssl_fd;  /* if ssl is enabled, holds ssl fd for ssl_* functions */
-    int  timed;   /* is this timed-enabled port? */
+    int  fd;     /* systems file descriptor of socket */
+    int  ssl;    /* is this ssl connection? */
+    int  sslfd;  /* if ssl is enabled, holds ssl fd for ssl_* functions */
+    int  timed;  /* is this timed-enabled port? */
 };
 
-static struct fdinfo   *sfds;   /* sfds sockets for all interfaces */
-static int              nsfds;  /* number of sfds allocated */
-static int              cconn;  /* curently connected clients */
-static pthread_mutex_t  lconn;  /* mutex lock for operation on cconn */
-static pthread_mutex_t  lopen;  /* mutex for opening file */
+struct cinfo
+{
+    int              cfd;
+    int              ffd;
+    int              ssl;
+    int              sslfd;
+    int              timed;
+    char             fname[32];
+    struct timespec  timeout_at;
+    size_t           written;
+};
+
+static struct sinfo  *si;   /* server info array for all interfaces */
+static unsigned       nsi;  /* number of server info allocated */
+static struct cinfo  *ci;   /* client info array of connected clients sockets */
+static unsigned       nci;  /* number of client info allocated */
 
 
 /* ==========================================================================
@@ -110,6 +118,71 @@ static pthread_mutex_t  lopen;  /* mutex for opening file */
  / .___//_/   /_/  |___/ \__,_/ \__/ \___/  /_/   \__,_//_/ /_/ \___//____/
 /_/
    ========================================================================== */
+
+
+/* ==========================================================================
+    returns statically allocated string with IP related to fd
+   ========================================================================== */
+
+
+static const char *server_get_ips
+(
+    int                 fd      /* fd to get ip from */
+)
+{
+    socklen_t           clen;   /* size of client address */
+    struct sockaddr_in  client; /* client socket info */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    clen = sizeof(client);
+    getpeername(fd, (struct sockaddr *)&client, &clen);
+    return inet_ntoa(client.sin_addr);
+}
+
+
+/* ==========================================================================
+    Returns number of busy slots. Busy slot means that client is connected
+    and we are still processing it.
+   ========================================================================== */
+
+
+static unsigned server_num_busy_slot(void)
+{
+    unsigned  n;  /* number of busy slots */
+    unsigned  i;  /* iterator */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    for (i = 0, n = 0; i != nci; ++i)
+        if (ci[i].cfd >= 0)
+            ++n;
+
+    return n;
+}
+
+
+/* ==========================================================================
+    Searches for available slot for client connection.
+
+
+    returns
+            >=0     index for client info with free slot
+            -1      no free slots available
+   ========================================================================== */
+
+
+static int server_get_free_client(void)
+{
+    unsigned  i;  /* iterator */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    for (i = 0; i != nci; ++i)
+        if (ci[i].cfd == -1)
+            return i;
+
+    return -1;
+}
 
 
 /* ==========================================================================
@@ -157,9 +230,7 @@ static void server_generate_fname
 
 
     for (i = 0; i != l; ++i)
-    {
         *s++ = alphanum[rand() % (sizeof(alphanum) - 1)];
-    }
 
     *s = '\0';
 }
@@ -174,7 +245,7 @@ static void server_generate_fname
 
 static void server_linger
 (
-    struct fdinfo *fdi         /* connected clients file descriptor */
+    struct cinfo  *c           /* info about connected client */
 )
 {
     unsigned char  buf[8192];  /* dummy buffer to get data from read */
@@ -184,17 +255,15 @@ static void server_linger
 
     /* inform client that writing any more data is not allowed */
 
-    if (fdi->ssl)
-    {
-        ssl_shutdown(fdi->ssl_fd, SHUT_RDWR);
-    }
+    if (c->ssl)
+        ssl_shutdown(c->sslfd, SHUT_RDWR);
 
-    shutdown(fdi->fd, SHUT_RDWR);
+    shutdown(c->cfd, SHUT_RDWR);
 
     for (;;)
     {
-        r = fdi->ssl ? ssl_read(fdi->ssl_fd, buf, sizeof(buf)) :
-            read(fdi->fd, buf, sizeof(buf));
+        r = c->ssl ? ssl_read(c->sslfd, buf, sizeof(buf)) :
+            read(c->cfd, buf, sizeof(buf));
 
         if (r < 0)
         {
@@ -235,7 +304,7 @@ static void server_linger
 
 static void server_reply
 (
-    struct fdinfo *fdi,        /* client to send message to */
+    struct cinfo  *fdi,        /* client to send message to */
     const char    *fmt,        /* message format (see printf(3)) */
                    ...         /* variadic arguments for fmt */
 )
@@ -262,12 +331,12 @@ static void server_reply
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-        w = fdi->ssl ? ssl_write(fdi->ssl_fd, msg + written, mlen - written) :
-            write(fdi->fd, msg + written, mlen - written);
+        w = fdi->ssl ? ssl_write(fdi->sslfd, msg + written, mlen - written) :
+            write(fdi->cfd, msg + written, mlen - written);
 
         if (w == -1)
         {
-            el_perror(ELE, "[%3d] error writing reply to the client", fdi->fd);
+            el_perror(ELE, "[%3d] error writing reply to the client", fdi->cfd);
             return;
         }
 
@@ -345,26 +414,87 @@ static int server_create_socket
         return -1;
     }
 
-    /* set server socket to work in non blocking manner, all
-     * clients connecting to that socket will also inherit non
-     * block nature
+    return fd;
+}
+
+
+/* ==========================================================================
+    Checks when current client timeouts and arm timer to that value. Timer
+    is set only when either it is not armed or requests 's' is smaller than
+    current timer.
+   ========================================================================== */
+
+
+static void server_rearm_timer
+(
+    struct cinfo     *c     /* rearm timer based on this client */
+)
+{
+    struct itimerval  it;   /* timer value */
+    struct timespec   next; /* how long till next timeout for client c */
+    struct timespec   now;  /* current time */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    /* how long till next timeout on 'c' should occur? */
+
+    memset(&it, 0x00, sizeof(it));
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    next.tv_sec = c->timeout_at.tv_sec - now.tv_sec;
+    next.tv_nsec = c->timeout_at.tv_nsec - now.tv_nsec;
+
+    if (next.tv_nsec < 0)
+    {
+        next.tv_sec -= 1;
+        next.tv_nsec += 1000000000l;
+    }
+
+    if (next.tv_sec <= 0)
+    {
+        /* whoops, we are already past schedule, set timer to expire
+         * as soon as possible
+         */
+
+        it.it_value.tv_sec  = 0;
+        it.it_value.tv_usec = 1;
+        setitimer(ITIMER_REAL, &it, NULL);
+        el_print(ELD, "we are past schedule; set timer to 1usec");
+        return;
+    }
+
+    getitimer(ITIMER_REAL, &it);
+    el_print(ELD, "timer expire in: %ld.%03d, c expire in: %ld.%03d",
+            (long)it.it_value.tv_sec, it.it_value.tv_usec / 1000l,
+            (long)next.tv_sec, next.tv_nsec / 1000000l);
+
+    if (it.it_value.tv_sec == 0 && it.it_value.tv_usec == 0)
+    {
+        /* timer is currently disarmed, arm it now and leave */
+
+        it.it_value.tv_sec = next.tv_sec;
+        it.it_value.tv_usec = next.tv_nsec / 1000l;
+        setitimer(ITIMER_REAL, &it, NULL);
+        el_print(ELD, "timer armed to expire in %ld.%03d",
+                (long)next.tv_sec, next.tv_nsec / 1000000l);
+        return;
+    }
+
+    /* if timer is currently armed and expires earlier then what
+     * was requested, do not change timer
      */
 
-    if ((flags = fcntl(fd, F_GETFL)) == -1)
-    {
-        el_perror(ELF, "error reading socket flags");
-        close(fd);
-        return INADDR_NONE;
-    }
+    if ((it.it_value.tv_sec < next.tv_sec) ||
+            (it.it_value.tv_sec == next.tv_sec &&
+             it.it_value.tv_usec < next.tv_nsec / 1000l))
+        return;
 
-    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-    {
-        el_perror(ELF, "error setting socket to O_NONBLOCK");
-        close(fd);
-        return INADDR_NONE;
-    }
+    /* our timer needs to expire before current one, so override */
 
-    return fd;
+    it.it_value.tv_sec  = next.tv_sec;
+    it.it_value.tv_usec = next.tv_nsec / 1000;
+    setitimer(ITIMER_REAL, &it, NULL);
+    el_print(ELD, "timer armed to expire in %ld.%03d",
+            (long)next.tv_sec, next.tv_nsec / 1000000l);
 }
 
 
@@ -374,200 +504,73 @@ static int server_create_socket
     checks for maximum connection, black and white list etc. Function handle
     upload from the client and storing it in the file, it also takes care of
     network problems and end string detection. Here, if socket is ssl or tls
-    enabled, cfd->ssl_fd is after successfull ssl handshake.
+    enabled, cfd->sslfd is after successfull ssl handshake.
    ========================================================================== */
 
 
-static void *server_handle_upload
+static void server_process_client
 (
-    void               *arg          /* socket associated with client */
+    struct cinfo       *c        /* current client to process */
 )
 {
-    struct sockaddr_in  client;      /* address of connected client */
-    time_t              last_notif;  /* when last notif was sent */
-    time_t              now;         /* current time */
-    socklen_t           clen;        /* size of client address */
-    fd_set              readfds;     /* set with client socket for select */
-    struct timeval      cfdtimeo;    /* read timeout of clients socket */
-    sigset_t            set;         /* signals to mask in thread */
-    struct fdinfo      *cfd;         /* socket associated with client */
-    int                 fd;          /* file where data will be stored */
-    int                 ncollision;  /* number of file name collisions hit */
-    int                 opathlen;    /* length of output directory path */
-    char                path[PATH_MAX];  /* full path to the file */
-    char                fname[32];   /* random generated file name */
+    struct timespec     now;         /* current time */
     char                url[8192 + 1];   /* generated link to uploaded data */
     char                ends[9 + 1]; /* buffer for end string detection */
-    static int          flen = 5;    /* length of the filename to generate */
     unsigned char       buf[8192];   /* temp buffer we read uploaded data to */
-    size_t              written;     /* total written bytes to file */
     ssize_t             w;           /* return from write function */
     ssize_t             r;           /* return from read function */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    last_notif = time(NULL);
-    cfd = arg;
-    clen = sizeof(client);
-    getpeername(cfd->fd, (struct sockaddr *)&client, &clen);
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    el_print(ELD, "processing client %3d", c->cfd);
 
-    strcpy(path, g_config.output_dir);
-    strcat(path, "/");
-    opathlen = strlen(path);
-
-    /* we don't want threads that handle client connection to
-     * receive signals, and thus interrupt system calls like write
-     * or read. Only main thread can handle signals, so we mask all
-     * signals here
-     */
-
-    sigfillset(&set);
-
-    if (pthread_sigmask(SIG_SETMASK, &set, NULL) != 0)
+    if (g_sigalrm)
     {
-        el_perror(ELA, "couldn't mask signals");
-        el_oprint(OELI, "[%s] rejected: signal mask failed",
-                inet_ntoa(client.sin_addr));
-        server_reply(cfd, "internal server error, try again later\n");
-        if (cfd->ssl) ssl_close(cfd->ssl_fd);
-        close(cfd->fd);
-        free(cfd);
-        return NULL;
-    }
+        /* SIGALRM has been received, did our client timedout? */
 
-    /* generate unique file name for content that client will be
-     * sending we start from file length = 5, and will increase
-     * this value if we hit file collision 3 times in a row. flen
-     * is static, because if we hit file collision once, there is
-     * big enough chance we will hit it again, so to not waste cpu
-     * power for checking it every single time client connects, we
-     * keep the state in running serwer. When server gets
-     * restarted, flen will be reseted back to default value, and
-     * increment will again begin from low value. To avoid
-     * situation, where 2 threads modify flen (leading to
-     * incrementing flen by 2 instead of 1), only one thread can
-     * open file at a time. Opening is fast, so it's not a big deal
-     */
+        el_print(ELD, "handling SIGALRM, now: %lld.%03d, timeout at: %lld.%03d",
+                (long long)now.tv_sec, now.tv_nsec / 1000000l,
+                (long long)c->timeout_at.tv_sec,
+                c->timeout_at.tv_nsec / 1000000l);
 
-    pthread_mutex_lock(&lopen);
-    ncollision = 0;
-    for (;;)
-    {
-        server_generate_fname(fname, flen);
-        strcpy(path + opathlen, fname);
-
-        if ((fd = open(path, O_CREAT | O_EXCL | O_APPEND | O_RDWR, 0644)) >= 0)
+        if ((now.tv_sec < c->timeout_at.tv_sec) ||
+                (now.tv_sec == c->timeout_at.tv_sec &&
+                 now.tv_nsec < c->timeout_at.tv_nsec))
         {
-            /* file opened with success, break out of the loop */
-
-            break;
-        }
-
-        if (errno == EEXIST)
-        {
-            /* we hit file name collision, increment collision
-             * counter, and if that counter is bigger than 3, we
-             * increment file length by one, because it looks like
-             * there are a lot of files with current file length
+            /* no, that wasn't us, rearm timer unless someone else
+             * is going to timeout before us
              */
 
-            if (++ncollision == 3)
-            {
-                ++flen;
-                ncollision = 0;
-            }
-
-            continue;
+            server_rearm_timer(c);
+            return;
         }
 
-        /* unexpected error occured, log situation and close
-         * connection
-         */
+        /* yes, what should we do with it? */
 
-        pthread_mutex_unlock(&lopen);
-        el_perror(ELA, "[%3d] couldn't open file %s", cfd->fd, path);
-        el_oprint(OELI, "[%s] rejected: file open error",
-                inet_ntoa(client.sin_addr));
-        server_reply(cfd, "internal server error, try again later\n");
-        if (cfd->ssl) ssl_close(cfd->ssl_fd);
-        close(cfd->fd);
-        free(cfd);
-        pthread_mutex_lock(&lconn);
-        --cconn;
-        pthread_mutex_unlock(&lconn);
-        return NULL;
-    }
-    pthread_mutex_unlock(&lopen);
-
-    /* file is opened, we can now start to retrieve data from
-     * client. Since purpose of this file server is that user can
-     * upload data using only simple tools like netcat, we don't
-     * have information about file size.  On top of that, we want
-     * to send link to upload file, once upload is completed, so
-     * netcat cannot close connection on upload complete, to inform
-     * us about upload completed, so we expect an ending string at
-     * the end of transfer that will inform us that transfer is
-     * completed.  That ending string is "termsend\n". Yes, this may
-     * lead to prepature end of transfer, but chances are so slim,
-     * we can neglect them.
-     */
-
-    written = 0;
-    memset(ends, 0, sizeof(ends));
-
-    for (;;)
-    {
-        int     sact;  /* select activity, just return from select() */
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-
-        FD_ZERO(&readfds);
-        FD_SET(cfd->fd, &readfds);
-
-        cfdtimeo.tv_sec =
-            cfd->timed ? g_config.timed_max_timeout : g_config.max_timeout;
-        cfdtimeo.tv_usec = 0;
-
-        now = time(NULL);
-        sact = select(cfd->fd + 1, &readfds, NULL, NULL, &cfdtimeo);
-
-        if (sact == -1)
+        if (c->timed)
         {
-            /* select stumbled upon some error, it's a sad day for
-             * our client, we need to interrupt connection
+            /* time upload was enabled, in that case we don't treat
+             * timeout as error but we assume user has no more data
+             * to send and we should store it and send him the link
+             * to data he just uploaded.
              */
 
-            el_perror(ELW, "[%3d] select error on client read", cfd->fd);
-            el_oprint(OELI, "[%s] rejected: select error",
-                inet_ntoa(client.sin_addr));
-            server_reply(cfd, "internal server error, try again later\n");
-            goto error;
+            goto upload_finished_with_timeout;
         }
-
-        if (sact == 0)
+        else
         {
-            if (cfd->timed)
-            {
-                /* time upload was enabled, in that case we don't
-                 * treat timeout as error but we assume user has no
-                 * more data to send and we should store it and
-                 * send him the link to data he just uploaded.
-                 */
-
-                goto upload_finished_with_timeout;
-            }
-
-            /* no activity on cfd for max_timeout seconds, either
-             * client died and didn't tell us about it (thanks!) or
-             * connection was abrupted by some higher forces. We
-             * assume this is unrecoverable problem and close
-             * connection
+            /* no activity from client for max_timeout seconds,
+             * either client died and didn't tell us about it
+             * (thanks!) or connection was abrupted by some higher
+             * forces. We assume this is unrecoverable problem and
+             * close connection
              */
 
             el_print(ELN, "[%3d] client inactive for %d seconds",
-                cfd->fd, g_config.max_timeout);
+                    c->cfd, g_config.max_timeout);
             el_oprint(OELI, "[%s] rejected: inactivity",
-                inet_ntoa(client.sin_addr));
+                    server_get_ips(c->cfd));
 
             /* well, there may be one more case for inactivity from
              * clients side. It may be that he forgot to add ending
@@ -575,150 +578,155 @@ static void *server_handle_upload
              * as there is a chance he is still alive.
              */
 
-            server_reply(cfd, "disconnected due to inactivity for %d "
+            server_reply(c, "disconnected due to inactivity for %d "
                 "seconds, did you forget to append termination "
                 "string - \"termsend\\n\"?\n", g_config.max_timeout);
             goto error;
         }
-
-        /* and finnaly, we get here, when there is some data in
-         * cfd, and we can safely call read, without fear of
-         * locking
-         */
-
-        r = cfd->ssl ? ssl_read(cfd->ssl_fd, buf, sizeof(buf)) :
-            read(cfd->fd, buf, sizeof(buf));
-
-        if (r == -1)
-        {
-            /* error from read, and we know it cannot be EAGAIN as
-             * select covered that for us, so something wrong must
-             * have happened.  Inform client and close connection.
-             */
-
-            el_perror(ELC, "[%3d] couldn't read from client", cfd->fd);
-            el_oprint(OELI, "[%s] rejected: read error",
-                inet_ntoa(client.sin_addr));
-            server_reply(cfd, "internal server error, try again later\n");
-            goto error;
-        }
-
-        if (r == 0)
-        {
-            /* r == 0 means that client gently closes connection
-             * by sending FIN, and nicely waits for us to respond,
-             * in that case we do not require client to send ending
-             * termsend\n
-             */
-
-            goto upload_finished_with_fin;
-        }
-
-        if (written + r > (size_t)g_config.max_size + 9)
-        {
-            /* we received, in total, more bytes then we can
-             * accept, we remove such file and return error to the
-             * client. That +9 is for ending string "termsend\n" as
-             * we will delete that anyway and file will not get
-             * more than g_config.max_size size.
-             */
-
-            el_oprint(OELI, "[%s] rejected: file too big",
-                inet_ntoa(client.sin_addr));
-            server_reply(cfd, "file too big, max length is %ld bytes\n",
-                g_config.max_size);
-            goto error;
-        }
-
-        /* received some data, simply store them into file, right
-         * now we don't care if ending string "termsend\n" ends up
-         * in a file, we will take care of it later.
-         */
-
-        if ((w = write(fd, buf, r)) != r)
-        {
-            el_perror(ELC, "[%3d] couldn't write to file", cfd->fd);
-            el_oprint(OELI, "[%s] rejected: write to file failed",
-                inet_ntoa(client.sin_addr));
-            server_reply(cfd, "internal server error, try again later\n");
-            goto error;
-        }
-
-        /* write was successful, now let's check if data written to
-         * file contains ending string "termsend\n". For that we
-         * read 9 last characters from data stored in file.
-         */
-
-        if ((written += w) < 9)
-        {
-            /* we didn't receive enough bytes to check for ending
-             * string, so we don't check for ending string, simple.
-             */
-
-            continue;
-        }
-
-        /* we seek 9 bytes back, as its length of "termsend\n" and
-         * read last 9 bytes to check for end string existance. We
-         * don't need to seek back to end of file, as reading will
-         * move the pointer by itself.
-         */
-
-        lseek(fd, -9, SEEK_CUR);
-
-        if (read(fd, ends, 9) != 9)
-        {
-            /* totally unexpected, but still we expect it, like a
-             * good swat team. We don't know how to recover from
-             * this error, so let's call it a day for this client
-             */
-
-            el_perror(ELC, "[%3d] couldn't read end string", cfd->fd);
-            el_oprint(OELI, "[%s] rejected: end string read error",
-                inet_ntoa(client.sin_addr));
-            server_reply(cfd, "internal server error, try again later\n");
-            goto error;
-        }
-
-        if (strcmp(ends, "termsend\n") != 0)
-        {
-            /* ending string has not yet been received, we continue
-             * getting data from client, and we send information to
-             * the client about transfer status. We sent status
-             * about progres once per second
-             */
-
-            if (last_notif != now)
-            {
-                server_reply(cfd, "uploaded %10d bytes\n", written);
-                last_notif = now;
-            }
-
-            continue;
-        }
-
-        /* full file received without errors, we even got ending
-         * string, we can now break out of loop to perform
-         * finishing touch on upload.
-         */
-
-        break;
     }
 
-    /* to finish, we need to truncate file, to cut off ending
-     * string from file and close it. We carefully check in
-     * previous lines that written is at least 9 bytes long,
-     * so this subtact is ok.
+    /* no SIGALRM means there is data to be read from client.
+     * read() won't block since we've checked it with select()
      */
 
-    written -= 9;
-    if (ftruncate(fd, written) != 0)
+    r = c->ssl ? ssl_read(c->sslfd, buf, sizeof(buf)) :
+        read(c->cfd, buf, sizeof(buf));
+
+    if (r == -1)
+    {
+        /* error from read, and we know it cannot be EAGAIN as
+         * select covered that for us, so something wrong must
+         * have happened.  Inform client and close connection.
+         */
+
+        el_perror(ELC, "[%3d] couldn't read from client", c->cfd);
+        el_oprint(OELI, "[%s] rejected: read error", server_get_ips(c->cfd));
+        server_reply(c, "internal server error, try again later\n");
+        goto error;
+    }
+
+    /* r == 0 means that client gently closed connection by sending
+     * FIN, and nicely waits for us to respond, in that case we do
+     * not require client to send ending termsend\n
+     */
+
+    if (r == 0)
+        goto upload_finished_with_fin;
+
+    if (c->written + r > (size_t)g_config.max_size + 9)
+    {
+        /* we received, in total, more bytes then we can accept, we
+         * remove such file and return error to the client. That +9
+         * is for ending string "termsend\n" as we will delete that
+         * anyway and file will not get more than g_config.max_size
+         * size.
+         */
+
+        el_oprint(OELI, "[%s] rejected: file too big", server_get_ips(c->cfd));
+        server_reply(c, "file too big, max length is %ld bytes\n",
+            g_config.max_size);
+        goto error;
+    }
+
+    /* received some data, simply store them into file, right now
+     * we don't care if ending string "termsend\n" ends up in a
+     * file, we will take care of it later.
+     */
+
+    if ((w = write(c->ffd, buf, r)) != r)
+    {
+        el_perror(ELC, "[%3d] couldn't write to file", c->cfd);
+        el_oprint(OELI, "[%s] rejected: write to file failed",
+                server_get_ips(c->cfd));
+        server_reply(c, "internal server error, try again later\n");
+        goto error;
+    }
+
+    /* write was successful, now let's check if data written to
+     * file contains ending string "termsend\n". For that we read 9
+     * last characters from data stored in file and if there are
+     * not enough bytes in the file yet, simply do nothing and wait
+     * for more data
+     */
+
+    if ((c->written += w) < 9)
+    {
+        server_rearm_timer(c);
+        c->timeout_at.tv_sec = now.tv_sec +
+                (c->timed ? g_config.timed_max_timeout : g_config.max_timeout);
+        c->timeout_at.tv_nsec = now.tv_nsec;
+        el_print(ELD, "got data, now: %lld.%03d, next timeout at: %lld.%03d",
+                (long long)now.tv_sec, now.tv_nsec / 1000000l,
+                (long long)c->timeout_at.tv_sec,
+                c->timeout_at.tv_nsec / 1000000l);
+
+        return;
+    }
+
+    /* we seek 9 bytes back, as its length of "termsend\n" and read
+     * last 9 bytes to check for end string existance. We don't
+     * need to seek back to end of file, as reading will move the
+     * pointer by itself.
+     */
+
+    lseek(c->ffd, -9, SEEK_CUR);
+
+    if (read(c->ffd, ends, 9) != 9)
+    {
+        /* totally unexpected, but still we expect it, like a good
+         * swat team. We don't know how to recover from this error,
+         * so let's call it a day for this client
+         */
+
+        el_perror(ELC, "[%3d] couldn't read end string", c->cfd);
+        el_oprint(OELI, "[%s] rejected: end string read error",
+                server_get_ips(c->cfd));
+        server_reply(c, "internal server error, try again later\n");
+        goto error;
+    }
+
+    ends[sizeof(ends) - 1] = '\0';
+    if (strcmp(ends, "termsend\n") != 0)
+    {
+        /* ending string has not yet been received, we continue
+         * getting data from client. Reset timeout timer.
+         */
+
+        server_rearm_timer(c);
+
+        /* since we have received some data it means client is
+         * active, reset timeout timer
+         */
+
+        c->timeout_at.tv_sec = now.tv_sec +
+                (c->timed ? g_config.timed_max_timeout : g_config.max_timeout);
+        c->timeout_at.tv_nsec = now.tv_nsec;
+        el_print(ELD, "got data, now: %lld.%03d, next timeout at: %lld.%03d",
+                (long long)now.tv_sec, now.tv_nsec / 1000000l,
+                (long long)c->timeout_at.tv_sec,
+                c->timeout_at.tv_nsec / 1000000l);
+
+        return;
+    }
+
+    /* full file received without errors, we even got ending
+     * string, we can now break out of loop to perform finishing
+     * touch on upload.
+     *
+     * to finish, we need to truncate file, to cut off ending
+     * string from file and close it. We carefully check in
+     * previous lines that written is at least 9 bytes long, so
+     * this subtact is ok.
+     */
+
+    c->written -= 9;
+    if (ftruncate(c->ffd, c->written) != 0)
     {
         el_perror(ELC, "[%3d] couldn't truncate file from ending string",
-            cfd->fd);
+                c->cfd);
         el_oprint(OELI, "[%s] rejected: truncate failed",
-            inet_ntoa(client.sin_addr));
-        server_reply(cfd, "internal server error, try again later\n");
+                server_get_ips(c->cfd));
+        server_reply(c, "internal server error, try again later\n");
         goto error;
     }
 
@@ -743,15 +751,15 @@ upload_finished_with_fin:
      * not save empty file
      */
 
-    if (written == 0)
+    if (c->written == 0)
     {
         el_oprint(OELI, "[%s] rejected: no data has been sent",
-            inet_ntoa(client.sin_addr));
-        server_reply(cfd, "no data has been sent\n");
+                server_get_ips(c->cfd));
+        server_reply(c, "no data has been sent\n");
         goto error;
     }
 
-    close(fd);
+    close(c->ffd);
 
     /* after upload is finished, we send the client, link where he
      * can download his newly uploaded file
@@ -759,39 +767,149 @@ upload_finished_with_fin:
 
     strcpy(url, g_config.domain);
     strcat(url, "/");
-    strcat(url, fname);
-    el_oprint(OELI, "[%s] %s", inet_ntoa(client.sin_addr), fname);
-    server_reply(cfd, "%s\n", url);
-    server_linger(cfd);
-    if (cfd->ssl) ssl_close(cfd->ssl_fd);
-    close(cfd->fd);
-    free(cfd);
+    strcat(url, c->fname);
+    el_oprint(OELI, "[%s] %s", server_get_ips(c->cfd), c->fname);
+    server_reply(c, "%s\n", url);
+    server_linger(c);
+    if (c->ssl) ssl_close(c->sslfd);
+    close(c->cfd);
+    c->cfd = -1;
 
-    pthread_mutex_lock(&lconn);
-    --cconn;
-    pthread_mutex_unlock(&lconn);
-
-    return NULL;
+    return;
 
 error:
     /* this handles any error during file reception, we remove
      * unfinished upload and close client's connection
      */
 
-    server_linger(cfd);
-    if (cfd->ssl) ssl_close(cfd->ssl_fd);
-    close(cfd->fd);
-    close(fd);
-    free(cfd);
-    unlink(path);
-
-    pthread_mutex_lock(&lconn);
-    --cconn;
-    pthread_mutex_unlock(&lconn);
-
-    return NULL;
+    server_linger(c);
+    if (c->ssl) ssl_close(c->sslfd);
+    close(c->cfd);
+    close(c->ffd);
+    c->cfd = -1;
+    unlink(c->fname);
 }
 
+
+/* ==========================================================================
+    Initializes client so it cat start transfering data. This is done only
+    once per client right after connection.
+
+    return
+            0       client initialized with success
+           -1       critical error, client not initialized, connection
+                    has been dropped.
+   ========================================================================== */
+
+
+static int server_init_client
+(
+    struct cinfo    *cfd          /* info about client */
+)
+{
+    int              ncollision;  /* number of file name collisions hit */
+    struct timespec  now;         /* current time */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    /* first, let's generate unique name to reference data client is
+     * sending
+     */
+
+    ncollision = 0;
+    for (;;)
+    {
+        static unsigned  flen = 5; /* length of the filename to generate */
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+        if (flen >= sizeof(cfd->fname))
+        {
+            static unsigned  warnings_emitted;  /* number of warnings printed */
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+            /* somehow we hit maximum filename, this is like, super
+             * unlikely, but of course may happen and when it does,
+             * limit size of flen to not overflow cfd->fname. It is
+             * possible we will hang server while it searches for
+             * free file, but it's better than buffer overflow
+             */
+
+            flen = sizeof(cfd->fname) - 1;
+            ++warnings_emitted;
+
+            if (warnings_emitted <= 10)
+                el_print(ELW, "flen reached its maximum value of %u", flen);
+
+            /* in case we hit colision everytime, and everytime we
+             * overflow flen, we will spam log file with flen warnings
+             * forever, which may lead to log file getting fat rapidly,
+             * user has been warned 10 times about the situation, this
+             * is enough, no more spam (until we overflow variable).
+             */
+
+            if (warnings_emitted == 10)
+                el_print(ELW, "flen warning happens too often, no more");
+        }
+
+        server_generate_fname(cfd->fname, flen);
+
+        cfd->ffd = open(cfd->fname, O_CREAT | O_EXCL | O_APPEND | O_RDWR, 0644);
+
+        /* if file has opened with success, break out of the loop */
+
+        if (cfd->ffd >= 0)
+            break;
+
+        if (errno == EEXIST)
+        {
+            /* we hit file name collision, increment collision
+             * counter, and if that counter is bigger than 3, we
+             * increment file length by one, because it looks like
+             * there are a lot of files with current file length
+             */
+
+            if (++ncollision == 3)
+            {
+                ++flen;
+                ncollision = 0;
+                el_print(ELN, "increasing flen by one to: %u", flen);
+            }
+
+            continue;
+        }
+
+        /* unexpected error occured, log situation and close
+         * connection
+         */
+
+        el_perror(ELA, "[%3d] couldn't open file %s/%s", cfd->cfd,
+                g_config.output_dir, cfd->fname);
+        el_oprint(OELI, "[%s] rejected: file open error",
+                server_get_ips(cfd->cfd));
+        server_reply(cfd, "internal server error, try again later\n");
+        if (cfd->ssl) ssl_close(cfd->sslfd);
+        close(cfd->cfd);
+        cfd->cfd = -1;
+        return -1;
+    }
+
+    cfd->written = 0;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    cfd->timeout_at.tv_sec = now.tv_sec +
+            (cfd->timed ? g_config.timed_max_timeout : g_config.max_timeout);
+    cfd->timeout_at.tv_nsec = now.tv_nsec;
+
+    /* if client connects but does not send anything, select() never
+     * returns and we could have ghost connection that occupies slot
+     * (dos attack) unless another connection triggers SIGALRM. To
+     * counter it, we arm timer right here even before we receive
+     * any byte
+     */
+
+    server_rearm_timer(cfd);
+    return 0;
+}
 
 /* ==========================================================================
     in this function we accept connection from the backlog queue, check if
@@ -802,192 +920,130 @@ error:
 
 static void server_process_connection
 (
-    struct fdinfo      *sfd      /* server socket we accept connection from */
+    struct sinfo       *sfd      /* server socket we accept connection from */
 )
 {
-    int                 nconn;   /* current number of active connection */
-    struct fdinfo      *cfd;     /* socket associated with connected client */
-    int                 flags;   /* flags for cfd socket */
+    int                 acfd;    /* fd for accepted client connection */
+    int                 slot;    /* free slot for client */
     socklen_t           clen;    /* length of 'client' variable */
+    struct cinfo       *cfd;     /* current client information */
     struct sockaddr_in  client;  /* address of remote client */
-    pthread_t           t;       /* tread info that will handle upload */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-    /* process all awaiting connections in sfd socket */
-
     clen = sizeof(client);
+    el_print(ELD, "processing new connection");
 
-    for (;;)
+    /* accept incoming connection, it will be instant because we
+     * checked with select() ther client is awaiting.
+     */
+
+    if ((acfd = accept(sfd->fd, (struct sockaddr *)&client, &clen)) < 0)
     {
-        /* allocate fdinfo, which will be passed to thread */
-
-        cfd = malloc(sizeof(*cfd));
-
-        /* wait for incoming connection */
-
-        if ((cfd->fd = accept(sfd->fd, (struct sockaddr *)&client, &clen)) < 0)
-        {
-            free(cfd);
-
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                /* connection queue in server socket is empty, that
-                 * means we processed all queued clients, we can
-                 * leave now, our job is done here
-                 */
-
-                return;
-            }
-
-            el_perror(ELC, "couldn't accept connection");
-            el_oprint(OELI, "[NULL] rejected: accept error");
-            continue;
-        }
-
-        el_print(ELI, "incoming %sssl connection from %s socket id %d",
-            sfd->ssl ? "" : "non-", inet_ntoa(client.sin_addr), cfd->fd);
-
-        /* at this point, we still have normal unencrypted
-         * connection, so set ssl to 0, so that server_reply()
-         * sends possible error data (without any sensitive
-         * informations) over non-ssl socket.
-         */
-
-        cfd->ssl = 0;
-
-        /* after accepting connection, we have client's ip, now we
-         * check if this ip can upload (it can be banned, or not
-         * listen in the whitelist, depending on server
-         * configuration
-         */
-
-        if (bnw_is_allowed(ntohl(client.sin_addr.s_addr)) == 0)
-        {
-            el_oprint(OELI, "[%s] rejected: not allowed",
-                inet_ntoa(client.sin_addr));
-            server_reply(cfd, "you are not allowed to upload to this server\n");
-            if (cfd->ssl) ssl_close(cfd->ssl_fd);
-            close(cfd->fd);
-            free(cfd);
-            continue;
-        }
-
-        /* user is allowed to upload, be we still need to check if
-         * there is upload slot available (connection limit is not
-         * reached)
-         */
-
-        pthread_mutex_lock(&lconn);
-        nconn = cconn;
-        pthread_mutex_unlock(&lconn);
-
-        if (nconn >= g_config.max_connections)
-        {
-            el_oprint(OELI, "[%s] rejected: connection limit",
-                inet_ntoa(client.sin_addr));
-            server_reply(cfd, "all upload slots are taken, try again later\n");
-            if (cfd->ssl) ssl_close(cfd->ssl_fd);
-            close(cfd->fd);
-            free(cfd);
-            continue;
-        }
-
-        /* on some systems (like BSDs) socket after accept will
-         * inherit flags from accept server socket. In our case we
-         * may inherit O_NONBLOCK property which is not what we
-         * want. We turn that flag explicitly
-         */
-
-        if ((flags = fcntl(cfd->fd, F_GETFL)) == -1)
-        {
-            el_oprint(OELI, "[%s] rejected: socket config error",
-                    inet_ntoa(client.sin_addr));
-            el_perror(ELF, "[%3d] error reading socket flags", cfd->fd);
-            server_reply(cfd, "internal server error, try again later\n");
-            if (cfd->ssl) ssl_close(cfd->ssl_fd);
-            close(cfd->fd);
-            free(cfd);
-            continue;
-        }
-
-        if (fcntl(cfd->fd, F_SETFL, flags & ~O_NONBLOCK) == -1)
-        {
-            el_oprint(OELI, "[%s] rejected: socket config error",
-                    inet_ntoa(client.sin_addr));
-            el_perror(ELF, "[%3d] error setting socket into block mode",
-                    cfd->fd);
-            server_reply(cfd, "internal server error, try again later\n");
-            if (cfd->ssl) ssl_close(cfd->ssl_fd);
-            close(cfd->fd);
-            free(cfd);
-            continue;
-        }
-
-        /* perform ssl handshake, this should be done after fcntl()
-         * calls, to make sure cfd->fd is in blocking mode on BSDs,
-         * check comment above before fcntl() to know more
-         */
-
-        if (sfd->ssl)
-        {
-            cfd->ssl_fd = ssl_accept(cfd->fd);
-            if (cfd->ssl_fd == -1)
-            {
-                el_oprint(OELI, "[%s] rejected: ssl_accept() error",
-                        inet_ntoa(client.sin_addr));
-
-                /* ssl negotation failed, reply in clear text */
-
-                server_reply(cfd, "termsend: ssl negotation failed\n");
-                close(cfd->fd);
-                free(cfd);
-                continue;
-            }
-
-            /* now connection is encrypted, note that in clients
-             * socket info
-             */
-
-            cfd->ssl = 1;
-        }
-
-        /* copy information if client should perform timed uploads
-         * or not
-         */
-
-        cfd->timed = sfd->timed;
-
-        /* client is connected, allowed and connection limit has
-         * not been reached, we start thread that will take actions
-         * from here.
-         */
-
-        if (pthread_create(&t, NULL, server_handle_upload, cfd) != 0)
-        {
-            el_oprint(OELI, "[%s] rejected: pthread_create error",
-                    inet_ntoa(client.sin_addr));
-            el_perror(ELC, "[%3d] couldn't start processing thread", cfd->fd);
-            server_reply(cfd, "internal server error, try again later\n");
-            if (cfd->ssl) ssl_close(cfd->ssl_fd);
-            close(cfd->fd);
-            free(cfd);
-            continue;
-        }
-
-        pthread_mutex_lock(&lconn);
-        ++cconn;
-        pthread_mutex_unlock(&lconn);
-
-        /* we don't need anything from running thread and we surely
-         * don't want to babysit it, so we detach and forget about
-         * it. Running thread will deal with errors on its own and
-         * will terminate in case of any error. That thread is also
-         * responsible for freeing cfd.
-         */
-
-        pthread_detach(t);
+        el_perror(ELC, "couldn't accept connection");
+        el_oprint(OELI, "[NULL] rejected: accept error");
+        return;
     }
+
+    el_print(ELI, "incoming %sssl connection from %s socket id %d",
+        sfd->ssl ? "" : "non-", inet_ntoa(client.sin_addr), acfd);
+
+    /* server is going down, do not accept any new connections */
+
+    if (g_shutdown)
+        close(acfd);
+
+    /* get free upload slot for client, of no slot is available,
+     * that means connection limit is reached.
+     */
+
+    slot = server_get_free_client();
+    if (slot == -1)
+    {
+        struct cinfo  cfd;  /* temp cinfo object for server_reply() */
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+        /* since we couldn't get free slot for the client, but
+         * we still want to reply to the user, and to the fact
+         * that server_reply() accepts struct cinfo, we
+         * create temporary cinfo, for that purpose. We only
+         * have to set fields needed by server_reply().
+         */
+
+        cfd.cfd = acfd;
+        cfd.ssl = 0;
+
+        el_oprint(OELI, "[%s] rejected: connection limit",
+            inet_ntoa(client.sin_addr));
+        server_reply(&cfd, "all upload slots are taken, try again later\n");
+        close(acfd);
+        return;
+    }
+
+    cfd = &ci[slot];
+    cfd->cfd = acfd;
+
+    /* at this point, we still have normal unencrypted connection,
+     * so set ssl to 0, so that server_reply() sends possible error
+     * data (without any sensitive informations) over non-ssl
+     * socket.
+     */
+
+    cfd->ssl = 0;
+
+    /* after accepting connection, we have client's ip, now we
+     * check if this ip can upload (it can be banned, or not
+     * listed in the whitelist, depending on server config.
+     */
+
+    if (bnw_is_allowed(ntohl(client.sin_addr.s_addr)) == 0)
+    {
+        el_oprint(OELI, "[%s] rejected: not allowed",
+            inet_ntoa(client.sin_addr));
+        server_reply(cfd, "you are not allowed to upload to this server\n");
+        close(cfd->cfd);
+        cfd->cfd = -1;
+        return;
+    }
+
+    /* perform ssl handshake */
+
+    if (sfd->ssl)
+    {
+        cfd->sslfd = ssl_accept(cfd->cfd);
+        if (cfd->sslfd == -1)
+        {
+            el_oprint(OELI, "[%s] rejected: ssl_accept() error",
+                inet_ntoa(client.sin_addr));
+
+            /* ssl negotation failed, reply in clear text */
+
+            server_reply(cfd, "kurload: ssl negotation failed\n");
+            close(cfd->cfd);
+            cfd->cfd = -1;
+            return;
+        }
+
+        /* now connection is encrypted, mark that in clients
+         * socket info
+         */
+
+        cfd->ssl = 1;
+    }
+
+    /* copy information if client should perform timed uploads
+     * or not
+     */
+
+    cfd->timed = sfd->timed;
+
+    /* client is connected, allowed and connection limit has
+     * not been reached, now initialize client's state struct
+     * so it can start transfering data.
+     */
+
+    server_init_client(cfd);
 }
 
 
@@ -999,14 +1055,14 @@ static void server_process_connection
 
 static int create_socket_for_ips
 (
-    int          port,       /* port to create sockets for */
+    unsigned     port,       /* port to create sockets for */
     int          timed,      /* is this timed-enabled upload port? */
     int          ssl,        /* is this ssl port? */
-    int          nips,       /* number of ips to listen on*/
-    int         *port_index  /* port index being parsed */
+    unsigned     nips,       /* number of ips to listen on*/
+    unsigned    *port_index  /* port index being parsed */
 )
 {
-    int          i;          /* current sfds index */
+    unsigned     i;          /* current server info array index */
     char         bip[sizeof(g_config.bind_ip)];  /* copy of g_config.bind_ip */
     const char  *ip;         /* tokenized ip from bip */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -1031,22 +1087,22 @@ static int create_socket_for_ips
 
         el_print(ELN, "creating server %s:%d (%s, %s)", ip, port,
             timed ? "    timed" : "not timed", ssl ? "    ssl" : "non-ssl");
-        if ((sfds[i].fd = server_create_socket(netip, port)) < 0)
+        if ((si[i].fd = server_create_socket(netip, port)) < 0)
         {
             el_print(ELF, "couldn't create socket for %s:%d", ip, port);
             return -1;
         }
 
-        sfds[i].ssl = ssl;
-        sfds[i].timed = timed;
+        si[i].ssl = ssl;
+        si[i].timed = timed;
 
         /* get next ip address on the list */
 
         ip = strtok(NULL, ",");
     }
 
-    /* increase port index, so next time we write to proper sfds
-     * index
+    /* increase port index, so next time we write to proper server
+     * info array index
      */
 
     *port_index += 1;
@@ -1075,11 +1131,11 @@ static int create_socket_for_ips
 
 int server_init(void)
 {
-    int  i;       /* simple iterator */
-    int  e;       /* error from function */
-    int  pi;      /* current port index */
-    int  nports;  /* number of listen ports */
-    int  nips;    /* number of ips to listen on*/
+    int       e;       /* error from function */
+    unsigned  i;       /* simple iterator */
+    unsigned  pi;      /* current port index */
+    unsigned  nports;  /* number of listen ports */
+    unsigned  nips;    /* number of ips to listen on*/
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -1100,43 +1156,39 @@ int server_init(void)
      */
 
     nips = server_bind_num();
-    nsfds = nports * nips;
+    nsi = nports * nips;
+    nci = g_config.max_connections;
 
     /* allocate memory for all server sockets, one interface equals
      * one server socket.
      */
 
-    if ((sfds = malloc(nsfds * sizeof(*sfds))) == NULL)
+    if ((si = malloc(nsi * sizeof(*si))) == NULL)
     {
-        el_print(ELF, "couldn't allocate memory for %d server(s)", nsfds);
+        el_print(ELF, "couldn't allocate memory for %d server(s)", nsi);
         return -1;
     }
 
-    /* initialize mutexes */
-
-    if (pthread_mutex_init(&lconn, NULL) != 0)
-    {
-        el_perror(ELF, "couldn't initialize current connection mutex");
-        free(sfds);
-        return -1;
-    }
-
-    if (pthread_mutex_init(&lopen, NULL) != 0)
-    {
-        el_perror(ELF, "couldn't initialize open mutex");
-        free(sfds);
-        pthread_mutex_destroy(&lconn);
-        return -1;
-    }
-
-    /* invalidate all allocated server sockets, so closing such
-     * socket in case of an error won't crash the app.
+    /* allocate memory for all client sockets, one socket for each
+     * connection
      */
 
-    for (i = 0; i != nsfds; ++i)
+    if ((ci = malloc(nci * sizeof(*ci))) == NULL)
     {
-        sfds[i].fd = -1;
+        el_print(ELF, "couldn't allocate memory for %u client(s)", nci);
+        free(si);
+        return -1;
     }
+
+    /* invalidate all allocated server and client sockets, so
+     * closing such socket in case of an error won't crash the app.
+     */
+
+    for (i = 0; i != nsi; ++i)
+        si[i].fd = -1;
+
+    for (i = 0; i != nci; ++i)
+        ci[i].cfd = -1;
 
     /* Now we create one server socket for each interface:port user
      * specified in configuration file.
@@ -1159,11 +1211,22 @@ int server_init(void)
 
     srand(time(NULL));
 
-    if (g_config.ssl_listen_port)
-    {
-        /* ssl port enabled, initialize ssl */
+    /* if ssl port is enabled, initialize ssl */
 
+    if (g_config.ssl_listen_port || g_config.timed_ssl_listen_port)
         ssl_init();
+
+    /* change dir to the output directory, so we can open suffix
+     * directly without passing full path, like: open("f3jds", ...)
+     * instaed of open("/var/lib/termsend/f3jds", ...), which saves
+     * us from constructing path for open() each time we generate
+     * filename
+     */
+
+    if (chdir(g_config.output_dir) != 0)
+    {
+        el_perror(ELF, "chdir(%s)", g_config.output_dir);
+        goto error;
     }
 
     return 0;
@@ -1181,21 +1244,24 @@ error:
 
 void server_loop_forever(void)
 {
-    fd_set  readfds;     /* set containing all server sockets to monitor */
-    time_t  prev_flush;  /* time when flush was last called */
-    int     maxfd;       /* maximum fd value monitored in readfds */
-    int     i;           /* simple iterator for loop */
+    fd_set    readfds;     /* set containing all server sockets to monitor */
+    time_t    prev_flush;  /* time when flush was last called */
+    int       maxfd;       /* maximum fd value monitored in readfds */
+    sigset_t  sigblk;      /* signals to block */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+
+    sigemptyset(&sigblk);
+    sigaddset(&sigblk, SIGALRM);
 
     prev_flush = 0;
     el_print(ELN, "server initialized and started");
 
     for (;;)
     {
-        int     sact;     /* select activity, just select return value */
-        int     i;        /* a simple interator for loop */
-        time_t  now;      /* current time from time() */
+        int       sact;     /* select activity, just select return value */
+        unsigned  i;        /* a simple interator for loop */
+        time_t    now;      /* current time from time() */
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -1220,156 +1286,180 @@ void server_loop_forever(void)
 
         FD_ZERO(&readfds);
 
-        for (i = 0, maxfd = 0; i != nsfds; ++i)
+        for (i = 0, maxfd = 0; i != nsi; ++i)
         {
             /* we validate all sockets in init function, so we are
-             * sure sfds is valid and contains valid file
-             * descriptors unless user called this function without
-             * init or when init failed and return code wasn't
-             * checked, then he deserves nice segfault in da face
+             * sure server info array is valid and contains valid
+             * file descriptors unless user called this function
+             * without init or when init failed and return code
+             * wasn't checked, then he deserves nice segfault in da
+             * face
              */
 
-            FD_SET(sfds[i].fd, &readfds);
+            FD_SET(si[i].fd, &readfds);
 
             /* we need to find which socket is the highest one,
              * select needs this information to process fds without
              * segfaults
              */
 
-            maxfd = sfds[i].fd > maxfd ? sfds[i].fd : maxfd;
+            maxfd = si[i].fd > maxfd ? si[i].fd : maxfd;
         }
 
-        if (g_shutdown)
+        for (i = 0; i != nci; ++i)
         {
-            /* shutdown flag was set, program is going to end, we
-             * check and return here, right before blocking
-             * select() as this has the least chance of locking in
-             * select() after SIGTERM
-             */
+            if (ci[i].cfd == -1)
+                continue;
 
-            return;
+            FD_SET(ci[i].cfd, &readfds);
+            maxfd = ci[i].cfd > maxfd ? ci[i].cfd : maxfd;
         }
 
-        /* now we wait for activity, for server sockets (like ours)
-         * activity means we have an incoming connection. We pass
-         * NULL for timeout, because we want to wait indefinitely,
-         * and we are not interested in writefds (we don't write to
-         * any socket) nor exceptfds as exceptions don't occur on
-         * server sockets.
+        /* double SIGTERM received, we need to exit RIGHT NOW,
+         * so no more client processsing
          */
 
-        sact = select(maxfd + 1, &readfds, NULL, NULL, NULL);
+        if (g_stfu)
+            return;
 
-        if (sact == -1)
+        /* now we wait for activity, for server sockets activity
+         * means we have an incoming connection. For client
+         * sockets, it means we have outstanding data to read. We
+         * pass NULL for timeout, because we want to wait
+         * indefinitely, and we are not interested in writefds (we
+         * don't write to any socket) nor exceptfds as exceptions
+         * don't occur on server sockets.
+         *
+         * We use SIGALRM to indicate that any of the client socket
+         * has timed out and action must be taken. We don't want
+         * SIGALRM to interrupt any of read()/write() call during
+         * client processing code, so we block that signal after
+         * select() and unblock it before select(). It's ok for
+         * select to be interrupted by SIGALRM.
+         */
+
+        sigprocmask(SIG_UNBLOCK, &sigblk, NULL);
+
+        /* call select() only when SIGALRM has not been received,
+         * if it has, we process all clients immediately to check
+         * which one has timedout
+         */
+
+        sact = -1;
+        if (g_sigalrm == 0)
+            sact = select(maxfd + 1, &readfds, NULL, NULL, NULL);
+
+        sigprocmask(SIG_BLOCK, &sigblk, NULL);
+
+        if (sact == -1 && g_sigalrm == 0 && g_shutdown == 0)
         {
-            /* an error occured in select, it is most likely EINTR
-             * from the SIGTERM signal, in any case, we return so
-             * program can finish
+            /* if select has been interrupted by something we didn't
+             * expect (and we expect SIGALRM and SIGTERM for shutdown)
+             * then it means critical error and we interrupt program,
+             * since there is no clean way to avoid UB at this point.
              */
 
-            if (errno == EINTR)
-            {
-                el_print(ELN, "select interrupted by signal");
-            }
-            else
-            {
-                el_perror(ELF, "error waiting on socket activity");
-            }
-
+            el_perror(ELF, "error waiting on socket activity");
             return;
         }
 
         /* if we get here, that means activity is on any server
          * socket, since we wait indefinietly, select cannot return
          * 0. Now we check which socket got activity and we accept
-         * connection to process it.
+         * connection to process it. Processing of server socket
+         * makes sense only when there is actual action there, so
+         * if SIGALRM has been received (or select() simply did not
+         * succeed), we do not process server sockets.
          */
 
-        for (i = 0; i != nsfds; ++i)
+        if (sact > 0)
+            for (i = 0; i != nsi; ++i)
+                if (FD_ISSET(si[i].fd, &readfds))
+                    server_process_connection(&si[i]);
+
+        /* now let's check if which (if any) client sent us some
+         * data, it could also be that some client has timed out
+         * but we don't know which one did that, so we have to
+         * process all connected clients regardless of socket
+         * activity to know that.
+         */
+
+        for (i = 0; i != nci; ++i)
         {
-            if (FD_ISSET(sfds[i].fd, &readfds))
-            {
-                /* well, this socket has something to say, pass it
-                 * to processing function to determin what to do
-                 * with it
-                 */
+            if (ci[i].cfd == -1)
+                continue;
 
-                server_process_connection(&sfds[i]);
-            }
-
-            /* nope, that socket has nothing intereseted going on
-             * inside
-             */
+            if (g_sigalrm || (sact > 0 && FD_ISSET(ci[i].cfd, &readfds)))
+                server_process_client(&ci[i]);
         }
+
+        /* SIGALRM has been handled (if there was any) */
+
+        g_sigalrm = 0;
+
+        /* if shutdown is not set, we continue flow of program */
+
+        if (g_shutdown == 0)
+            continue;
+
+        /* server is going down but there still might be some
+         * outstanding connections which we need to process.
+         * Check if all connections are done and return from
+         * loop only when all clients are processed. Busy slot
+         * means client is connected there and is being processed.
+         */
+
+        if (server_num_busy_slot() == 0)
+            return;
+
+        /* double SIGTERM received, we exit without waiting for
+         * clients to finish
+         */
+
+        if (g_stfu)
+            return;
     }
 }
 
+
+/* ==========================================================================
+    Waits for all connection to finish (unless double SIGTERM has been
+    received) and then free resources that has been allocated.
+   ========================================================================== */
+
+
 void server_destroy(void)
 {
-    int              i;    /* simple iterator for loop */
-    struct timespec  req;  /* time to sleep in nanosleep() */
+    unsigned         i;    /* simple iterator for loop */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
 
     /* close all server sockets, so any new connection is
      * automatically droped by the system
      */
 
-    for (i = 0; i != nsfds; ++i)
+    for (i = 0; i != nsi; ++i)
+        close(si[i].fd);
+
+    free(si);
+
+    /* also close all outstanding connections */
+
+    for (i = 0; i != nci; ++i)
     {
-        close(sfds[i].fd);
+        if (ci[i].cfd == -1)
+            continue;
+
+        close(ci[i].cfd);
+
+        /* close and remove any incomplete download */
+
+        close(ci[i].ffd);
+        unlink(ci[i].fname);
     }
 
-    pthread_mutex_destroy(&lconn);
-    pthread_mutex_destroy(&lopen);
-    free(sfds);
-
-    req.tv_sec = 0;
-    req.tv_nsec = 100000000l; /* 100[ms] */
-
-    /* when all cleaning is done, we wait for all ongoing
-     * transmisions to finish
-     */
-
-    el_print(ELN, "waiting for all connections to finish");
-
-    for (;;)
-    {
-        int nconn;  /* number of currently active connections */
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-        pthread_mutex_lock(&lconn);
-        nconn = cconn;
-        pthread_mutex_unlock(&lconn);
-
-        if (nconn == 0)
-        {
-            /* all connections has been closed, we can proceed with
-             * cleaning up operations
-             */
-
-            break;
-        }
-
-        if (g_stfu)
-        {
-            /* someone is nervous, finishing without waiting for
-             * connection to finish - this might cause file in
-             * output_dir to be in invalid state
-             */
-
-            el_print(ELW, "exiting without waiting for connection to finish "
-                "this may lead to invalid files in %s", g_config.output_dir);
-
-            break;
-        }
-
-        nanosleep(&req, NULL);
-    }
+    /* if ssl port enabled, cleanup ssl */
 
     if (g_config.ssl_listen_port)
-    {
-        /* ssl port enabled, cleanup ssl */
-
         ssl_cleanup();
-    }
 }

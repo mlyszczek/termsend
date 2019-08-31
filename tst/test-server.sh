@@ -2,7 +2,7 @@
 
 updir="./termsend-test/out"
 data="./termsend-test/data"
-pidfile="./termsend-test/termsend.pid"
+pidfile="$(pwd)/termsend-test/termsend.pid"
 
 . ./mtest.sh
 os="$(uname)"
@@ -25,10 +25,10 @@ fi
 
 start_termsend()
 {
-    common_opts="-D -l7 -c -i61337 -a61338 -s1024 -t3 -m3 -dlocalhost -utermsend \
-        -gtermsend -P"${pidfile}" -q./termsend-test/termsend-query.log \
-        -p./termsend-test/termsend.log -T0 \
-        -o./termsend-test/out -b${server}"
+    common_opts="-D -l7 -c -i61337 -a61338 -s1024 -t3 -m8 -dlocalhost -utermsend \
+        -gtermsend -P"${pidfile}" -q`pwd`/termsend-test/termsend-query.log \
+        -p`pwd`/termsend-test/termsend.log -T0 \
+        -o`pwd`/termsend-test/out -b${server}"
 
     mkdir -p ./termsend-test/out
     if [ ${ssl_test} = "openssl" ]
@@ -346,7 +346,7 @@ multi_thread_check()
 
 test_is_running()
 {
-    mt_fail "kill -s 0 `cat ./termsend-test/termsend.pid`"
+    mt_fail "kill -s 0 `cat ${pidfile}`"
 
     # sleep for 1 second, since it is possible that we run the test
     # so quickly, that in cleanup kill SIGTERM is emited to early
@@ -639,6 +639,73 @@ test_totally_random()
 ## ==========================================================================
 
 
+run_with_timeout()
+{
+    truncate -s0 "${data}"
+    start=$(date +%s%N)
+    start=$((start / 1000000))
+    out="$(termsend "${data}" 0 | ${tailn} | tr "\n" ".")"
+
+    mt_fail "[[ \"$out\" == \"disconnected due to inactivity for 3 seconds, did you forget to append termination string\"* ]]"
+
+    #echo $out
+    if [ ${mt_test_status} -eq 1 ]
+    then
+        return 1
+    fi
+
+    now=$(date +%s%N)
+    oper_time=$((now/1000000 - start))
+    mt_fail "[ ${oper_time} -gt 2800 ] && [ ${oper_time} -lt 3200 ]"
+    if [ ${mt_test_status} -eq 1 ]
+    then
+        # we expect for timeout error to be received after 3 seconds
+        # but since world is not perfect we accept no more than 200[ms]
+        # slide. This test checks if we properly calculate SIGALRM
+        # and and really disconnect clients after 3 seconds, and not
+        # let's say 10. On system that is heavy loaded, this may
+        # rise false positive alarm as it may take longer than 3.2s
+        # to handle client
+
+        return 1
+    fi
+
+    touch ${1}.test_check
+}
+
+test_mixed_timeouts()
+{
+    i=0
+    for i in $(seq 1 1 15)
+    do
+        if [ $(( i % 3 )) ]
+        then
+            # just to add some madness to the test
+            test_send_string &
+        fi
+
+        run_with_timeout ${i} &
+        sleep 0.1
+
+        if [ $(( i % 2 )) -eq 0 ]
+        then
+            sleep 1
+        fi
+    done
+
+
+    sleep 4
+
+    num_files="$(ls -1 *.test_check | wc -l)"
+    mt_fail "[ ${num_files} -eq 15 ]"
+    rm *.test_check
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
 check_sanitizer_logs()
 {
     if grep "==ERROR: " ${0}.log
@@ -687,6 +754,8 @@ if ../src/termsend -v | grep +ssl > /dev/null
 then
     have_ssl=1
 fi
+
+echo > /tmp/termsend
 
 ## ==========================================================================
 #   __               __                                    __   _
@@ -742,6 +811,18 @@ then
     ssl_test=openssl
     prog_test=socat
     run_tests
+fi
+
+if [ "x${optional_tests}" = "x1" ]
+then
+    # these tests are optional as they need precise environment and
+    # can easily report false positives.
+
+    ssl_test=none
+    prog_test=nc
+    timed_test=0
+
+    mt_run_named test_mixed_timeouts "test_mixed_timeouts-nc-none"
 fi
 
 # last but not least, when running sanitizer tests, our test suite

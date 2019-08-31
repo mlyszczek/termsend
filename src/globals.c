@@ -34,3 +34,4 @@ struct config  g_config;    /* program configuration */
 struct el      g_qlog;      /* options for embedlog to print query logs */
 int            g_shutdown;  /* flag indicating that program should die */
 int            g_stfu;      /* someone relly want to kill us FAST */
+int            g_sigalrm;   /* sigalrm has been received */
