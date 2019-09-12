@@ -53,6 +53,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <magic.h>
 
 #if HAVE_SYS_SELECT_H
     /* hpux doesn't have select.h file, maybe there are other
@@ -104,10 +105,11 @@ struct cinfo
     size_t           written;
 };
 
-static struct sinfo  *si;   /* server info array for all interfaces */
-static unsigned       nsi;  /* number of server info allocated */
-static struct cinfo  *ci;   /* client info array of connected clients sockets */
-static unsigned       nci;  /* number of client info allocated */
+static struct sinfo  *si;    /* server info array for all interfaces */
+static unsigned       nsi;   /* number of server info allocated */
+static struct cinfo  *ci;    /* client info array of connected clients sockets*/
+static unsigned       nci;   /* number of client info allocated */
+static magic_t        magic; /* magics needed to detect file type */
 
 
 /* ==========================================================================
@@ -118,6 +120,49 @@ static unsigned       nci;  /* number of client info allocated */
  / .___//_/   /_/  |___/ \__,_/ \__/ \___/  /_/   \__,_//_/ /_/ \___//____/
 /_/
    ========================================================================== */
+
+
+/* ==========================================================================
+    Tries to detect mime type of 'file'. Will return statically allocated
+    string that points to subtype of text mime. So if "text/x-c" file is
+    detected, function will return pointer to "x-c" part. If mime category
+    is not test, or type of file couldn't be detected, NULL is returned.
+   ========================================================================== */
+
+
+static const char *server_get_mime
+(
+    const char  *file  /* file path to detect */
+)
+{
+    const char  *mime; /* mime name returned from libmagic */
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    /* if magic is not initialized, don't do anything */
+
+    if (magic == NULL)
+        return NULL;
+
+    /* try to magically guess mime type of file */
+
+    mime = magic_file(magic, file);
+    if (mime == NULL)
+        return NULL;
+
+    /* we only work with text* mimes */
+
+    if (strncmp(mime, "text/", 5) != 0)
+        return NULL;
+
+    /* for text/plain return NULL, as plain is default action */
+
+    if (strcmp(mime + 5, "plain") == 0)
+        return NULL;
+
+    /* return subtype, for text/x-c, "x-c" will be returned */
+
+    return mime + 5;
+}
 
 
 /* ==========================================================================
@@ -199,12 +244,8 @@ static int server_bind_num(void)
 
 
     for (n = 1, ips = g_config.bind_ip; *ips; ++ips)
-    {
         if (*ips == ',')
-        {
             ++n;
-        }
-    }
 
     return n;
 }
@@ -250,6 +291,7 @@ static void server_linger
 {
     unsigned char  buf[8192];  /* dummy buffer to get data from read */
     ssize_t        r;          /* return value from read */
+    unsigned       i;          /* loop counter */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -260,7 +302,7 @@ static void server_linger
 
     shutdown(c->cfd, SHUT_RDWR);
 
-    for (;;)
+    for (i = 0; i < 10; i++)
     {
         r = c->ssl ? ssl_read(c->sslfd, buf, sizeof(buf)) :
             read(c->cfd, buf, sizeof(buf));
@@ -291,6 +333,18 @@ static void server_linger
          * talking is over.
          */
     }
+
+    /* client keeps sending us data after we've sent FIN, that is
+     * not nice of him so ignore that client and close connection
+     * nevertheless. On some ocasions this could result in some
+     * false positives and we will close client that behaves, but
+     * this should be extreme rare, and without breaking out of
+     * loop in sane time, someone could just keep sending us data
+     * which would result in deadlock and DOS (with only SINGLE
+     * client) attack.
+     */
+
+    el_print(ELW, "missbehaving client, close connection");
 }
 
 
@@ -319,6 +373,14 @@ static void server_reply
     va_start(ap, fmt);
     mlen = vsprintf(msg, fmt, ap);
     va_end(ap);
+
+    /* temporarily remove last new line character as embedlog already
+     * prints \n, and this leads to double \n in logs
+     */
+
+    msg[mlen - 1] = '\0';
+    el_print(ELD, "sending message to client: %s", msg);
+    msg[mlen - 1] = '\n';
 
     /* send reply in loop until all bytes are commited to the
      * kernel for sending
@@ -513,8 +575,9 @@ static void server_process_client
     struct cinfo       *c        /* current client to process */
 )
 {
+    const char         *mime;        /* mime type of received file */
     struct timespec     now;         /* current time */
-    char                url[8192 + 1];   /* generated link to uploaded data */
+    char                url[8192 + 1];  /* generated link to uploaded data */
     char                ends[9 + 1]; /* buffer for end string detection */
     unsigned char       buf[8192];   /* temp buffer we read uploaded data to */
     ssize_t             w;           /* return from write function */
@@ -765,9 +828,21 @@ upload_finished_with_fin:
      * can download his newly uploaded file
      */
 
+    /* first add user configured domain */
+
     strcpy(url, g_config.domain);
     strcat(url, "/");
+
+    /* if we could detect mime type, add it to the path */
+
+    mime = server_get_mime(c->fname);
+    strcat(url, mime ? mime : "");
+    strcat(url, mime ? "/" : "");
+
+    /* and last but not least, add generated filename for full url */
+
     strcat(url, c->fname);
+
     el_oprint(OELI, "[%s] %s", server_get_ips(c->cfd), c->fname);
     server_reply(c, "%s\n", url);
     server_linger(c);
@@ -1229,6 +1304,19 @@ int server_init(void)
         goto error;
     }
 
+    /* create new magical cookie, om nom nom, magics is optional
+     * so do not exit when it fails
+     */
+
+    magic = magic_open(MAGIC_MIME_TYPE);
+    if (magic == NULL)
+        el_perror(ELW, "magic_open(MAGIC_MIME)");
+
+    /* load default magic database */
+
+    if (magic_load(magic, NULL) != 0)
+        el_print(ELW, "magic_load(NULL) failed: %s", magic_error(magic));
+
     return 0;
 
 error:
@@ -1442,6 +1530,12 @@ void server_destroy(void)
         close(si[i].fd);
 
     free(si);
+
+    /* close magic cookie, don't let it leak, it's our and only our
+     * cookie
+     */
+
+    magic_close(magic);
 
     /* also close all outstanding connections */
 

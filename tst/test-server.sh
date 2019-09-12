@@ -356,6 +356,59 @@ test_is_running()
     sleep 1
 }
 
+## ==========================================================================
+## ==========================================================================
+
+
+test_mime_text_c()
+{
+    out="$(termsend main.c | tail -n1)"
+    mime="$(echo ${out} | rev | cut -d/ -f2 | rev)"
+    file="$(echo ${out} | rev | cut -d/ -f-1 | rev)"
+
+    mt_fail "[ \"x${mime}\" = \"xx-c\" ]"
+    mt_fail "diff ${updir}/${file} main.c"
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
+test_mime_text_shellscript()
+{
+    out="$(termsend shell-test.sh | tail -n1)"
+    mime="$(echo ${out} | rev | cut -d/ -f2 | rev)"
+    file="$(echo ${out} | rev | cut -d/ -f-1 | rev)"
+
+    mt_fail "[ \"x${mime}\" = \"xx-shellscript\" ]"
+    mt_fail "diff ${updir}/${file} shell-test.sh"
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
+test_mime_text_plain()
+{
+    file="$(termsend test-server.key.pass | get_file)"
+    mt_fail "diff ${updir}/${file} test-server.key.pass"
+}
+
+
+## ==========================================================================
+## ==========================================================================
+
+
+test_mime_bin()
+{
+    printf "a\0\0\0s\0\0\0" > binfile.tmp
+    file="$(termsend binfile.tmp | get_file)"
+    mt_fail "diff ${updir}/${file} binfile.tmp"
+    unlink binfile.tmp
+}
+
 
 ## ==========================================================================
 ## ==========================================================================
@@ -772,6 +825,10 @@ run_tests()
     timed_test=0
 
     mt_run_named test_is_running "test_is_running-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_text_c "test_mime_text_c-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_text_shellscript "test_mime_text_shellscript-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_text_plain "test_mime_text_plain-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_bin "test_mime_bin-${prog_test}-${ssl_test}"
     mt_run_named test_send_string "test_send_string-${prog_test}-${ssl_test}"
     mt_run_named test_send_string_full "test_send_string_full-${prog_test}-${ssl_test}"
     mt_run_named test_send_string_too_big "test_send_string_too_big-${prog_test}-${ssl_test}"

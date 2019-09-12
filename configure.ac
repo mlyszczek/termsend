@@ -69,6 +69,8 @@ AM_CONDITIONAL([ENABLE_ANALYZER], [test "x$enable_analyzer" = "xyes"])
 AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([gethostent], [nsl])
 AC_SEARCH_LIBS([el_init], [embedlog])
+AC_SEARCH_LIBS([magic_open], [magic])
+
 
 AX_PTHREAD
 LIBS="$PTHREAD_LIBS $LIBS"
