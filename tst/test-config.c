@@ -74,6 +74,7 @@ static void test_prepare(void)
     config.max_timeout = 60;
     config.timed_max_timeout = 3;
     config.pem_pass_file[0] = '\0';
+    config.ft_based_url = 0;
     strcpy(config.domain, "localhost");
     strcpy(config.bind_ip, "0.0.0.0");
     strcpy(config.user, "termsend");
@@ -137,6 +138,7 @@ static void config_short_opts(void)
         "-P/pid",
         "-o", "/tmp",
         "-b0.0.0.0,1.3.3.7",
+        "F",
 #if HAVE_SSL
         "-A103",
         "-I101",
@@ -161,6 +163,7 @@ static void config_short_opts(void)
     config.max_connections = 3;
     config.max_timeout = 20;
     config.timed_max_timeout = 7;
+    config.ft_based_url = 1;
     strcpy(config.domain, "http://termsend.bofc.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");
@@ -210,6 +213,7 @@ static void config_long_opts(void)
         "--pid-file=/pid",
         "--output-dir=/tmp",
         "--list-file=./main.c",
+        "--ft-based-url",
 #if HAVE_SSL
         "--timed-ssl-listen-port=103",
         "--ssl-listen-port=101",
@@ -234,6 +238,7 @@ static void config_long_opts(void)
     config.max_connections = 3;
     config.max_timeout = 20;
     config.timed_max_timeout = 7;
+    config.ft_based_url = 1;
     strcpy(config.domain, "http://termsend.bofc.pl");
     strcpy(config.bind_ip, "0.0.0.0,1.3.3.7");
     strcpy(config.user, "kur");

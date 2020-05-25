@@ -1,5 +1,3 @@
-include ../Makefile.am.coverage
-
 check_SCRIPTS = test-server.sh
 check_PROGRAMS = test
 test_SOURCES  = main.c \

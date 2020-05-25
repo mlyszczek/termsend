@@ -1308,14 +1308,18 @@ int server_init(void)
      * so do not exit when it fails
      */
 
-    magic = magic_open(MAGIC_MIME_TYPE);
-    if (magic == NULL)
-        el_perror(ELW, "magic_open(MAGIC_MIME)");
+    if (g_config.ft_based_url)
+    {
+        el_print(ELF, "ft based url on");
+        magic = magic_open(MAGIC_MIME_TYPE);
+        if (magic == NULL)
+            el_perror(ELW, "magic_open(MAGIC_MIME)");
 
-    /* load default magic database */
+        /* load default magic database */
 
-    if (magic_load(magic, NULL) != 0)
-        el_print(ELW, "magic_load(NULL) failed: %s", magic_error(magic));
+        if (magic_load(magic, NULL) != 0)
+            el_print(ELW, "magic_load(NULL) failed: %s", magic_error(magic));
+    }
 
     return 0;
 

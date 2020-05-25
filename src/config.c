@@ -67,7 +67,7 @@
 /* list of short options for getopt_long */
 
 static const char  *shortopts =
-    ":hvcDl:i:a:s:m:t:T:b:d:u:g:q:p:P:o:L:M:"
+    ":hvcDl:i:a:s:m:t:T:b:d:u:g:q:p:P:o:L:M:F"
 #if HAVE_SSL
     "I:A:k:C:f:"
 #endif
@@ -98,6 +98,7 @@ struct option       longopts[] =
     {"pid-file",              required_argument, NULL, 'P'},
     {"output-dir",            required_argument, NULL, 'o'},
     {"list-file",             required_argument, NULL, 'L'},
+    {"ft-based-url",          no_argument,       NULL, 'F'},
 #if HAVE_SSL
     {"ssl-listen-port",       required_argument, NULL, 'I'},
     {"timed-ssl-listen-port", required_argument, NULL, 'A'},
@@ -206,6 +207,7 @@ static int config_parse_arguments
         {
         case 'c': g_config.colorful_output = 1; break;
         case 'D': g_config.daemonize = 1; break;
+        case 'F': g_config.ft_based_url = 1; break;
         case 'l': PARSE_INT(log_level, 0, 7); break;
         case 'i': PARSE_INT(listen_port, 0, UINT16_MAX); break;
         case 'a': PARSE_INT(timed_listen_port, 0, UINT16_MAX); break;
@@ -244,6 +246,7 @@ static int config_parse_arguments
 "\t-c, --colorful-output            enable nice colors for logs\n"
 "\t-i, --listen-port=<port>         port on which program will listen\n"
 "\t-a, --timed-listen-port=<port>   port on which program will listen\n"
+"\t-F, --ft-based-url               return different link based on file type\n"
 #if HAVE_SSL
 "\t-I, --ssl-listen-port=<port>     ssl port on which program will listen\n"
 "\t-A, --timed-ssl-listen-port=<port>  ssl port on which program will listen\n"
@@ -373,6 +376,7 @@ int config_init
     g_config.max_timeout = 60;
     g_config.timed_max_timeout = 3;
     g_config.pem_pass_file[0] = '\0';
+    g_config.ft_based_url = 0;
     strcpy(g_config.domain, "localhost");
     strcpy(g_config.bind_ip, "0.0.0.0");
     strcpy(g_config.user, "termsend");
@@ -489,6 +493,7 @@ void config_print(void)
     CONFIG_PRINT(output_dir, "%s");
     CONFIG_PRINT(pid_file, "%s");
     CONFIG_PRINT(bind_ip, "%s");
+    CONFIG_PRINT(ft_based_url, "%d");
 #if HAVE_SSL
     CONFIG_PRINT(ssl_listen_port, "%ld");
     CONFIG_PRINT(timed_ssl_listen_port, "%ld");

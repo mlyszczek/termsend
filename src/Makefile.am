@@ -1,5 +1,3 @@
-include ../Makefile.am.coverage
-
 source = bnwlist.c \
 	config.c \
 	daemonize.c \

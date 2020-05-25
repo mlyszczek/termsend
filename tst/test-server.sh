@@ -3,6 +3,7 @@
 updir="./termsend-test/out"
 data="./termsend-test/data"
 pidfile="$(pwd)/termsend-test/termsend.pid"
+g_args=""
 
 . ./mtest.sh
 os="$(uname)"
@@ -34,9 +35,9 @@ start_termsend()
     if [ ${ssl_test} = "openssl" ]
     then
         ../src/termsend ${common_opts} -I61339 -A61340 -k./test-server.key.pem \
-            -C./test-server.cert.pem -f./test-server.key.pass ${args}
+            -C./test-server.cert.pem -f./test-server.key.pass ${g_args}
     else
-        ../src/termsend ${common_opts} ${args}
+        ../src/termsend ${common_opts} ${g_args}
     fi
 
     # wait for termsend to start
@@ -362,11 +363,18 @@ test_is_running()
 
 test_mime_text_c()
 {
-    out="$(termsend main.c | tail -n1)"
-    mime="$(echo ${out} | rev | cut -d/ -f2 | rev)"
-    file="$(echo ${out} | rev | cut -d/ -f-1 | rev)"
+    if echo "${g_args}" | grep "\-F"
+    then
+        # ft-based-url enabled
+        out="$(termsend main.c | tail -n1)"
+        mime="$(echo ${out} | rev | cut -d/ -f2 | rev)"
+        file="$(echo ${out} | rev | cut -d/ -f-1 | rev)"
 
-    mt_fail "[ \"x${mime}\" = \"xx-c\" ]"
+        mt_fail "[ \"x${mime}\" = \"xx-c\" ]"
+    else
+        file="$(termsend main.c | get_file)"
+    fi
+
     mt_fail "diff ${updir}/${file} main.c"
 }
 
@@ -377,11 +385,18 @@ test_mime_text_c()
 
 test_mime_text_shellscript()
 {
-    out="$(termsend shell-test.sh | tail -n1)"
-    mime="$(echo ${out} | rev | cut -d/ -f2 | rev)"
-    file="$(echo ${out} | rev | cut -d/ -f-1 | rev)"
+    if echo "${g_args}" | grep "\--ft-based-urll"
+    then
+        # ft-based-url enabled
+        out="$(termsend shell-test.sh | tail -n1)"
+        mime="$(echo ${out} | rev | cut -d/ -f2 | rev)"
+        file="$(echo ${out} | rev | cut -d/ -f-1 | rev)"
 
-    mt_fail "[ \"x${mime}\" = \"xx-shellscript\" ]"
+        mt_fail "[ \"x${mime}\" = \"xx-shellscript\" ]"
+    else
+        file="$(termsend shell-test.sh | get_file)"
+    fi
+
     mt_fail "diff ${updir}/${file} shell-test.sh"
 }
 
@@ -825,10 +840,6 @@ run_tests()
     timed_test=0
 
     mt_run_named test_is_running "test_is_running-${prog_test}-${ssl_test}"
-    mt_run_named test_mime_text_c "test_mime_text_c-${prog_test}-${ssl_test}"
-    mt_run_named test_mime_text_shellscript "test_mime_text_shellscript-${prog_test}-${ssl_test}"
-    mt_run_named test_mime_text_plain "test_mime_text_plain-${prog_test}-${ssl_test}"
-    mt_run_named test_mime_bin "test_mime_bin-${prog_test}-${ssl_test}"
     mt_run_named test_send_string "test_send_string-${prog_test}-${ssl_test}"
     mt_run_named test_send_string_full "test_send_string_full-${prog_test}-${ssl_test}"
     mt_run_named test_send_string_too_big "test_send_string_too_big-${prog_test}-${ssl_test}"
@@ -840,6 +851,20 @@ run_tests()
     mt_run_named test_send_empty "test_send_empty-${prog_test}-${ssl_test}"
     mt_run_named test_threaded "test_threaded-${prog_test}-${ssl_test}"
     mt_run_named test_totally_random "test_totally_random-${prog_test}-${ssl_test}"
+
+    # run mime test with ft-based-url disabled
+    mt_run_named test_mime_text_c "test_mime_text_c-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_text_shellscript "test_mime_text_shellscript-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_text_plain "test_mime_text_plain-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_bin "test_mime_bin-${prog_test}-${ssl_test}"
+
+    # run mime test with ft-based-url enabled
+    g_args="--ft-based-url"
+    mt_run_named test_mime_text_c "test_mime_text_c-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_text_shellscript "test_mime_text_shellscript-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_text_plain "test_mime_text_plain-${prog_test}-${ssl_test}"
+    mt_run_named test_mime_bin "test_mime_bin-${prog_test}-${ssl_test}"
+    g_args=""
 
     timed_test=1
 

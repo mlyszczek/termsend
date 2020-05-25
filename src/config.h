@@ -38,6 +38,7 @@ struct config
     long            max_connections;
     long            max_timeout;
     long            timed_max_timeout;
+    int             ft_based_url;
     char            domain[4096 + 1];
     char            bind_ip[1024 + 1];
     char            user[255 + 1];
