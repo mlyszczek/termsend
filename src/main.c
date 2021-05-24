@@ -144,6 +144,7 @@ int main(int argc, char *argv[])
     sa.sa_handler = sigint_handler;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGPIPE, &sa, NULL);
 
     config_print();
 
