@@ -70,6 +70,7 @@ AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([gethostent], [nsl])
 AC_SEARCH_LIBS([el_init], [embedlog])
 AC_SEARCH_LIBS([magic_open], [magic], [], [], -lz)
+AC_SEARCH_LIBS([inflate], [z])
 
 
 AC_OUTPUT
