@@ -72,9 +72,4 @@ AC_SEARCH_LIBS([el_init], [embedlog])
 AC_SEARCH_LIBS([magic_open], [magic], [], [], -lz)
 
 
-AX_PTHREAD
-LIBS="$PTHREAD_LIBS $LIBS"
-CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-CC="$PTHREAD_CC"
-
 AC_OUTPUT
