@@ -138,7 +138,7 @@ static void config_short_opts(void)
         "-P/pid",
         "-o", "/tmp",
         "-b0.0.0.0,1.3.3.7",
-        "F",
+        "-F",
 #if HAVE_SSL
         "-A103",
         "-I101",
